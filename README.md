@@ -1,6 +1,8 @@
 # Dusan Tomic - Personal Portfolio
 
-A modern, responsive personal portfolio website built with Next.js, Framer Motion, and Nunito Sans font.
+A modern, responsive portfolio built with Next.js, TypeScript and Framer Motion.
+The website highlights my work as a Product Designer & Design Engineer through polished UI, smooth interactions, and a clean component structure.
+Live site: [https://www.dusantmc.com](dusantmc.com)
 
 ## Features
 
