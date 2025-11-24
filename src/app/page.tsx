@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
+import Clarity from '@microsoft/clarity';
 import LeftPanel from '@/components/LeftPanel';
 import RightPanel from '@/components/RightPanel';
 import MetaRobots from '@/components/MetaRobots';
@@ -8,16 +9,17 @@ import MetaRobots from '@/components/MetaRobots';
 export default function Home() {
   const [activeTab, setActiveTab] = useState('intro');
 
+  useEffect(() => {
+    Clarity.init('u6yojs5f1t');
+  }, []);
+
   return (
     <>
       <Suspense fallback={null}>
         <MetaRobots />
       </Suspense>
-      <div className="min-h-screen flex flex-col lg:flex-row">
-        {/* Left Panel - Sticky on desktop, full width on mobile */}
+      <div className="app-shell">
         <LeftPanel activeTab={activeTab} setActiveTab={setActiveTab} />
-        
-        {/* Right Panel - Scrollable */}
         <RightPanel />
       </div>
     </>
