@@ -50,6 +50,38 @@ interface Particle {
 // Store all active particles for collision detection
 const activeParticles: Particle[] = [];
 
+// Track preloaded images
+let imagesPreloaded = false;
+
+/**
+ * Preloads all particle images to ensure smooth performance on first click
+ */
+function preloadParticleImages(): void {
+  if (typeof window === 'undefined' || imagesPreloaded) {
+    return;
+  }
+
+  PARTICLE_IMAGES.forEach((imagePath) => {
+    const img = new Image();
+    img.src = imagePath;
+  });
+
+  imagesPreloaded = true;
+}
+
+// Preload images when module loads (if in browser)
+if (typeof window !== 'undefined') {
+  // Preload immediately
+  preloadParticleImages();
+  
+  // Also preload when DOM is ready (in case images weren't ready)
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', preloadParticleImages);
+  } else {
+    preloadParticleImages();
+  }
+}
+
 /**
  * Selects a random particle image based on weighted probabilities
  */
@@ -267,6 +299,11 @@ export function spawnGreetingParticle(clientX: number, clientY: number): void {
     return;
   }
 
+  // Ensure images are preloaded (fallback in case preload didn't run)
+  if (!imagesPreloaded) {
+    preloadParticleImages();
+  }
+
   // Select random particle image based on weights
   const imageIndex = selectRandomParticle();
   
@@ -319,6 +356,13 @@ export function spawnGreetingParticle(clientX: number, clientY: number): void {
     lastTime = performance.now();
     animationFrameId = requestAnimationFrame(animate);
   }
+}
+
+/**
+ * Manually preload particle images (useful for eager loading)
+ */
+export function preloadParticles(): void {
+  preloadParticleImages();
 }
 
 /**
