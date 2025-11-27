@@ -271,12 +271,34 @@ button {
 }
 
 .greeting-hand {
-  width: 32px;
-  height: 32px;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px;
+  min-height: 32px;
+  max-width: 32px;
+  max-height: 32px;
+  flex-shrink: 0;
+  object-fit: contain;
   transform-origin: center;
   transform: translateY(-2px) rotate(-32deg);
   transition: transform var(--hand-rest-duration, 0.25s) ease;
   cursor: grab;
+  display: block !important;
+}
+
+.greeting-hand span,
+.greeting-hand img {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  max-width: 32px !important;
+  max-height: 32px !important;
+  display: block !important;
+}
+
+.greeting-hand img {
+  object-fit: contain;
 }
 
 .greeting-hand-wrapper {
@@ -308,7 +330,7 @@ button {
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: rgba(255, 206, 86, 0.6);
+  background: rgba(226, 49, 49, 0.2);
   transform: translate(-50%, -50%) scale(0.9);
   opacity: 0;
   pointer-events: none;
@@ -368,7 +390,7 @@ button {
 }
 
 .greeting-hand:hover {
-  transform: translateY(-5px) translateX(3px) rotate(-10deg) scale(1.1);
+  transform: translateY(-5px) translateX(3px) rotate(-6deg) scale(1.1);
   transition-duration: var(--hand-hover-duration, var(--hand-rest-duration, 0.25s));
 }
 

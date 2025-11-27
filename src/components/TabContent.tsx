@@ -4,6 +4,7 @@ import type { CSSProperties } from 'react';
 import Image from 'next/image';
 import { useMagneticHover } from '@/hooks/useMagneticHover';
 import LottiePlayer, { LottiePlayerElement } from './LottiePlayer';
+import { spawnGreetingParticle, cleanupParticles } from '@/utils/particles';
 
 interface TabContentProps {
   activeTab: string;
@@ -118,11 +119,11 @@ const HAND_BURST_SPEEDS = [
 ] as const;
 
 const HAND_TOOLTIP_MESSAGES = [
-  'Keep going!',
-  'You are on fire!',
-  'I like your energy',
-  'This is getting emotional',
-  'Now we\'re best friends',
+  'Ho ho ho!',
+  'Santa\'s impressed',
+  'Jingle all the way!',
+  'Snow much fun',
+  'Best Christmas ever!',
 ] as const;
 
 type HandTooltipMessage = (typeof HAND_TOOLTIP_MESSAGES)[number];
@@ -225,6 +226,8 @@ const TabContent: React.FC<TabContentProps> = ({ activeTab }) => {
         window.clearTimeout(handTooltipTimeoutRef.current);
         handTooltipTimeoutRef.current = null;
       }
+      // Cleanup particles on unmount
+      cleanupParticles();
     };
   }, []);
 
@@ -244,7 +247,7 @@ const TabContent: React.FC<TabContentProps> = ({ activeTab }) => {
     }, 1200);
   };
 
-  const triggerHandBurst = () => {
+  const triggerHandBurst = (event?: React.PointerEvent) => {
     if (typeof window === 'undefined') return;
     if (handBurstTimeoutRef.current !== null) {
       window.clearTimeout(handBurstTimeoutRef.current);
@@ -258,7 +261,7 @@ const TabContent: React.FC<TabContentProps> = ({ activeTab }) => {
     const resetDelay = Math.max(nextDurations.burst, nextDurations.splash) + 80;
 
     handClickCountRef.current += 1;
-    if (handClickCountRef.current % 6 === 0) {
+    if (handClickCountRef.current % 10 === 0) {
       showHandTooltip();
     } else if (handTooltipVisible) {
       setHandTooltipVisible(false);
@@ -275,6 +278,11 @@ const TabContent: React.FC<TabContentProps> = ({ activeTab }) => {
         handBurstTimeoutRef.current = null;
       }, resetDelay);
     });
+
+    // Spawn particle at click position
+    if (event && event.clientX !== undefined && event.clientY !== undefined) {
+      spawnGreetingParticle(event.clientX, event.clientY);
+    }
   };
 
   const fallbackCopy = () => {
@@ -334,7 +342,7 @@ const TabContent: React.FC<TabContentProps> = ({ activeTab }) => {
               }
             >
               <Image
-                src="/icons/emojihand3.png"
+                src="/icons/emojihand4.png"
                 alt=""
                 width={32}
                 height={32}
