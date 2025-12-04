@@ -11,6 +11,7 @@ const nunitoSans = Nunito_Sans({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://dusantomic.com'),
   title: "Dusan Tomic - Product Designer",
   description:
     "I design products that work. Specialized in SaaS platforms, mobile apps, and everything in between.",
@@ -18,6 +19,7 @@ export const metadata: Metadata = {
     title: "Dusan Tomic - Product Designer",
     description: "I design products that work. Specialized in SaaS platforms, mobile apps, and everything in between.",
     type: "website",
+    siteName: "Dusan Tomic - Portfolio",
   },
   twitter: {
     card: "summary_large_image",
