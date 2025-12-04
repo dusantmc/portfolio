@@ -14,6 +14,16 @@ export const metadata: Metadata = {
   title: "Dusan Tomic - Product Designer",
   description:
     "I design products that work. Specialized in SaaS platforms, mobile apps, and everything in between.",
+  openGraph: {
+    title: "Dusan Tomic - Product Designer",
+    description: "I design products that work. Specialized in SaaS platforms, mobile apps, and everything in between.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Dusan Tomic - Product Designer",
+    description: "I design products that work. Specialized in SaaS platforms, mobile apps, and everything in between.",
+  },
   icons: {
     icon: [
       { url: "/icons/favicon.ico" },
