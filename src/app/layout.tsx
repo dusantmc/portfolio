@@ -12,11 +12,11 @@ const nunitoSans = Nunito_Sans({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://dusantomic.com'),
-  title: "Dusan Tomic - Product Designer",
+  title: "Dusan Tomic - Senior Product Designer",
   description:
     "I design products that work. Specialized in SaaS platforms, mobile apps, and everything in between.",
   openGraph: {
-    title: "Dusan Tomic - Product Designer",
+    title: "Dusan Tomic - Senior Product Designer",
     description: "I design products that work. Specialized in SaaS platforms, mobile apps, and everything in between.",
     type: "website",
     siteName: "Dusan Tomic - Portfolio",
@@ -25,13 +25,13 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Dusan Tomic - Product Designer Portfolio",
+        alt: "Dusan Tomic - Senior Product Designer Portfolio",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Dusan Tomic - Product Designer",
+    title: "Dusan Tomic - Senior Product Designer",
     description: "I design products that work. Specialized in SaaS platforms, mobile apps, and everything in between.",
     images: ["/og-image.png"],
   },
