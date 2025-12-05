@@ -15,14 +15,14 @@ const CustomMetaTags: React.FC = () => {
       document.head.appendChild(meta);
     }
 
-    // Ensure og:image meta tag is set correctly
+    // Ensure og:image meta tag is set correctly with absolute URL
     const existingImageMeta = document.querySelector('meta[property="og:image"]');
     if (existingImageMeta) {
-      existingImageMeta.setAttribute('content', '/og-image.png');
+      existingImageMeta.setAttribute('content', 'https://www.dusantmc.com/og-image.png');
     } else {
       const imageMeta = document.createElement('meta');
       imageMeta.setAttribute('property', 'og:image');
-      imageMeta.setAttribute('content', '/og-image.png');
+      imageMeta.setAttribute('content', 'https://www.dusantmc.com/og-image.png');
       document.head.appendChild(imageMeta);
     }
   }, []);

@@ -11,7 +11,7 @@ const nunitoSans = Nunito_Sans({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://dusantmc.com'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://www.dusantmc.com'),
   title: "Dusan Tomic - Senior Product Designer",
   description:
     "I design products that work. Specialized in SaaS platforms, mobile apps, and everything in between.",
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     siteName: "Dusan Tomic - Portfolio",
     images: [
       {
-        url: "/og-image.png",
+        url: "https://www.dusantmc.com/og-image.png",
         width: 1200,
         height: 630,
         alt: "Dusan Tomic - Senior Product Designer Portfolio",
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Dusan Tomic - Senior Product Designer",
     description: "I design products that work. Specialized in SaaS platforms, mobile apps, and everything in between.",
-    images: ["/og-image.png"],
+    images: ["https://www.dusantmc.com/og-image.png"],
   },
   icons: {
     icon: [
