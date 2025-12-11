@@ -31,7 +31,7 @@ const EXPERIENCE: ExperienceItem[] = [
     logo: '/resume/mosaik.png',
     logoAlt: 'Mosaik',
     dates: 'November 2021 - Present',
-    title: 'Chief Designer at Mosaik',
+    title: 'Lead Product Designer at Mosaik',
     description:
       'Led product design for an AI-powered real estate platform connecting agents, clients, and service providers. Oversaw UX for web and mobile apps and shaped the product\'s overall design direction.',
   },
@@ -57,7 +57,7 @@ const EXPERIENCE: ExperienceItem[] = [
     dates: 'February 2012 - April 2020',
     title: 'Senior Product Designer at RebelMouse',
     description:
-      'First designer on the team, creating the CMS platform and client projects for brands including United Airlines and CBS.',
+      'Founding designer. Built the CMS from 0-to-1 and designed enterprise solutions for United Airlines (+260% pageviews), CBS, and Penske.',
   },
 ];
 
@@ -544,7 +544,7 @@ const TabContent: React.FC<TabContentProps> = ({ activeTab }) => {
       </div>
 
       <a
-        href="/resume/Dusan_Tomic_Senior_Product_Designer_2025.pdf"
+        href="/resume/Dusan_Tomic_Resume.pdf"
         className="cta-download"
         target="_blank"
         rel="noopener noreferrer"
