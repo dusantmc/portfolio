@@ -400,7 +400,7 @@ const RightPanel: React.FC = () => {
 
   return (
     <div className="right-panel">
-      {/* Mosaik Web App */}
+      {/* Mosaik Web App 
       <div className="card card-full">
         <div className="landing-container" onClick={() => openModal('/portfolio/mosaikapp.png', 'mosaik')}>
           <Image
@@ -422,7 +422,7 @@ const RightPanel: React.FC = () => {
           <span className="portfolio-label">Mosaik Web App</span>
         </div>
       </div>
-
+*/}
 
 
 
