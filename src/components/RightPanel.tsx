@@ -400,33 +400,6 @@ const RightPanel: React.FC = () => {
 
   return (
     <div className="right-panel">
-      {/* Mosaik Web App 
-      <div className="card card-full">
-        <div className="landing-container" onClick={() => openModal('/portfolio/mosaikapp.png', 'mosaik')}>
-          <Image
-            src="/portfolio/mosaikapp80.webp"
-            alt="Mosaik Web App"
-            width={800}
-            height={468}
-            className="portfolio-image"
-          />
-        </div>
-        <div className="portfolio-footer">
-          <Image
-            src="/portfolio/ico-mosaik.png"
-            alt="Mosaik"
-            width={96}
-            height={96}
-            className="portfolio-icon"
-          />
-          <span className="portfolio-label">Mosaik Web App</span>
-        </div>
-      </div>
-*/}
-
-
-
-
       {/* MC2 */}
       <div className="card card-full">
         <div className="landing-container" onClick={() => openModal('/portfolio/mc2.webp')}>

@@ -22,7 +22,7 @@ type ExperienceItem = {
   logo: string;
   logoAlt: string;
   dates: string;
-  title: string;      // “Principal designer at Mosaik”
+  title: string;
   description: string;
 };
 
@@ -30,7 +30,7 @@ const EXPERIENCE: ExperienceItem[] = [
   {
     logo: '/resume/mosaik.png',
     logoAlt: 'Mosaik',
-    dates: 'November 2021 - Present',
+    dates: 'November 2021 - 2025',
     title: 'Lead Product Designer at Mosaik',
     description:
       'Led product design for an AI-powered real estate platform connecting agents, clients, and service providers. Oversaw UX for web and mobile apps and shaped the product\'s overall design direction.',
@@ -57,7 +57,7 @@ const EXPERIENCE: ExperienceItem[] = [
     dates: 'February 2012 - April 2020',
     title: 'Senior Product Designer at RebelMouse',
     description:
-      'Founding designer. Built the CMS from 0-to-1 and designed enterprise solutions for United Airlines (+260% pageviews), CBS, and Penske.',
+      'Founding designer. Built a CMS from 0→1 and led enterprise solutions for United Airlines (+260% pageviews), CBS, and Penske.',
   },
 ];
 
@@ -476,7 +476,6 @@ const TabContent: React.FC<TabContentProps> = ({ activeTab }) => {
 
         <div className="trusted-logos">
           <div className="logos-slide">
-            <Image src="/icons/logo-mosaik.svg" alt="Mosaik" width={101} height={32} />
             <Image src="/icons/logo-kripto.svg" alt="Kriptomat" width={111} height={32} />
             <Image src="/icons/logo-rebelmouse.svg" alt="RebelMouse" width={106} height={32} />
             <Image src="/icons/logo-united.svg" alt="United Airlines" width={114} height={32} />
@@ -484,28 +483,24 @@ const TabContent: React.FC<TabContentProps> = ({ activeTab }) => {
             <Image src="/icons/logo-mc2.svg" alt="MC2 Finance" width={57} height={32} />
 
             {/* duplicate for seamless loop */}
-            <Image src="/icons/logo-mosaik.svg" alt="Mosaik" width={101} height={32} />
             <Image src="/icons/logo-kripto.svg" alt="Kriptomat" width={111} height={32} />
             <Image src="/icons/logo-rebelmouse.svg" alt="RebelMouse" width={106} height={32} />
             <Image src="/icons/logo-united.svg" alt="United Airlines" width={114} height={32} />
             <Image src="/icons/logo-cbs.svg" alt="CBS Watch! Magazine" width={63} height={32} />
             <Image src="/icons/logo-mc2.svg" alt="MC2 Finance" width={57} height={32} />
             {/* duplicate for seamless loop */}
-            <Image src="/icons/logo-mosaik.svg" alt="Mosaik" width={101} height={32} />
             <Image src="/icons/logo-kripto.svg" alt="Kriptomat" width={111} height={32} />
             <Image src="/icons/logo-rebelmouse.svg" alt="RebelMouse" width={106} height={32} />
             <Image src="/icons/logo-united.svg" alt="United Airlines" width={114} height={32} />
             <Image src="/icons/logo-cbs.svg" alt="CBS Watch! Magazine" width={63} height={32} />
             <Image src="/icons/logo-mc2.svg" alt="MC2 Finance" width={57} height={32} />
             {/* duplicate for seamless loop */}
-            <Image src="/icons/logo-mosaik.svg" alt="Mosaik" width={101} height={32} />
             <Image src="/icons/logo-kripto.svg" alt="Kriptomat" width={111} height={32} />
             <Image src="/icons/logo-rebelmouse.svg" alt="RebelMouse" width={106} height={32} />
             <Image src="/icons/logo-united.svg" alt="United Airlines" width={114} height={32} />
             <Image src="/icons/logo-cbs.svg" alt="CBS Watch! Magazine" width={63} height={32} />
             <Image src="/icons/logo-mc2.svg" alt="MC2 Finance" width={57} height={32} />
             {/* duplicate for seamless loop */}
-            <Image src="/icons/logo-mosaik.svg" alt="Mosaik" width={101} height={32} />
             <Image src="/icons/logo-kripto.svg" alt="Kriptomat" width={111} height={32} />
             <Image src="/icons/logo-rebelmouse.svg" alt="RebelMouse" width={106} height={32} />
             <Image src="/icons/logo-united.svg" alt="United Airlines" width={114} height={32} />
@@ -542,24 +537,6 @@ const TabContent: React.FC<TabContentProps> = ({ activeTab }) => {
           </div>
         ))}
       </div>
-
-      <a
-        href="/resume/Dusan_Tomic_Resume.pdf"
-        className="cta-download"
-        target="_blank"
-        rel="noopener noreferrer"
-        ref={downloadMagnetic.elementRef}
-        onMouseEnter={downloadMagnetic.handleMouseEnter}
-        onMouseMove={downloadMagnetic.handleMouseMove}
-        onMouseLeave={downloadMagnetic.handleMouseLeave}
-        onMouseDown={downloadMagnetic.handleMouseDown}
-        onMouseUp={downloadMagnetic.handleMouseUp}
-        onFocus={downloadMagnetic.handleFocus}
-        onBlur={downloadMagnetic.handleBlur}
-      >
-        <Image src="/icons/download.svg" alt="" width={20} height={20} aria-hidden="true" />
-        <span>Download resume</span>
-      </a>
     </div>
   );
 
