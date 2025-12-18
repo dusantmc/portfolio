@@ -30,7 +30,7 @@ const EXPERIENCE: ExperienceItem[] = [
   {
     logo: '/resume/mosaik.png',
     logoAlt: 'Mosaik',
-    dates: 'November 2021 - 2025',
+    dates: 'November 2021 - December 2025',
     title: 'Lead Product Designer at Mosaik',
     description:
       'Led product design for an AI-powered real estate platform connecting agents, clients, and service providers. Oversaw UX for web and mobile apps and shaped the product\'s overall design direction.',
