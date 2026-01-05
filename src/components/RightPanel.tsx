@@ -1,10 +1,54 @@
 'use client';
 
+import { useRive, Layout, Fit, Alignment } from '@rive-app/react-canvas';
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import parse from 'html-react-parser';
 import MagneticSocialLink from './MagneticSocialLink';
-import LottiePlayer from './LottiePlayer';
+
+const MC2CtaButton = () => {
+  const [isHovered, setIsHovered] = useState(false);
+  const { rive, RiveComponent } = useRive({
+    src: '/icons/cta_background.riv',
+    stateMachines: 'State Machine 1',
+    autoplay: false,
+    layout: new Layout({
+      fit: Fit.Cover,
+      alignment: Alignment.Center,
+    }),
+  });
+
+  return (
+    <MagneticSocialLink
+      href="https://cal.com/dusantomic/intro-call"
+      target="_blank"
+      className={`cta-button lottie-button teaser-cta${isHovered ? ' is-hovered' : ''}`}
+      onMouseEnter={() => {
+        setIsHovered(true);
+        rive?.play();
+      }}
+      onMouseLeave={() => {
+        setIsHovered(false);
+        rive?.pause();
+      }}
+      onFocus={() => {
+        setIsHovered(true);
+        rive?.play();
+      }}
+      onBlur={() => {
+        setIsHovered(false);
+        rive?.pause();
+      }}
+    >
+      <span className="cta-label">Let's talk</span>
+      <RiveComponent
+        className="cta-lottie cta-lottie--teaser"
+        aria-hidden="true"
+      />
+    </MagneticSocialLink>
+  );
+};
+
 
 interface TeaserCardProps {
   handleCopy: () => void;
@@ -14,7 +58,7 @@ interface TeaserCardProps {
 type Edge = 'left' | 'right' | 'top' | 'bottom';
 
 interface ModalSection {
-  headline: string;
+  headline?: string;
   body: string | React.ReactNode;
   imagePlaceholder?: string;
 }
@@ -160,6 +204,16 @@ const TeaserCardParallax: React.FC<TeaserCardProps> = ({ handleCopy, copied }) =
 
   const [isTeaserHovered, setTeaserHover] = useState(false);
 
+  const { rive, RiveComponent } = useRive({
+    src: '/icons/cta_background.riv',
+    stateMachines: 'State Machine 1',
+    autoplay: false,
+    layout: new Layout({
+      fit: Fit.Cover,
+      alignment: Alignment.Center,
+    }),
+  });
+
   return (
     <div ref={cardRef} className="teaser-card">
       <div className="teaser-images">
@@ -167,11 +221,11 @@ const TeaserCardParallax: React.FC<TeaserCardProps> = ({ handleCopy, copied }) =
           <React.Fragment key={config.src}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-            src={config.src}
-            alt=""
-            className="teaser-img"
-            style={getImageStyle(config)}
-            aria-hidden="true"
+              src={config.src}
+              alt=""
+              className="teaser-img"
+              style={getImageStyle(config)}
+              aria-hidden="true"
             />
           </React.Fragment>
         ))}
@@ -187,19 +241,26 @@ const TeaserCardParallax: React.FC<TeaserCardProps> = ({ handleCopy, copied }) =
           target="_blank"
           rel="noopener noreferrer"
           className={`cta-button lottie-button teaser-cta${isTeaserHovered ? ' is-hovered' : ''}`}
-          onMouseEnter={() => setTeaserHover(true)}
-          onMouseLeave={() => setTeaserHover(false)}
-          onFocus={() => setTeaserHover(true)}
-          onBlur={() => setTeaserHover(false)}
+          onMouseEnter={() => {
+            setTeaserHover(true);
+            rive?.play();
+          }}
+          onMouseLeave={() => {
+            setTeaserHover(false);
+            rive?.pause();
+          }}
+          onFocus={() => {
+            setTeaserHover(true);
+            rive?.play();
+          }}
+          onBlur={() => {
+            setTeaserHover(false);
+            rive?.pause();
+          }}
         >
           <span className="cta-label">Let&apos;s talk</span>
-          <LottiePlayer
-            src="/icons/lottiebg.json"
+          <RiveComponent
             className="cta-lottie cta-lottie--teaser"
-            renderer="svg"
-            background="transparent"
-            autoplay
-            loop
             aria-hidden="true"
           />
         </a>
@@ -240,13 +301,13 @@ const getModalData = (imageSrcs: string[], projectId?: string): ModalData => {
   }
 
   // Mosaik - unified modal for all Mosaik projects
-  if (imageSrcs[0] === '/portfolio/mosaikapp.png' || 
-      imageSrcs[0] === '/portfolio/mosaik-landing.jpg' || 
-      imageSrcs[0] === '/portfolio/mosaikapp1.png' || 
-      imageSrcs[0] === '/portfolio/mosaikapp2.png' || 
-      imageSrcs[0] === '/portfolio/mosaikapp3.png' || 
-      projectId === 'mosaik' || 
-      projectId === 'mosaik-mobile') {
+  if (imageSrcs[0] === '/portfolio/mosaikapp.png' ||
+    imageSrcs[0] === '/portfolio/mosaik-landing.jpg' ||
+    imageSrcs[0] === '/portfolio/mosaikapp1.png' ||
+    imageSrcs[0] === '/portfolio/mosaikapp2.png' ||
+    imageSrcs[0] === '/portfolio/mosaikapp3.png' ||
+    projectId === 'mosaik' ||
+    projectId === 'mosaik-mobile') {
     return {
       imageSrcs: [
         '/portfolio/mosaikapp.png',
@@ -265,14 +326,141 @@ const getModalData = (imageSrcs: string[], projectId?: string): ModalData => {
   }
 
   // MC2 Finance
-  if (imageSrcs[0] === '/portfolio/mc2.webp') {
+  if (imageSrcs[0] === '/portfolio/mc2-final.webp') {
     return {
       imageSrcs,
       headline: 'MC2 Finance',
-      body: 'Redesigned and improved the app and its crypto purchase flow, helping the platform scale to $50M AUM.',
+      body: 'Elevating a crypto trading platform to institutional standards in 4 weeks, <br/>' +
+        'helping scale to $50M AUM',
       role: 'Product Designer',
       results: '',
-      sections: []
+      sections: [
+        {
+          headline: 'Project Overview',
+          body: `
+          <div className="modal-section-text">
+          <p><strong>MC² Finance</strong> provides institutional-grade digital asset ETFs and ETPs. It is a decentralized platform allowing users to trade tokens and crypto assets with the rigor expected by professional investors.</p>
+          <div className="modal-info-grid">
+            <div className="modal-info-cell">
+              <span className="modal-info-label">ROLE:</span>
+              <span className="modal-info-value">Lead Product Designer (Freelance)</span>
+            </div>
+            <div className="modal-info-cell">
+              <span className="modal-info-label">Timeline:</span>
+              <span className="modal-info-value">4 Weeks (Sprint)</span>
+            </div>
+            <div className="modal-info-cell">
+              <span className="modal-info-label">Team:</span>
+              <span className="modal-info-value">Collaborated directly with Owners, PM, and Engineers</span>
+            </div>
+          </div>
+          `
+        },
+
+        {
+          headline: 'The Challenge',
+          body: `
+          <div className="modal-section-text">
+          <p><strong>The "Trust Gap" and a Mental Model Mismatch.</strong> When I joined, the product was fully functional but suffered from low user confidence. The interface felt "amateur" compared to competitors, and the data tables, the heart of any trading platform, were cluttered and hard to scan.</p>
+          <p>Furthermore, the purchase flow presented a unique friction point. Unlike standard crypto "swaps" (e.g., Uniswap), the platform used an e-commerce style "Shopping Cart" model. Users were confused by adding tokens to a cart rather than buying them instantly.</p>
+          <p><strong>My Goal: </strong> With a strict 4-week deadline, I couldn't rebuild the entire backend logic. My mission was to bridge the gap between the existing "Shopify-style" mechanics and the expectations of crypto traders, while polishing the UI to be investor-ready.</p>
+          </div>
+          `
+        },
+        {
+          headline: 'Strategy: Quick Wins & Componentizing',
+          body: `
+          <div className="modal-section-text">
+          <p>With only a month to deliver, I had to be pragmatic. I conducted a rapid audit of competitors (CoinMarketCap, Coingecko) and e-commerce leaders to find a hybrid UI pattern that worked.</p>
+          <p>I started by breaking the UI into <strong>reusable components</strong>. This wasn't just for consistency; it allowed me to quickly mock up different table layouts and gave the engineers a system that was much faster to implement.</p>
+          </div>
+          `
+        },
+
+        {
+          headline: 'Key Improvements',
+          body: `
+          <div className="modal-section-text">
+          <h3>1. Redesigning the Data Tables</h3>
+          <p>The original tables were dense and cluttered with too much visual noise. Cells were aligned inconsistently, and the table overall looked cheap and unprofessional—lacking the critical trust required for purchasing cryptocurrencies.</p>
+          </div>
+<div className="before-after-wrapper">
+              <div className="modal-case-study-label">BEFORE</div>
+              <img src="/portfolio/mc2-table-before.webp" alt="Data Tables Redesign" className="modal-case-study-image" />
+              <div className="modal-case-study-label">AFTER</div>
+              <img src="/portfolio/mc2-table-after.webp" alt="Data Tables Redesign" className="modal-case-study-image" />
+              <div className="modal-section-text modal-section-text-gap">
+                <ul className="custom-bullet-list">
+                  <li>
+                    <img src="/portfolio/ul1.svg" className="custom-bullet-marker" alt="" />
+                    <span><strong>Enhanced Accessibility: </strong> I updated the star buttons and improved accessibility by establishing higher contrast ratios on table elements.</span>
+                  </li>
+                  <li>
+                    <img src="/portfolio/ul2.svg" className="custom-bullet-marker" alt="" />
+                    <span><strong>Reduced Visual Noise: </strong> I applied progressive disclosure, hiding low-priority data and displaying elements like sorting arrows only on hover to reduce clutter.</span>
+                  </li>
+                  <li>
+                    <img src="/portfolio/ul3.svg" className="custom-bullet-marker" alt="" />
+                    <span><strong>Optimized Data Density: </strong> I simplified the columns, removing low-priority data to save horizontal space, and introduced intuitive filtering.</span>
+                  </li>
+                   <li>
+                    <img src="/portfolio/ul4.svg" className="custom-bullet-marker" alt="" />
+                    <span><strong>Clear Call-to-Action: </strong> The ambiguous "Cart" icon was replaced with clear, prominent "BUY" buttons. This reduced cognitive load and made the primary call-to-action unmistakable.</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+<div className="modal-section-text">
+            <h3>2. Fixing the "Cart" Friction</h3>
+            <p>Since technical constraints required keeping the "shopping cart" model, I focused on transforming it from a point of friction into a transparent, additive experience.</p>
+            <ul style="padding-left: 20px; list-style-type: disc; margin-bottom: 16px;">
+              <li><strong>System Status Visibility: </strong> I implemented toast notifications and micro-interactions to provide immediate feedback, ensuring users instantly understood when assets were successfully added to their bundle.</li>
+              <li><strong>Active Discovery: </strong> I utilized the cart view to introduce dynamic "Top Gainer" suggestions, turning a passive holding area into an active feature that encourages portfolio diversification.</li>
+              <li><strong>Elevated Visual Hierarchy: </strong> I redesigned the drawer with a strict financial aesthetic - using clean spacing and clear summaries - to ensure it felt like a professional trading tool rather than a generic e-commerce checkout.</li>
+            </ul></div>
+            <img src="/portfolio/mc2-cart.webp" alt="Cart Redesign" className="modal-content-image" />
+<div className="modal-section-text">
+            <h3>3. Solving Navigation Scalability</h3>
+            <p>The original sidebar suffered from vertical overflow issues. On smaller laptops, critical menu items disappeared below the fold, forcing users to scroll to access basic navigation.</p><p>This issue became urgent when a new business requirement emerged: we needed to permanently display a "Supported by" trust badge in the footer prior to a major industry event.</p>
+            <ul style="padding-left: 20px; list-style-type: disc; margin-bottom: 16px;">
+              <li><strong>Vertical Optimization: </strong> I redesigned the navigation architecture to be denser and more efficient. By consolidating actions—such as converting the large "Create Portfolio" button into a subtle inline action—I reclaimed valuable vertical real estate.</li>
+              <li><strong>Strategic Real Estate: </strong> This layout optimization ensured that all primary navigation points remained visible within the average viewport.</li>
+              <li><strong>Trust Integration: </strong> The new spacing strategy created a permanent "safe zone" at the bottom of the sidebar, allowing us to prominently display the "Supported by" badge without cluttering the navigation flow.</li>
+            </ul></div>
+            <div className="before-after-narrow-wrapper">
+              <div className="before-after-narrow-col">
+                <div className="modal-case-study-label">BEFORE</div>
+              <img src="/portfolio/mc2-nav-before.webp" alt="Data Tables Redesign" className="modal-case-study-narrow-image" /></div>
+              <div className="before-after-narrow-col"><div className="modal-case-study-label">AFTER</div>
+              <img src="/portfolio/mc2-nav-after.webp" alt="Data Tables Redesign" className="modal-case-study-narrow-image" /></div>
+            </div>
+          `
+        },
+        {
+          headline: 'The Outcome',
+          body: `
+          <div className="modal-section-text">
+          <p>The impact was immediate and measurable. The engineering team began implementing the component-based designs during the project, accelerating their development velocity.</p>
+          <ul style="padding-left: 20px; list-style-type: disc;">
+            <li><strong>Scaled to $50M AUM: </strong>By reducing friction in the purchase flow and upgrading the UI to build trust, the platform successfully scaled to over <strong>$50 Million in Assets Under Management.</strong></li>
+            <li><strong>Secured Funding: </strong>The "institutional-grade" redesign was a key factor in building investor confidence, directly helping the company secure their next round of funding.</li>
+            <li><strong>Developer Efficiency: </strong>The move to a component-based system meant the engineers could maintain consistency and build faster long after my contract ended.</li>
+          </ul>
+          </div>
+          `
+        },
+
+        {
+          headline: 'Retrospective',
+          body: `
+          <div className="modal-section-text">
+            <p><strong>What I learned & What I’d do differently.</strong> This project reinforced the value of constraints. Not being able to change the "Cart logic" forced me to find creative UI solutions to make it work for the user.</p>
+            <p>If I had 8 weeks instead of 4, I would have focused heavily on the mobile experience. While I updated the main tables for mobile, a complex trading platform requires dedicated mobile flows to be truly competitive. I also would have loved to run A/B tests on the purchase flow to see if the "Trending Tokens" in the cart significantly boosted order value.</p>
+          </div>
+          `
+        }
+
+      ]
     };
   }
 
@@ -336,7 +524,7 @@ const RightPanel: React.FC = () => {
     document.body.appendChild(textArea);
     textArea.focus();
     textArea.select();
-    
+
     try {
       document.execCommand('copy');
       setCopied(true);
@@ -344,7 +532,7 @@ const RightPanel: React.FC = () => {
     } catch (err) {
       console.error('Failed to copy:', err);
     }
-    
+
     document.body.removeChild(textArea);
   };
 
@@ -390,7 +578,7 @@ const RightPanel: React.FC = () => {
       const originalOverflow = document.body.style.overflow;
       // Disable body scroll
       document.body.style.overflow = 'hidden';
-      
+
       return () => {
         // Restore original overflow when modal closes
         document.body.style.overflow = originalOverflow;
@@ -399,12 +587,11 @@ const RightPanel: React.FC = () => {
   }, [modalData]);
 
   return (
-    <div className="right-panel">
-      {/* MC2 */}
+    <div className="right-panel">{/* MC2 */}
       <div className="card card-full">
-        <div className="landing-container" onClick={() => openModal('/portfolio/mc2.webp')}>
+        <div className="landing-container" onClick={() => openModal('/portfolio/mc2-final.webp')}>
           <Image
-            src="/portfolio/mc2.webp"
+            src="/portfolio/mc2-final.webp"
             alt="MC2 Finance"
             width={800}
             height={468}
@@ -577,24 +764,94 @@ const RightPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Modal - Extracted to separate component for performance */}
       {modalData && (
-        <div className="modal-backdrop" onClick={handleBackdropClick}>
-          <button className="modal-close" onClick={closeModal}>
-            <Image
-              src="/icons/close.svg"
-              alt="Close"
-              width={20}
-              height={20}
-            />
-          </button>
-          <div className="modal-content">
-            {/* Header */}
-            <div className="modal-header">
-              <h1 className="modal-headline">{modalData.headline}</h1>
-              <p className="modal-body">{modalData.body}</p>
-            </div>
+        <ProjectModal
+          modalData={modalData}
+          handleBackdropClick={handleBackdropClick}
+          closeModal={closeModal}
+        />
+      )}
+    </div>
+  );
+};
 
+// Sub-component for the modal to handle deferred rendering
+const ProjectModal: React.FC<{
+  modalData: ModalData;
+  handleBackdropClick: (e: React.MouseEvent) => void;
+  closeModal: () => void;
+}> = ({ modalData, handleBackdropClick, closeModal }) => {
+  const [isContentVisible, setIsContentVisible] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const fallbackCopy = () => {
+    const textArea = document.createElement('textarea');
+    textArea.value = 'dusantomic@gmail.com';
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
+    try {
+      document.execCommand('copy');
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+
+    document.body.removeChild(textArea);
+  };
+
+  const handleCopy = () => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText('dusantomic@gmail.com')
+        .then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        })
+        .catch(() => {
+          fallbackCopy();
+        });
+    } else {
+      fallbackCopy();
+    }
+  };
+
+  useEffect(() => {
+    // Defer the rendering of heavy content to allow the enter animation to start smoothly
+    const info = requestAnimationFrame(() => {
+      setIsContentVisible(true);
+    });
+    return () => cancelAnimationFrame(info);
+  }, []);
+
+  return (
+    <div className="modal-backdrop" onClick={handleBackdropClick}>
+      <button className="modal-close" onClick={closeModal}>
+        <Image
+          src="/icons/close.svg"
+          alt="Close"
+          width={20}
+          height={20}
+        />
+      </button>
+      <div className={`modal-content ${modalData.headline === 'MC2 Finance' ? 'modal-content--mc2' : ''}`}>
+        {/* Header */}
+        <div className="modal-header">
+          <h1 className="modal-headline">{modalData.headline}</h1>
+          <div className={`modal-body-transition ${isContentVisible ? 'is-visible' : ''}`}>
+            <p className="modal-body">{parse(modalData.body)}</p>
+          </div>
+        </div>
+
+        {/* Defer heavy content rendering */}
+        {isContentVisible && (
+          <div className="modal-heavy-content">
             {/* Main Image(s) */}
             {modalData.imageLayout === 'mosaik' ? (
               <div className="modal-images-mosaik">
@@ -677,110 +934,108 @@ const RightPanel: React.FC = () => {
               const hasImage = section.imagePlaceholder && section.imagePlaceholder.trim() !== '';
               const isStacked = !hasImage || index === 0 || index === 4; // Sections without images, Section 1 and 5 are stacked
               const isAlternate = hasImage && index === 2; // Section 3 is alternate (image left, text right)
-              
+
               return (
-                <div 
-                  key={index} 
-                  className={`modal-section ${isAlternate ? 'modal-section--alternate' : ''} ${isStacked ? 'modal-section--stacked' : ''}`}
+                <div
+                  key={index}
+                  className={`modal-section ${index === 0 ? 'modal-section--first' : ''} ${isAlternate ? 'modal-section--alternate' : ''} ${isStacked ? 'modal-section--stacked' : ''}`}
                 >
                   <div className="modal-section-content">
-                    <div className="modal-section-text">
-                      <h2 className="modal-section-headline">{section.headline}</h2>
-                      <div className="modal-section-body">
-                        {typeof section.body === 'string' ? (
-                          (() => {
-                            // Check if body contains HTML tags
-                            const hasHTML = /<[^>]+>/.test(section.body);
-                            
-                            if (hasHTML) {
-                              // If HTML is present, parse it directly
-                              // Split by double newlines to handle multiple blocks
-                              const blocks = section.body.split('\n\n').filter(block => block.trim());
-                              return (
-                                <>
-                                  {blocks.map((block, idx) => {
-                                    const trimmed = block.trim();
-                                    if (!trimmed) return null;
-                                    
-                                    // If it's already HTML (contains tags), parse it
-                                    if (/<[^>]+>/.test(trimmed)) {
-                                      return <div key={idx}>{parse(trimmed)}</div>;
-                                    }
-                                    
-                                    // Otherwise treat as plain text paragraph
-                                    return <p key={idx}>{trimmed}</p>;
-                                  })}
-                                </>
-                              );
-                            }
-                            
-                            // Original logic for plain text with markdown-style lists
-                            const paragraphs = section.body.split('\n\n');
+                    {section.headline && <h2 className="modal-section-headline">{section.headline}</h2>}
+                    <div className="modal-section-body">
+                      {typeof section.body === 'string' ? (
+                        (() => {
+                          // Check if body contains HTML tags
+                          const hasHTML = /<[^>]+>/.test(section.body);
+
+                          if (hasHTML) {
+                            // If HTML is present, parse it directly
+                            // Split by double newlines to handle multiple blocks
+                            const blocks = section.body.split('\n\n').filter(block => block.trim());
                             return (
                               <>
-                                {paragraphs.map((paragraph, idx) => {
-                                  const trimmed = paragraph.trim();
+                                {blocks.map((block, idx) => {
+                                  const trimmed = block.trim();
                                   if (!trimmed) return null;
-                                  
-                                  // Check if it's a bullet list (starts with "- ")
-                                  if (trimmed.startsWith('- ')) {
-                                    const lines = trimmed.split('\n');
-                                    const bulletItems = lines
-                                      .filter(line => line.trim().startsWith('- '))
-                                      .map(line => line.trim().substring(2).trim())
-                                      .filter(item => item);
-                                    
-                                    if (bulletItems.length > 0) {
-                                      return (
-                                        <ul key={idx}>
-                                          {bulletItems.map((item, i) => (
-                                            <li key={i}>{item}</li>
-                                          ))}
-                                        </ul>
-                                      );
-                                    }
+
+                                  // If it's already HTML (contains tags), parse it
+                                  if (/<[^>]+>/.test(trimmed)) {
+                                    return <div key={idx}>{parse(trimmed)}</div>;
                                   }
-                                  
-                                  // Check if it's a numbered list (starts with "1. ", "2. ", etc.)
-                                  if (/^\d+\.\s/.test(trimmed)) {
-                                    const lines = trimmed.split('\n');
-                                    const numberedItems = lines
-                                      .filter(line => /^\d+\.\s/.test(line.trim()))
-                                      .map(line => {
-                                        const match = line.trim().match(/^\d+\.\s(.+)$/);
-                                        return match ? match[1].trim() : '';
-                                      })
-                                      .filter(item => item);
-                                    
-                                    if (numberedItems.length > 0) {
-                                      return (
-                                        <ol key={idx}>
-                                          {numberedItems.map((item, i) => (
-                                            <li key={i}>{item}</li>
-                                          ))}
-                                        </ol>
-                                      );
-                                    }
-                                  }
-                                  
-                                  // Regular paragraph
-                                  return (
-                                    <p key={idx}>{trimmed}</p>
-                                  );
+
+                                  // Otherwise treat as plain text paragraph
+                                  return <p key={idx}>{trimmed}</p>;
                                 })}
                               </>
                             );
-                          })()
-                        ) : (
-                          section.body
-                        )}
-                      </div>
+                          }
+
+                          // Original logic for plain text with markdown-style lists
+                          const paragraphs = section.body.split('\n\n');
+                          return (
+                            <>
+                              {paragraphs.map((paragraph, idx) => {
+                                const trimmed = paragraph.trim();
+                                if (!trimmed) return null;
+
+                                // Check if it's a bullet list (starts with "- ")
+                                if (trimmed.startsWith('- ')) {
+                                  const lines = trimmed.split('\n');
+                                  const bulletItems = lines
+                                    .filter(line => line.trim().startsWith('- '))
+                                    .map(line => line.trim().substring(2).trim())
+                                    .filter(item => item);
+
+                                  if (bulletItems.length > 0) {
+                                    return (
+                                      <ul key={idx}>
+                                        {bulletItems.map((item, i) => (
+                                          <li key={i}>{item}</li>
+                                        ))}
+                                      </ul>
+                                    );
+                                  }
+                                }
+
+                                // Check if it's a numbered list (starts with "1. ", "2. ", etc.)
+                                if (/^\d+\.\s/.test(trimmed)) {
+                                  const lines = trimmed.split('\n');
+                                  const numberedItems = lines
+                                    .filter(line => /^\d+\.\s/.test(line.trim()))
+                                    .map(line => {
+                                      const match = line.trim().match(/^\d+\.\s(.+)$/);
+                                      return match ? match[1].trim() : '';
+                                    })
+                                    .filter(item => item);
+
+                                  if (numberedItems.length > 0) {
+                                    return (
+                                      <ol key={idx}>
+                                        {numberedItems.map((item, i) => (
+                                          <li key={i}>{item}</li>
+                                        ))}
+                                      </ol>
+                                    );
+                                  }
+                                }
+
+                                // Regular paragraph
+                                return (
+                                  <p key={idx}>{trimmed}</p>
+                                );
+                              })}
+                            </>
+                          );
+                        })()
+                      ) : (
+                        section.body
+                      )}
                     </div>
                     {hasImage && section.imagePlaceholder && (
                       <div className="modal-section-image">
-                        <Image 
-                          src={section.imagePlaceholder} 
-                          alt={section.headline}
+                        <Image
+                          src={section.imagePlaceholder}
+                          alt={section.headline || ''}
                           width={600}
                           height={400}
                           className="modal-section-img"
@@ -792,9 +1047,84 @@ const RightPanel: React.FC = () => {
                 </div>
               );
             })}
+
+            {/* CTA Section - Specific for MC2 Finance */}
+            {modalData.headline === 'MC2 Finance' && (
+              <>
+                <div className="modal-cta-section">
+                  <h2 className="teaser-title" style={{ marginBottom: '32px' }}>Curious to see more work?</h2>
+                  <MC2CtaButton />
+                  <div className="modal-cta-contact">
+                    <p className="teaser-text">Prefer email? Write me at</p>
+                    <div className="cta-email-wrapper">
+                      <button className="cta-email ctwhite" onClick={() => window.open('mailto:dusantomic@gmail.com')}>
+                        dusantomic@gmail.com
+                      </button>
+
+                      <div className="copy-wrapper">
+                        <button className="copy-btn" onClick={handleCopy} aria-label="Copy Email">
+                          <Image src="/icons/copybtn.svg" alt="Copy" width={20} height={20} />
+                        </button>
+                        <span className="copy-tooltip">
+                          {copied ? 'Copied!' : 'Copy Email'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer - Reusing lp-footer structure */}
+                <div className="modal-footer">
+                  <span className="modal-footer-copy">© Dusan Tomic 2026</span>
+                  <div className="modal-footer-social">
+                    <span className="modal-footer-copy modal-footer-label">Let’s connect</span>
+                    <div className="modal-footer-buttons">
+                      <div className="tooltip-wrapper">
+                        <MagneticSocialLink
+                          href="https://www.linkedin.com/in/dusantmc/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="social-button"
+                          aria-label="LinkedIn"
+                        >
+                          <Image src="/icons/linkedin.svg" alt="LinkedIn" width={26} height={26} />
+                        </MagneticSocialLink>
+                        <div className="copy-tooltip">Connect with me on LinkedIn</div>
+                      </div>
+
+                      <div className="tooltip-wrapper">
+                        <MagneticSocialLink
+                          href="https://x.com/dusantomic"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="social-button"
+                          aria-label="Twitter"
+                        >
+                          <Image src="/icons/twitter.svg" alt="Twitter" width={26} height={26} />
+                        </MagneticSocialLink>
+                        <div className="copy-tooltip">Follow me on Twitter</div>
+                      </div>
+
+                      <div className="tooltip-wrapper">
+                        <MagneticSocialLink
+                          href="https://contra.com/dusantomic/work"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="social-button"
+                          aria-label="Contra"
+                        >
+                          <Image src="/icons/contra.svg" alt="Contra" width={26} height={26} />
+                        </MagneticSocialLink>
+                        <div className="copy-tooltip">Hire me on Contra</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

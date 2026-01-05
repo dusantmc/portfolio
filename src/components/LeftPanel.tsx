@@ -66,7 +66,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ activeTab, setActiveTab }) => {
     'about->resume': {
       initial: { opacity: 0, x: 12 },
       animate: { opacity: 1, x: 0 },
-      exit: { opacity: 0, x:  -12 },
+      exit: { opacity: 0, x: -12 },
     },
 
     // --- Default (fallback) ---
@@ -127,7 +127,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ activeTab, setActiveTab }) => {
 
       {/* Footer */}
       <div className="lp-footer">
-        <span className="lp-footer-copy">© Dusan Tomic 2025</span>
+        <span className="lp-footer-copy">© Dusan Tomic 2026</span>
         <div className="lp-footer-social">
           <span className="lp-footer-copy lp-footer-label">Let’s connect</span>
           <div className="lp-footer-buttons">

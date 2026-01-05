@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import Image from 'next/image';
 import { useMagneticHover } from '@/hooks/useMagneticHover';
-import LottiePlayer, { LottiePlayerElement } from './LottiePlayer';
+import { useRive, Layout, Fit, Alignment } from '@rive-app/react-canvas';
 import { spawnGreetingParticle, cleanupParticles } from '@/utils/particles';
 
 interface TabContentProps {
@@ -12,10 +12,10 @@ interface TabContentProps {
 
 // Update these paths to your actual images
 const aboutPhotos = [
-  { src: '/about/helena3.webp', alt: 'Waikiki',        caption: 'Me and my daughter' },
-  { src: '/about/image3.webp', alt: 'Family',      caption: 'Family photo' },
+  { src: '/about/helena3.webp', alt: 'Waikiki', caption: 'Me and my daughter' },
+  { src: '/about/image3.webp', alt: 'Family', caption: 'Family photo' },
   { src: '/about/image1.webp', alt: 'Mauritius', caption: 'Catching (flat) waves in Mauritius' },
-  { src: '/about/image4.webp', alt: 'Hollywood',   caption: 'Posing in front of Hollywood sign' },
+  { src: '/about/image4.webp', alt: 'Hollywood', caption: 'Posing in front of Hollywood sign' },
 ];
 
 type ExperienceItem = {
@@ -119,46 +119,48 @@ const HAND_BURST_SPEEDS = [
 ] as const;
 
 const HAND_TOOLTIP_MESSAGES = [
-  'Ho ho ho!',
-  'Santa\'s impressed',
-  'Jingle all the way!',
-  'Snow much fun',
-  'Best Christmas ever!',
+  'Keep going',
+  'You are on fire!',
+  'I like your energy',
+  'This is getting emotional',
+  'Now we’re best friends',
 ] as const;
 
 type HandTooltipMessage = (typeof HAND_TOOLTIP_MESSAGES)[number];
 
+
+
 const BookCallButton: React.FC = () => {
-  const playerRef = useRef<LottiePlayerElement | null>(null);
   const magnetic = useMagneticHover<HTMLAnchorElement>({ stickyFactor: 0.02, scale: 1.02 });
-  useEffect(() => {
-    void import('@lottielab/lottie-player');
-  }, []);
 
-  const handleEnter = () => {
-    const player = playerRef.current;
-    if (!player) return;
-    player.loop = true;
-    player.seek?.(0);
-    player.play?.();
-  };
+  const { rive, RiveComponent } = useRive({
+    src: '/icons/cta_background.riv',
+    stateMachines: 'State Machine 1',
+    autoplay: false,
+    layout: new Layout({
+      fit: Fit.Cover,
+      alignment: Alignment.Center,
+    }),
+  });
 
-  const stopLottie = () => {
-    const player = playerRef.current;
-    player?.stop?.();
-    if (!player) return;
-    player.loop = false;
-    player.seek?.(0);
+  const handleMouseEnter = () => {
+    magnetic.handleMouseEnter();
+    rive?.play();
   };
 
   const handleMouseLeave = () => {
-    stopLottie();
     magnetic.handleMouseLeave();
+    rive?.pause();
   };
 
   const handleBlur = () => {
-    stopLottie();
     magnetic.handleBlur();
+    rive?.pause();
+  };
+
+  const handleFocus = () => {
+    magnetic.handleFocus();
+    rive?.play();
   };
 
   return (
@@ -168,14 +170,8 @@ const BookCallButton: React.FC = () => {
       rel="noopener noreferrer"
       className="cta-button lottie-button"
       ref={magnetic.elementRef}
-      onMouseEnter={() => {
-        magnetic.handleMouseEnter();
-        handleEnter();
-      }}
-      onFocus={() => {
-        magnetic.handleFocus();
-        handleEnter();
-      }}
+      onMouseEnter={handleMouseEnter}
+      onFocus={handleFocus}
       onMouseLeave={handleMouseLeave}
       onBlur={handleBlur}
       onMouseMove={magnetic.handleMouseMove}
@@ -183,13 +179,8 @@ const BookCallButton: React.FC = () => {
       onMouseUp={magnetic.handleMouseUp}
     >
       <span ref={magnetic.contentRef} className="cta-button__label">Book a call</span>
-      <LottiePlayer
-        ref={playerRef}
-        src="/icons/lottiebg.json"
+      <RiveComponent
         className="cta-lottie cta-lottie--primary"
-        renderer="svg"
-        mode="normal"
-        background="transparent"
         aria-hidden="true"
       />
     </a>
@@ -227,9 +218,10 @@ const TabContent: React.FC<TabContentProps> = ({ activeTab }) => {
         handTooltipTimeoutRef.current = null;
       }
       // Cleanup particles on unmount
-      cleanupParticles();
     };
   }, []);
+
+
 
   const showHandTooltip = () => {
     if (typeof window === 'undefined') return;
@@ -278,11 +270,6 @@ const TabContent: React.FC<TabContentProps> = ({ activeTab }) => {
         handBurstTimeoutRef.current = null;
       }, resetDelay);
     });
-
-    // Spawn particle at click position
-    if (event && event.clientX !== undefined && event.clientY !== undefined) {
-      spawnGreetingParticle(event.clientX, event.clientY);
-    }
   };
 
   const fallbackCopy = () => {
@@ -327,68 +314,68 @@ const TabContent: React.FC<TabContentProps> = ({ activeTab }) => {
       <div className="top-content">
         {/* Greeting */}
 
-        
+
         <div className="greeting">
           <h2 className="section-title greeting-title">Hi, I&apos;m Dusan!<span
-              className="greeting-hand-wrapper"
-              onPointerDown={triggerHandBurst}
-              style={
-                {
-                  '--hand-burst-duration': `${handBurstDurations.burst}ms`,
-                  '--hand-splash-duration': `${handBurstDurations.splash}ms`,
-                  '--hand-active-duration': `${handBurstDurations.handActive}ms`,
-                  '--hand-hover-duration': `${handBurstDurations.handHover}ms`,
-                } as CSSProperties
-              }
+            className="greeting-hand-wrapper"
+            onPointerDown={triggerHandBurst}
+            style={
+              {
+                '--hand-burst-duration': `${handBurstDurations.burst}ms`,
+                '--hand-splash-duration': `${handBurstDurations.splash}ms`,
+                '--hand-active-duration': `${handBurstDurations.handActive}ms`,
+                '--hand-hover-duration': `${handBurstDurations.handHover}ms`,
+              } as CSSProperties
+            }
+          >
+            <Image
+              src="/icons/emojihand3.png"
+              alt=""
+              width={32}
+              height={32}
+              className="greeting-hand"
+              aria-hidden="true"
+            />
+            <span
+              className={`greeting-hand-splash${handBurstActive ? ' greeting-hand-splash--active' : ''}`}
+              aria-hidden="true"
+            />
+            <span
+              className={`hand-tooltip greeting-hand-click-tooltip${handTooltipVisible ? ' is-visible' : ''}`}
+              role="status"
             >
-              <Image
-                src="/icons/emojihand4.png"
-                alt=""
-                width={32}
-                height={32}
-                className="greeting-hand"
-                aria-hidden="true"
-              />
-              <span
-                className={`greeting-hand-splash${handBurstActive ? ' greeting-hand-splash--active' : ''}`}
-                aria-hidden="true"
-              />
-              <span
-                className={`hand-tooltip greeting-hand-click-tooltip${handTooltipVisible ? ' is-visible' : ''}`}
-                role="status"
-              >
-                {handTooltipMessage}
-              </span>
-              <span
-                className={`greeting-hand-burst${handBurstActive ? ' greeting-hand-burst--active' : ''}`}
-                aria-hidden="true"
-              >
-                {HAND_PARTICLES.map((particle, index) => (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    key={`greeting-hand-particle-${index}`}
-                    src={particle.asset}
-                    alt=""
-                    width={20}
-                    height={20}
-                    className="greeting-hand-particle"
-                    aria-hidden="true"
-                    loading="lazy"
-                    style={
-                      {
-                        '--dx': particle.dx,
-                        '--dy': particle.dy,
-                        '--start-dx': particle.startDx,
-                        '--start-dy': particle.startDy,
-                        '--start-rot': particle.startRotation,
-                        '--end-rot': particle.endRotation,
-                        '--delay': particle.delay,
-                      } as CSSProperties
-                    }
-                  />
-                ))}
-              </span>
+              {handTooltipMessage}
             </span>
+            <span
+              className={`greeting-hand-burst${handBurstActive ? ' greeting-hand-burst--active' : ''}`}
+              aria-hidden="true"
+            >
+              {HAND_PARTICLES.map((particle, index) => (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  key={`greeting-hand-particle-${index}`}
+                  src={particle.asset}
+                  alt=""
+                  width={20}
+                  height={20}
+                  className="greeting-hand-particle"
+                  aria-hidden="true"
+                  loading="lazy"
+                  style={
+                    {
+                      '--dx': particle.dx,
+                      '--dy': particle.dy,
+                      '--start-dx': particle.startDx,
+                      '--start-dy': particle.startDy,
+                      '--start-rot': particle.startRotation,
+                      '--end-rot': particle.endRotation,
+                      '--delay': particle.delay,
+                    } as CSSProperties
+                  }
+                />
+              ))}
+            </span>
+          </span>
           </h2>
           <div className="about-copy">
             <p className="intro-subtext">
@@ -405,19 +392,19 @@ const TabContent: React.FC<TabContentProps> = ({ activeTab }) => {
           <BookCallButton />
 
           <div
-          className="cta-email-wrapper"
-          ref={emailMagnetic.elementRef}
-          onMouseEnter={emailMagnetic.handleMouseEnter}
-          onMouseMove={emailMagnetic.handleMouseMove}
-          onMouseLeave={() => {
-            emailMagnetic.setShift(0, 0);
-            emailMagnetic.handleMouseLeave();
-          }}
-          onMouseDown={emailMagnetic.handleMouseDown}
-          onMouseUp={(event) => {
-            emailMagnetic.setShift(0, 0);
-            emailMagnetic.handleMouseUp(event);
-          }}
+            className="cta-email-wrapper"
+            ref={emailMagnetic.elementRef}
+            onMouseEnter={emailMagnetic.handleMouseEnter}
+            onMouseMove={emailMagnetic.handleMouseMove}
+            onMouseLeave={() => {
+              emailMagnetic.setShift(0, 0);
+              emailMagnetic.handleMouseLeave();
+            }}
+            onMouseDown={emailMagnetic.handleMouseDown}
+            onMouseUp={(event) => {
+              emailMagnetic.setShift(0, 0);
+              emailMagnetic.handleMouseUp(event);
+            }}
           >
             <button
               className="cta-email"
@@ -436,27 +423,27 @@ const TabContent: React.FC<TabContentProps> = ({ activeTab }) => {
             </button>
 
             <div className="copy-wrapper">
-          <button
-            className="copy-btn"
-            onClick={handleCopy}
-            aria-label="Copy Email"
-            onMouseDown={() => emailMagnetic.setShift(2, 0)}
-            onMouseUp={() => emailMagnetic.setShift(0, 0)}
-            onMouseLeave={() => emailMagnetic.setShift(0, 0)}
-            onTouchStart={() => emailMagnetic.setShift(2, 0)}
-            onTouchEnd={() => emailMagnetic.setShift(0, 0)}
-            onTouchCancel={() => emailMagnetic.setShift(0, 0)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                emailMagnetic.setShift(2, 0);
-              }
-            }}
-            onKeyUp={() => emailMagnetic.setShift(0, 0)}
-          >
-            <Image
-              src="/icons/copybtn.svg"
-              alt="Copy"
-              width={20}
+              <button
+                className="copy-btn"
+                onClick={handleCopy}
+                aria-label="Copy Email"
+                onMouseDown={() => emailMagnetic.setShift(2, 0)}
+                onMouseUp={() => emailMagnetic.setShift(0, 0)}
+                onMouseLeave={() => emailMagnetic.setShift(0, 0)}
+                onTouchStart={() => emailMagnetic.setShift(2, 0)}
+                onTouchEnd={() => emailMagnetic.setShift(0, 0)}
+                onTouchCancel={() => emailMagnetic.setShift(0, 0)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    emailMagnetic.setShift(2, 0);
+                  }
+                }}
+                onKeyUp={() => emailMagnetic.setShift(0, 0)}
+              >
+                <Image
+                  src="/icons/copybtn.svg"
+                  alt="Copy"
+                  width={20}
                   height={20}
                 />
               </button>
@@ -546,36 +533,36 @@ const TabContent: React.FC<TabContentProps> = ({ activeTab }) => {
 
       <div className="about-copy">
         <p className="about-text">
-When I’m not drawing rectangles in Figma, I’m usually at the gym, running, or cooking something that could pass for healthy (my family swears by my salmon–avocado toast).
+          When I’m not drawing rectangles in Figma, I’m usually at the gym, running, or cooking something that could pass for healthy (my family swears by my salmon–avocado toast).
         </p>
 
         <p className="about-text">
-        I&apos;m addicted to turquoise water and white sand beaches, and still chasing the dream of standing up on a surfboard for longer than five seconds.
+          I&apos;m addicted to turquoise water and white sand beaches, and still chasing the dream of standing up on a surfboard for longer than five seconds.
         </p>
       </div>
 
-{/* --- Photo stack gallery --- */}
-<div className="about-gallery" aria-label="Personal photo gallery">
-  {aboutPhotos.map((p, i) => (
-    <div key={p.src} className={`about-photo about-photo--${i + 1}`}>
-      <div className="about-photo-frame">
-        <Image
-          src={p.src}
-          alt={p.alt}
-          width={92}
-          height={92}
-          priority
-          sizes="92px"
-        />
-      </div>
+      {/* --- Photo stack gallery --- */}
+      <div className="about-gallery" aria-label="Personal photo gallery">
+        {aboutPhotos.map((p, i) => (
+          <div key={p.src} className={`about-photo about-photo--${i + 1}`}>
+            <div className="about-photo-frame">
+              <Image
+                src={p.src}
+                alt={p.alt}
+                width={92}
+                height={92}
+                priority
+                sizes="92px"
+              />
+            </div>
 
-      <div className="about-tooltip">
-        <span className="about-tooltip-text">{p.caption}</span>
+            <div className="about-tooltip">
+              <span className="about-tooltip-text">{p.caption}</span>
+            </div>
+          </div>
+        ))}
       </div>
-    </div>
-  ))}
-</div>
-{/* --- /Photo stack gallery --- */}
+      {/* --- /Photo stack gallery --- */}
     </div>
   );
 
