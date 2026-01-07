@@ -20,7 +20,7 @@ const MC2CtaButton = () => {
 
   return (
     <MagneticSocialLink
-      href="https://cal.com/dusantomic/intro-call"
+      href="https://cal.com/dusantmc/intro-call"
       target="_blank"
       className={`cta-button lottie-button teaser-cta${isHovered ? ' is-hovered' : ''}`}
       onMouseEnter={() => {
