@@ -1383,7 +1383,7 @@ strong {
   gap: 6px;
   font-size: 12px;
   letter-spacing: -0.1px;
-  color: rgba(0, 0, 0, 0.4);
+  color: rgba(0, 0, 0, 0.6);
 }
 
 .portfolio-icon {
@@ -1562,6 +1562,7 @@ strong {
   box-shadow: none;
   border-radius: 0;
 }
+
 
 .modal-image-wrapper--multiple .modal-images-grid {
   display: grid;
@@ -1991,7 +1992,8 @@ strong {
   justify-content: center;
   text-align: center;
   padding: 80px 0 40px 0;
-  margin-top: 64px;
+  margin-top: 96px;
+  margin-bottom: 64px;
   background-color: white;
   border-radius: 32px;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.04);
@@ -2018,6 +2020,7 @@ strong {
 /* Modal Footer */
 .modal-footer {
   margin-top: 40px;
+  margin-bottom: -64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2602,9 +2605,41 @@ strong {
     color: rgba(0, 0, 0, 0.5);
   }
 
+  .modal-image-wrapper--multiple {
+    overflow: visible;
+    padding: 0;
+    margin-left: -16px;
+    margin-right: -16px;
+    width: calc(100% + 32px);
+  }
+
   .modal-image-wrapper--multiple .modal-images-grid {
-    grid-template-columns: 1fr;
-    gap: 24px;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 16px;
+    overflow-x: auto;
+    overflow-y: visible;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 16px;
+  }
+
+  .modal-image-wrapper--multiple .modal-images-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .modal-image-wrapper--multiple .modal-image-item {
+    flex: 0 0 auto;
+    width: auto;
+    height: 400px;
+    scroll-snap-align: center;
+    border-radius: 16px;
+  }
+
+  .modal-image-wrapper--multiple .modal-image-item .modal-image {
+    width: auto;
+    height: 100%;
+    object-fit: contain;
   }
 
   .modal-images-mosaik {

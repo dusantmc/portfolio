@@ -49,6 +49,50 @@ const MC2CtaButton = () => {
   );
 };
 
+// Video component that autoplays when visible in viewport
+const ViewportVideo: React.FC<{ src: string; className?: string }> = ({ src, className }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            // Reset video to beginning and play
+            video.currentTime = 0;
+            video.play().catch(() => {
+              // Autoplay may be blocked, that's okay
+            });
+          } else {
+            // Pause when out of view
+            video.pause();
+          }
+        });
+      },
+      { threshold: 0.5 } // Trigger when 50% visible
+    );
+
+    observer.observe(video);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  return (
+    <video
+      ref={videoRef}
+      src={src}
+      className={className}
+      muted
+      playsInline
+      style={{ width: '100%', height: 'auto', borderRadius: '32px' }}
+    />
+  );
+};
 
 interface TeaserCardProps {
   handleCopy: () => void;
@@ -464,6 +508,141 @@ const getModalData = (imageSrcs: string[], projectId?: string): ModalData => {
     };
   }
 
+  // Loop - Built for the next generation of homeowners
+  if (imageSrcs[0] === '/portfolio/level-1.webp' && projectId === 'loop-mobile') {
+    return {
+      imageSrcs: ['/portfolio/loop-1.webp', '/portfolio/loop-2.webp', '/portfolio/loop-3.webp'],
+      headline: 'Loop',
+      body: 'Disrupting the real estate industry with a dopamine-driven <br/>' +
+        'discovery experience for Gen Z',
+      role: 'Product Designer',
+      results: '',
+      sections: [
+        {
+          headline: 'Project Overview',
+          body: `
+          <div className="modal-section-text">
+          <p><strong>Loop</strong> is a mobile app designed to break the monotony of traditional home buying. While legacy platforms like Zillow require users to know exactly where they want to look, Loop focuses on <strong>discovery</strong>. It gamifies the experience, allowing users to browse homes nationwide using swipe mechanics, creating an engaging "dopamine loop" similar to modern dating apps.</p>
+          <div className="modal-info-grid">
+            <div className="modal-info-cell">
+              <span className="modal-info-label">ROLE:</span>
+              <span className="modal-info-value">Founding Product Designer (Solo)</span>
+            </div>
+            <div className="modal-info-cell">
+              <span className="modal-info-label">Timeline:</span>
+              <span className="modal-info-value">2 Weeks (MVP Sprint)</span>
+            </div>
+            <div className="modal-info-cell">
+              <span className="modal-info-label">Team:</span>
+              <span className="modal-info-value">Worked directly with Founder & Lead Developer</span>
+            </div>
+          </div>
+          `
+        },
+        {
+          headline: 'The Challenge',
+          body: `
+          <div className="modal-section-text">
+          <p><strong>Zillow is for your parents. Gen Z needs discovery.</strong> Leading real estate apps (Redfin, Zillow) are built on a "Search" mental model. They are data-heavy, map-reliant, and visually overwhelming. For a Gen Z user who might just be casually browsing or "dreaming," these platforms feel like work.</p>
+          <p><strong>The Goal:</strong> I was brought in to design the entire MVP from scratch in just <strong>2 weeks</strong>. The objective was to strip away the complexity of real estate data and replace it with an interface that felt as addictive as TikTok or Tinder, focusing on visual impact, micro-interactions, and ease of use.</p>
+          </div>
+          `
+        },
+        {
+          headline: 'The Solution',
+          body: `
+          <div className="modal-section-text">
+          <p><strong>"Tinder for Homes."</strong> I designed Loop to be a <strong>discovery-first</strong> platform. Instead of a map view, the core experience is a deck of cards.</p>
+          <h3>1. The Swipe Mechanic (Core Loop)</h3>
+          <p>The primary interaction is simple: Swipe Right to "Love," Swipe Left to "Pass."</p>
+          <ul style="padding-left: 20px; list-style-type: disc; margin-bottom: 16px;">
+            <li><strong>Dopamine Triggers: </strong> Unlike a static list, swiping requires active decision-making. This physical interaction keeps the user engaged longer.</li>
+            <li><strong>National Scale: </strong> We removed the friction of "select a zip code." Users can swipe through homes across the entire country, broadening their horizons.</li>
+          </ul>
+          </div>
+          <div className="modal-image-wrapper modal-image-wrapper--multiple" style="margin: 40px 0 72px 0;">
+            <div className="modal-images-grid">
+              <div className="modal-image-item">
+                <img src="/portfolio/loop-4.webp" alt="Loop Swipe Screen 1" className="modal-image" />
+              </div>
+              <div className="modal-image-item">
+                <img src="/portfolio/loop-5.webp" alt="Loop Swipe Screen 2" className="modal-image" />
+              </div>
+              <div className="modal-image-item">
+                <img src="/portfolio/loop-6.webp" alt="Loop Swipe Screen 3" className="modal-image" />
+              </div>
+            </div>
+          </div>
+          <div className="modal-section-text">
+            <h3>2. The "Perfect Match" Moment</h3>
+            <p>To make the experience rewarding, I designed a specific "Perfect Match" state. When a home meets 100% of the user's hard filters, the app celebrates the moment.</p>
+            <ul style="padding-left: 20px; list-style-type: disc; margin-bottom: 16px;">
+              <li><strong>Visual Delight: </strong> I used a full-screen takeover with confetti and bold typography to make finding a home feel like a "win".</li>
+              </ul></div>
+            <img src="/portfolio/video1placeholder.webp" alt="Perfect Match Video" className="modal-content-image" />
+<div className="modal-section-text">
+            <h3>3. Social Collections</h3>
+            <p>Gen Z rarely makes decisions in isolation. I designed the "Favorites" tab to organize successful swipes into Collections.</p>
+            <ul style="padding-left: 20px; list-style-type: disc; margin-bottom: 16px;">
+              <li><strong>Organization: </strong> Users can create mood boards (e.g., "Miami Properties," "Pool Homes"), setting the stage for future social sharing features.</li>
+            </ul></div>
+          <div className="modal-image-wrapper modal-image-wrapper--multiple" style="margin: 40px 0 72px 0;">
+            <div className="modal-images-grid">
+              <div className="modal-image-item">
+                <img src="/portfolio/loop-7.webp" alt="Loop Swipe Screen 1" className="modal-image" />
+              </div>
+              <div className="modal-image-item">
+                <img src="/portfolio/loop-8.webp" alt="Loop Swipe Screen 2" className="modal-image" />
+              </div>
+              <div className="modal-image-item">
+                <img src="/portfolio/loop-9.webp" alt="Loop Swipe Screen 3" className="modal-image" />
+              </div>
+            </div>
+          `
+        },
+        {
+          headline: 'Going Beyond UI: Motion & Branding',
+          body: `
+          <div className="modal-section-text">
+          <p>As the sole designer, I wore multiple hats. I didn't just deliver screens; I built the brand identity and the motion system to ensure the app felt alive.</p>
+          <ul style="padding-left: 20px; list-style-type: disc;">
+            <li><strong>Rive Animations: </strong> I created custom animations for the filter interactions and empty states. Even running out of properties was designed to be a playful "Oops!" moment rather than a dead end.</li>
+            <li><strong>Branding & Marketing: </strong> Working with the founder's initial concept, I refined the logo and developed a suite of marketing assets, including Instagram Stories and social posts, to prepare for the go-to-market strategy.</li>
+          </ul>
+          </div>
+          <img src="/portfolio/video2placeholder.webp" alt="Oops Animation" className="modal-content-image" />
+          <div className="modal-image-wrapper modal-image-wrapper--multiple" style="margin: 40px 0 72px 0;">
+            <div className="modal-images-grid">
+              <div className="modal-image-item">
+                <img src="/portfolio/loop-insta-1.webp" alt="Loop Swipe Screen 1" className="modal-image" />
+              </div>
+              <div className="modal-image-item">
+                <img src="/portfolio/loop-insta-2.webp" alt="Loop Swipe Screen 2" className="modal-image" />
+              </div>
+              <div className="modal-image-item">
+                <img src="/portfolio/loop-insta-3.webp" alt="Loop Swipe Screen 3" className="modal-image" />
+              </div>
+            </div>
+          </div>
+          `
+        },
+        {
+          headline: 'The Outcome',
+          body: `
+          <div className="modal-section-text">
+          <p><strong>From Idea to MVP in 14 Days.</strong> This project was a testament to rapid execution. By working closely with the developer and using tools like Rive for animation handoff, we moved from zero to a fully designed application in two weeks.</p>
+          <ul style="padding-left: 20px; list-style-type: disc;">
+            <li><strong>Deliverables:</strong> Delivered 40+ high-fidelity screens, a comprehensive component library, brand guidelines, and production-ready animation assets.</li>
+            <li><strong>Implementation:</strong> Conducted QA directly with the engineer to ensure the "swipe physics" and micro-interactions felt native and smooth.</li>
+            <li><strong>Next Steps:</strong> The MVP is currently in development with a planned public launch in January 2026.</li>
+          </ul>
+          </div>
+          `
+        }
+      ]
+    };
+  }
+
   // LevelUp Mobile App (3 images)
   if (imageSrcs[0] === '/portfolio/level-1.webp' || projectId === 'levelup-mobile') {
     return {
@@ -587,7 +766,50 @@ const RightPanel: React.FC = () => {
   }, [modalData]);
 
   return (
-    <div className="right-panel">{/* MC2 */}
+    <div className="right-panel">{/* Loop */}
+      <div className="card card-full">
+        <div className="mobile-container">
+          <div className="mobile-box" onClick={() => openModal('/portfolio/level-1.webp', 'loop-mobile')}>
+            <Image
+              src="/portfolio/loop-1.webp"
+              alt="Loop"
+              width={240}
+              height={520}
+              className="portfolio-image"
+            />
+          </div>
+          <div className="mobile-box" onClick={() => openModal('/portfolio/level-1.webp', 'loop-mobile')}>
+            <Image
+              src="/portfolio/loop-2.webp"
+              alt="Loop"
+              width={240}
+              height={520}
+              className="portfolio-image"
+            />
+          </div>
+          <div className="mobile-box" onClick={() => openModal('/portfolio/level-1.webp', 'loop-mobile')}>
+            <Image
+              src="/portfolio/loop-3.webp"
+              alt="Loop"
+              width={240}
+              height={520}
+              className="portfolio-image"
+            />
+          </div>
+        </div>
+        <div className="portfolio-footer">
+          <Image
+            src="/portfolio/ico-loop.png"
+            alt="Loop"
+            width={96}
+            height={96}
+            className="portfolio-icon"
+          />
+          <span className="portfolio-label">Loop - Built for the next generation of homeowners</span>
+        </div>
+      </div>
+
+      {/* MC2 */}
       <div className="card card-full">
         <div className="landing-container" onClick={() => openModal('/portfolio/mc2-final.webp')}>
           <Image
@@ -958,9 +1180,19 @@ const ProjectModal: React.FC<{
                                   const trimmed = block.trim();
                                   if (!trimmed) return null;
 
-                                  // If it's already HTML (contains tags), parse it
+                                  // If it's already HTML (contains tags), parse it with video replacement
                                   if (/<[^>]+>/.test(trimmed)) {
-                                    return <div key={idx}>{parse(trimmed)}</div>;
+                                    return <div key={idx}>{parse(trimmed, {
+                                      replace: (domNode: unknown) => {
+                                        const node = domNode as { name?: string; attribs?: Record<string, string> };
+                                        if (node.name === 'img' && node.attribs?.src === '/portfolio/video1placeholder.webp') {
+                                          return <ViewportVideo src="/icons/match.webm" className="modal-content-image" />;
+                                        }
+                                        if (node.name === 'img' && node.attribs?.src === '/portfolio/video2placeholder.webp') {
+                                          return <ViewportVideo src="/icons/oops.webm" className="modal-content-image" />;
+                                        }
+                                      }
+                                    })}</div>;
                                   }
 
                                   // Otherwise treat as plain text paragraph
@@ -1048,8 +1280,8 @@ const ProjectModal: React.FC<{
               );
             })}
 
-            {/* CTA Section - Specific for MC2 Finance */}
-            {modalData.headline === 'MC2 Finance' && (
+            {/* CTA Section - For MC2 Finance and Loop */}
+            {(modalData.headline === 'MC2 Finance' || modalData.headline === 'Loop') && (
               <>
                 <div className="modal-cta-section">
                   <h2 className="teaser-title" style={{ marginBottom: '32px' }}>Curious to see more work?</h2>
