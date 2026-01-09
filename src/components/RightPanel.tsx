@@ -577,7 +577,7 @@ const getModalData = (imageSrcs: string[], projectId?: string): ModalData => {
             <h3>2. The "Perfect Match" Moment</h3>
             <p>To make the experience rewarding, I designed a specific "Perfect Match" state. When a home meets 100% of the user's hard filters, the app celebrates the moment.</p>
             <ul style="padding-left: 20px; list-style-type: disc; margin-bottom: 16px;">
-              <li><strong>Visual Delight: </strong> I used a full-screen takeover with confetti and bold typography to make finding a home feel like a "win".</li>
+              <li><strong>Visual Delight: </strong> I implemented a distinct success state featuring an <strong>animated "Perfect Match" badge</strong> and a <strong>warm orange gradient overlay</strong>. This immediate visual cue creates a moment of delight, distinguishing high-value matches from standard listings without disrupting the browsing flow.</li>
               </ul></div>
             <img src="/portfolio/video1placeholder.webp" alt="Perfect Match Video" className="modal-content-image" />
 <div className="modal-section-text">
