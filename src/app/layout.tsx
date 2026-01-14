@@ -8,6 +8,8 @@ const nunitoSans = Nunito_Sans({
   variable: "--font-nunito-sans",
   subsets: ["latin"],
   weight: ["200", "300", "400", "500", "600", "700", "800", "900"],
+  display: "swap",
+  preload: true,
 });
 
 export const metadata: Metadata = {
@@ -65,10 +67,22 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        {/* Critical inline CSS to prevent FOUC if external CSS fails to load */}
+        <style dangerouslySetInnerHTML={{
+          __html: `
+          :root{--background:#fff;--foreground:#000;--font-sans:'Nunito Sans',system-ui,-apple-system,sans-serif}
+          *{box-sizing:border-box;margin:0;padding:0}
+          body{background:var(--background);color:var(--foreground);font-family:var(--font-sans);line-height:1.6}
+          html,body{height:100%}
+          .app-shell{min-height:100vh;display:flex;flex-direction:row}
+          @media(max-width:1023px){.app-shell{flex-direction:column}}
+        `}} />
+      </head>
       <body className={`${nunitoSans.variable} antialiased`}>
         {children}
         <SpeedInsights />
-        <Analytics/>
+        <Analytics />
       </body>
     </html>
   );
