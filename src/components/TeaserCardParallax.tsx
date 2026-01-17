@@ -50,13 +50,13 @@ const TeaserCard = () => {
 
   const handleCopy = () => {
     const textArea = document.createElement('textarea');
-    textArea.value = 'dusantomic@gmail.com';
+    textArea.value = 'hey@dusantmc.com';
     textArea.style.position = 'fixed';
     textArea.style.left = '-999999px';
     document.body.appendChild(textArea);
     textArea.focus();
     textArea.select();
-    
+
     try {
       document.execCommand('copy');
       setCopied(true);
@@ -64,7 +64,7 @@ const TeaserCard = () => {
     } catch (err) {
       console.error('Failed to copy:', err);
     }
-    
+
     document.body.removeChild(textArea);
   };
 
@@ -158,11 +158,11 @@ const TeaserCard = () => {
           <React.Fragment key={config.src}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-            src={config.src}
-            alt=""
-            className="teaser-img"
-            style={getImageStyle(config)}
-            aria-hidden="true"
+              src={config.src}
+              alt=""
+              className="teaser-img"
+              style={getImageStyle(config)}
+              aria-hidden="true"
             />
           </React.Fragment>
         ))}
@@ -186,9 +186,9 @@ const TeaserCard = () => {
         <div className="cta-email-wrapper">
           <button
             className="cta-email"
-            onClick={() => window.open('mailto:dusantomic@gmail.com')}
+            onClick={() => window.open('mailto:hey@dusantmc.com')}
           >
-            dusantomic@gmail.com
+            hey@dusantmc.com
           </button>
 
           <div className="copy-wrapper">

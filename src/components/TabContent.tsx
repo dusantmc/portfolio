@@ -274,7 +274,7 @@ const TabContent: React.FC<TabContentProps> = ({ activeTab }) => {
 
   const fallbackCopy = () => {
     const textArea = document.createElement('textarea');
-    textArea.value = 'dusantomic@gmail.com';
+    textArea.value = 'hey@dusantmc.com';
     textArea.style.position = 'fixed';
     textArea.style.left = '-999999px';
     textArea.style.top = '-999999px';
@@ -296,7 +296,7 @@ const TabContent: React.FC<TabContentProps> = ({ activeTab }) => {
   const handleCopy = () => {
     emailMagnetic.setShift(0, 0);
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText('dusantomic@gmail.com')
+      navigator.clipboard.writeText('hey@dusantmc.com')
         .then(() => {
           setCopied(true);
           setTimeout(() => setCopied(false), 1500);
@@ -409,7 +409,7 @@ const TabContent: React.FC<TabContentProps> = ({ activeTab }) => {
             <button
               className="cta-email"
               type="button"
-              onClick={() => window.open('mailto:dusantomic@gmail.com')}
+              onClick={() => window.open('mailto:hey@dusantmc.com')}
               onFocus={emailMagnetic.handleFocus}
               onBlur={() => {
                 emailMagnetic.setShift(0, 0);
@@ -419,7 +419,7 @@ const TabContent: React.FC<TabContentProps> = ({ activeTab }) => {
                 emailMagnetic.contentRef.current = node;
               }}
             >
-              <span className="cta-email__label">dusantomic@gmail.com</span>
+              <span className="cta-email__label">hey@dusantmc.com</span>
             </button>
 
             <div className="copy-wrapper">

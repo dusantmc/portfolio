@@ -311,8 +311,8 @@ const TeaserCardParallax: React.FC<TeaserCardProps> = ({ handleCopy, copied }) =
         <p className="teaser-text">Prefer email? Write me at</p>
 
         <div className="cta-email-wrapper">
-          <button className="cta-email" onClick={() => window.open('mailto:dusantomic@gmail.com')}>
-            dusantomic@gmail.com
+          <button className="cta-email" onClick={() => window.open('mailto:hey@dusantmc.com')}>
+            hey@dusantmc.com
           </button>
 
           <div className="copy-wrapper">
@@ -696,7 +696,7 @@ const RightPanel: React.FC = () => {
 
   const fallbackCopy = () => {
     const textArea = document.createElement('textarea');
-    textArea.value = 'dusantomic@gmail.com';
+    textArea.value = 'hey@dusantmc.com';
     textArea.style.position = 'fixed';
     textArea.style.left = '-999999px';
     textArea.style.top = '-999999px';
@@ -717,7 +717,7 @@ const RightPanel: React.FC = () => {
 
   const handleCopy = () => {
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText('dusantomic@gmail.com')
+      navigator.clipboard.writeText('hey@dusantmc.com')
         .then(() => {
           setCopied(true);
           setTimeout(() => setCopied(false), 1500);
@@ -1010,7 +1010,7 @@ const ProjectModal: React.FC<{
 
   const fallbackCopy = () => {
     const textArea = document.createElement('textarea');
-    textArea.value = 'dusantomic@gmail.com';
+    textArea.value = 'hey@dusantmc.com';
     textArea.style.position = 'fixed';
     textArea.style.left = '-999999px';
     textArea.style.top = '-999999px';
@@ -1031,7 +1031,7 @@ const ProjectModal: React.FC<{
 
   const handleCopy = () => {
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText('dusantomic@gmail.com')
+      navigator.clipboard.writeText('hey@dusantmc.com')
         .then(() => {
           setCopied(true);
           setTimeout(() => setCopied(false), 1500);
@@ -1289,8 +1289,8 @@ const ProjectModal: React.FC<{
                   <div className="modal-cta-contact">
                     <p className="teaser-text">Prefer email? Write me at</p>
                     <div className="cta-email-wrapper">
-                      <button className="cta-email ctwhite" onClick={() => window.open('mailto:dusantomic@gmail.com')}>
-                        dusantomic@gmail.com
+                      <button className="cta-email ctwhite" onClick={() => window.open('mailto:hey@dusantmc.com')}>
+                        hey@dusantmc.com
                       </button>
 
                       <div className="copy-wrapper">
