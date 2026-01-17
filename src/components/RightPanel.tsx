@@ -332,9 +332,9 @@ const TeaserCardParallax: React.FC<TeaserCardProps> = ({ handleCopy, copied }) =
 // Modal data mapping
 const getModalData = (imageSrcs: string[], projectId?: string): ModalData => {
   // MyFlexHelper specific data
-  if (projectId === 'myflexhelper' || imageSrcs[0] === '/portfolio/mfh.webp') {
+  if (projectId === 'myflexhelper' || imageSrcs[0] === '/portfolio/mfh-1.webp') {
     return {
-      imageSrcs: ['/portfolio/mfh-start.png', '/portfolio/mfh.png', '/portfolio/mfh-filters.png'],
+      imageSrcs: ['/portfolio/mfh-1.webp', '/portfolio/mfh-2.webp', '/portfolio/mfh-3.webp'],
       headline: 'MyFlexHelper',
       body: 'End-to-end design of a gig-driver automation PWA that scaled to $100k+ MRR.',
       role: 'Product Designer',
@@ -511,7 +511,7 @@ const getModalData = (imageSrcs: string[], projectId?: string): ModalData => {
   // Loop - Built for the next generation of homeowners
   if (imageSrcs[0] === '/portfolio/level-1.webp' && projectId === 'loop-mobile') {
     return {
-      imageSrcs: ['/portfolio/loop-1.webp', '/portfolio/loop-2.webp', '/portfolio/loop-3.webp'],
+      imageSrcs: ['/portfolio/loop-1b.webp', '/portfolio/loop-2b.webp', '/portfolio/loop-3b.webp'],
       headline: 'Loop',
       body: 'Disrupting the real estate industry with a dopamine-driven <br/>' +
         'discovery experience for Gen Z',
@@ -668,9 +668,9 @@ const getModalData = (imageSrcs: string[], projectId?: string): ModalData => {
   }
 
   // Kriptomat Mobile App (3 images)
-  if (imageSrcs[0] === '/portfolio/kripto-1.webp' || projectId === 'kriptomat-mobile') {
+  if (imageSrcs[0] === '/portfolio/kripto-1b.webp' || projectId === 'kriptomat-mobile') {
     return {
-      imageSrcs: ['/portfolio/kripto-1.webp', '/portfolio/kripto-2.webp', '/portfolio/kripto-3.webp'],
+      imageSrcs: ['/portfolio/kripto-1b.webp', '/portfolio/kripto-2b.webp', '/portfolio/kripto-3b.webp'],
       headline: 'Kriptomat Mobile App',
       body: 'Led the full redesign of the mobile app, resulting in significantly higher usage and crypto purchases across the platform.',
       role: 'Product Designer',
@@ -771,7 +771,7 @@ const RightPanel: React.FC = () => {
         <div className="mobile-container">
           <div className="mobile-box" onClick={() => openModal('/portfolio/level-1.webp', 'loop-mobile')}>
             <Image
-              src="/portfolio/loop-1.webp"
+              src="/portfolio/loop-1b.webp"
               alt="Loop"
               width={240}
               height={520}
@@ -780,7 +780,7 @@ const RightPanel: React.FC = () => {
           </div>
           <div className="mobile-box" onClick={() => openModal('/portfolio/level-1.webp', 'loop-mobile')}>
             <Image
-              src="/portfolio/loop-2.webp"
+              src="/portfolio/loop-2b.webp"
               alt="Loop"
               width={240}
               height={520}
@@ -789,7 +789,7 @@ const RightPanel: React.FC = () => {
           </div>
           <div className="mobile-box" onClick={() => openModal('/portfolio/level-1.webp', 'loop-mobile')}>
             <Image
-              src="/portfolio/loop-3.webp"
+              src="/portfolio/loop-3b.webp"
               alt="Loop"
               width={240}
               height={520}
@@ -901,27 +901,27 @@ const RightPanel: React.FC = () => {
       {/* Kriptomat Mobile App */}
       <div className="card card-full">
         <div className="mobile-container">
-          <div className="mobile-box" onClick={() => openModal('/portfolio/kripto-1.webp', 'kriptomat-mobile')}>
+          <div className="mobile-box" onClick={() => openModal('/portfolio/kripto-1b.webp', 'kriptomat-mobile')}>
             <Image
-              src="/portfolio/kripto-1.webp"
+              src="/portfolio/kripto-1b.webp"
               alt="Kriptomat"
               width={240}
               height={520}
               className="portfolio-image"
             />
           </div>
-          <div className="mobile-box" onClick={() => openModal('/portfolio/kripto-2.webp', 'kriptomat-mobile')}>
+          <div className="mobile-box" onClick={() => openModal('/portfolio/kripto-2b.webp', 'kriptomat-mobile')}>
             <Image
-              src="/portfolio/kripto-2.webp"
+              src="/portfolio/kripto-2b.webp"
               alt="Kriptomat"
               width={240}
               height={520}
               className="portfolio-image"
             />
           </div>
-          <div className="mobile-box" onClick={() => openModal('/portfolio/kripto-3.webp', 'kriptomat-mobile')}>
+          <div className="mobile-box" onClick={() => openModal('/portfolio/kripto-3b.webp', 'kriptomat-mobile')}>
             <Image
-              src="/portfolio/kripto-3.webp"
+              src="/portfolio/kripto-3b.webp"
               alt="Kriptomat"
               width={240}
               height={520}
@@ -945,9 +945,9 @@ const RightPanel: React.FC = () => {
       <div className="card-row">
         <div className="card card-half">
           <div className="mobile-container-single">
-            <div className="mobile-box" onClick={() => openModal('/portfolio/mfh.webp', 'myflexhelper')}>
+            <div className="mobile-box" onClick={() => openModal('/portfolio/mfh-1.webp', 'myflexhelper')}>
               <Image
-                src="/portfolio/mfh.webp"
+                src="/portfolio/mfh-1.webp"
                 alt="MyFlexHelper"
                 width={240}
                 height={520}

@@ -720,7 +720,8 @@ strong {
   overflow: show;
   text-overflow: ellipsis;
   transition: background-color 0.24s cubic-bezier(0.4, 0, 0.2, 1), color 0.24s cubic-bezier(0.4, 0, 0.2, 1);
-  max-width: 238px;
+  max-width: 208px;
+
 }
 
 .cta-email-wrapper:hover .cta-email {
@@ -1312,7 +1313,7 @@ strong {
   display: flex;
   align-items: center;
   margin: 0 auto;
-  max-width: 238px;
+  max-width: 208px;
 }
 
 .teaser-card .cta-email {
@@ -1423,11 +1424,8 @@ strong {
 .mobile-box {
   width: auto;
   height: 100%;
-  background: transparent;
-  overflow: hidden;
-  border-radius: clamp(12px, 3vw, 28px);
-  outline: 0.5px solid rgba(0, 0, 0, 0.04);
-  box-shadow: 0 12px 80px rgba(0, 0, 0, 0.06);
+  background: none;
+  filter: drop-shadow(0 12px 80px rgba(0, 0, 0, 0.08));
   transform: scale(1);
   transition: transform 0.2s ease;
   cursor: pointer;
@@ -1573,9 +1571,8 @@ strong {
 
 .modal-image-wrapper--multiple .modal-image-item {
   width: 100%;
-  border-radius: 32px;
   overflow: hidden;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.09);
+  filter: drop-shadow(0 24px 80px rgba(0, 0, 0, 0.09));
 
 }
 
@@ -1583,7 +1580,6 @@ strong {
   width: 100%;
   height: auto;
   object-fit: contain;
-  border-radius: 24px;
 }
 
 .modal-images-mosaik {
@@ -2120,6 +2116,33 @@ strong {
   display: block;
 }
 
+/* ===============================  Intermediate Breakpoint (Tablet/Small Desktop) =============================== */
+@media (max-width: 1550px) and (min-width: 1200px) {
+  .teaser-title {
+    font-size: 32px;
+    line-height: 34px;
+  }
+}
+
+@media (max-width: 1200px) and (min-width: 1024px) {
+  .mobile-container {
+    width: clamp(350px, 45vw, 600px);
+    height: clamp(200px, 28vw, 400px);
+  }
+
+  .portfolio-footer {
+    white-space: nowrap;
+  }
+
+  .portfolio-label {
+    font-size: 11px;
+  }
+
+  .teaser-title {
+    font-size: 28px;
+    line-height: 30px;
+  }
+}
 
 
 /* ===============================  Mobile Responsive Design =============================== */
@@ -2295,21 +2318,21 @@ strong {
     height: 400px;
     min-width: auto;
     flex-shrink: 0;
-    border-radius: 16px;
-    outline: 0.5px solid rgba(0, 0, 0, 0.2);
-    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08);
+    background: none;
+    filter: drop-shadow(0 0 0.5px rgba(0, 0, 0, 0.15));
     box-shadow: none;
-    overflow: hidden;
     display: flex;
     flex-direction: column;
     scroll-snap-align: start;
   }
+
 
   .mobile-box img {
     width: auto;
     height: 100%;
     object-fit: contain;
     display: block;
+    background: transparent;
   }
 
   .mobile-container::-webkit-scrollbar {
@@ -2348,7 +2371,6 @@ strong {
     letter-spacing: -0.3px;
   }
 
-  /* Buttons - Mobile */
   .cta-section {
     display: flex;
     align-items: center;
@@ -2364,11 +2386,8 @@ strong {
 
   .cta-email-wrapper {
     flex: 0 1 auto;
-    /* Shrink to fit content, not stretch */
     min-width: 0;
-    /* Allow shrinking if needed */
     max-width: 100%;
-    /* Don't overflow container */
     position: relative;
     display: flex;
     align-items: center;
@@ -2378,37 +2397,12 @@ strong {
     font-size: 16px;
     padding: 14px 16px;
     padding-right: 50px;
-    /* Space for copy button */
     width: auto;
-    /* Changed from 100% to auto */
     min-width: 0;
-    /* Critical for text truncation */
-    max-width: 100%;
-    /* Prevent overflow */
-    overflow: hidden;
-    /* Enable truncation */
-    text-overflow: ellipsis;
-    /* Show ... */
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
     white-space: nowrap;
-    /* Keep text on one line */
-  }
-
-  .cta-email-wrapper:hover .cta-email {
-    overflow: hidden;
-    /* Keep this */
-    padding-right: 50px;
-    /* Match the default mobile padding */
-    background-color: rgba(0, 0, 0, 0.035);
-    /* Keep default background */
-    color: rgba(0, 0, 0, 0.8);
-    /* Keep default color */
-  }
-
-  .cta-email:hover {
-    background-color: rgba(0, 0, 0, 0.035);
-    /* Keep default background */
-    color: rgba(0, 0, 0, 0.8);
-    /* Keep default color */
   }
 
   .copy-btn {
@@ -2417,25 +2411,19 @@ strong {
 
   .copy-btn:hover {
     opacity: 0.6;
-    /* Keep default opacity */
     background-color: transparent;
-    /* Keep transparent */
   }
 
   .copy-btn:active {
     background-color: rgba(0, 0, 0, 0.08);
-    /* Darker on press */
     transform: scale(0.9);
   }
 
   .cta-email-wrapper .copy-wrapper {
     opacity: 1;
-    /* Always visible */
     pointer-events: all;
-    /* Always clickable */
   }
 
-  /* Social Buttons - Mobile */
   .left-panel .social-button {
     width: 36px;
     height: 36px;
@@ -2463,6 +2451,11 @@ strong {
     width: 100%;
     padding: 0;
 
+  }
+
+  .card.teaser-card-wrapper {
+    border-radius: 28px;
+    overflow: hidden;
   }
 
   /* Make teaser-card appear last */
@@ -2502,38 +2495,37 @@ strong {
     color: rgba(0, 0, 0, 0.7);
     margin-top: 32px;
     margin-bottom: -4px;
+    text-align: center;
+    width: 100%;
   }
 
   .teaser-card .cta-email-wrapper {
-    flex: 0 1 auto;
-    /* Shrink to fit content, not stretch */
-    min-width: 0;
-    /* Allow shrinking if needed */
+    width: fit-content;
+    min-width: 208px;
     max-width: 100%;
-    /* Don't overflow container */
     position: relative;
     display: flex;
     align-items: center;
-    margin-left: 16px;
+    margin: 0 auto;
   }
 
   .teaser-card .cta-email {
     font-size: 16px;
     padding: 14px 16px;
-    padding-right: 50px;
-    /* Space for copy button */
+    padding-right: 42px;
     width: auto;
-    /* Changed from 100% to auto */
     min-width: 0;
-    /* Critical for text truncation */
-    max-width: 100%;
-    /* Prevent overflow */
-    overflow: hidden;
-    /* Enable truncation */
-    text-overflow: ellipsis;
-    /* Show ... */
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
     white-space: nowrap;
-    /* Keep text on one line */
+  }
+
+  .teaser-card .copy-wrapper {
+    position: absolute;
+    right: 4px;
+    opacity: 1;
+    pointer-events: all;
   }
 
   .teaser-card .cta-email-wrapper:hover .cta-email {
@@ -2556,27 +2548,22 @@ strong {
 
   .teaser-card .copy-btn {
     transition: transform 0.2s ease, opacity 0.2s ease, background-color 0.2s ease;
+
   }
 
   .teaser-card .copy-btn:hover {
     opacity: 0.6;
-    /* Keep default opacity */
     background-color: transparent;
-    /* Keep transparent */
   }
 
   .teaser-card .copy-btn:active {
     background-color: rgba(0, 0, 0, 0.08);
-    /* Darker on press */
     transform: scale(0.9);
   }
 
-
-  .teaser-card .cta-email-wrapper .copy-wrapper {
-    opacity: 1;
-    /* Always visible */
-    pointer-events: all;
-    /* Always clickable */
+  .teaser-card .copy-btn {
+    width: 40px;
+    height: 40px;
   }
 
   /* Mobile Footer - Only visible on mobile */
@@ -2618,7 +2605,6 @@ strong {
 
   .modal-image-wrapper--multiple .modal-image-item {
     width: 100%;
-    border-radius: 32px;
     box-shadow: none;
   }
 
