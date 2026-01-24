@@ -1,0 +1,672 @@
+.editor {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #EBEBEB;
+}
+
+.editor__topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  height: 80px;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background-color: white;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.05);
+}
+
+.editor__topbar-left {
+  display: flex;
+  align-items: center;
+}
+
+.editor__back-btn {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: background-color 150ms;
+}
+
+.editor__back-btn:hover {
+  background-color: #f5f5f5;
+}
+
+.editor__back-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.editor__topbar-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 16px;
+  font-weight: 600;
+  color: #000;
+}
+
+.editor__topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.editor__tool-btn {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+    border-radius: 24px;
+  cursor: pointer;
+  transition: background-color 150ms;
+}
+
+.editor__tool-btn:hover {
+  background-color: #f5f5f5;
+}
+
+.editor__tool-btn.active {
+  background-color: #f0f0f0;
+}
+
+.editor__tool-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.editor__signature-btn {
+  height: 48px;
+  padding: 0 8px 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: none;
+  background: none;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: background-color 150ms;
+}
+
+.editor__signature-btn:hover {
+  background-color: #f5f5f5;
+}
+
+.editor__signature-btn.active {
+  background-color: #f0f0f0;
+}
+
+.editor__signature-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.editor__chevron-icon {
+  width: 20px;
+  height: 24px;
+}
+
+.editor__signature {
+  position: relative;
+}
+
+.signature-menu {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 320px;
+  padding: 18px 18px 16px;
+  background-color: #fff;
+  border-radius: 24px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  z-index: 20;
+}
+
+.signature-menu__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #8c8c8c;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-left:8px;
+}
+
+.signature-menu__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.signature-menu__item {
+  width: 100%;
+  height: 86px;
+  border: 1.5px dashed #b8b8b8;
+  border-radius: 16px;
+  background-color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 10px;
+}
+
+.signature-menu__item {
+  position: relative;
+}
+
+.signature-menu__preview-btn {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.signature-menu__item:hover {
+  border-color: #8c8c8c;
+}
+
+.signature-menu__remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 150ms;
+  cursor: pointer;
+}
+
+.signature-menu__item:hover .signature-menu__remove {
+  opacity: 1;
+}
+
+.signature-menu__remove-icon {
+  width: 16px;
+  height: 16px;
+  opacity: 0.6;
+}
+
+.signature-menu__preview {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.signature-menu__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.signature-menu__action {
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 10px 8px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.signature-menu__action:hover {
+  background-color: #f6f6f6;
+}
+
+.signature-menu__action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.signature-menu__action-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.signature-menu__input {
+  display: none;
+}
+
+.signature-toolbar {
+  position: absolute;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 2;
+}
+
+.signature-toolbar__palette {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #000;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 9999px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18);
+}
+
+.signature-toolbar__swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  box-sizing: content-box;
+  padding: 2px;
+  cursor: pointer;
+  background-clip: content-box;
+}
+
+.signature-toolbar__swatch--gradient {
+  background-image: url('/playground/gradient.svg');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+}
+
+.signature-toolbar__swatch--gray {
+  background-image: url('/playground/gradient-gray.svg');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+}
+
+.signature-toolbar__swatch.active {
+  border-color: #000000;
+  border-width: 1px;
+  padding: 1px;
+  outline: 2px solid rgba(255, 255, 255, 0.4);
+  outline-offset: 2px;
+}
+
+.signature-toolbar__delete {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18);
+}
+
+.signature-toolbar__delete:hover {
+  background: #111;
+}
+
+.signature-toolbar__icon {
+  width: 20px;
+  height: 20px;
+  filter: brightness(0) invert(1);
+}
+
+.editor__download-btn {
+  height: 48px;
+  padding: 0 20px;
+  background-color: #000;
+  color: #fff;
+  border: none;
+  border-radius: 9999px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms;
+  margin-left:8px;
+}
+
+.editor__download-btn:hover {
+  background-color: #222;
+}
+
+.editor__content {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  overflow: hidden;
+  cursor: grab;
+}
+
+.editor__content.dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.editor__canvas-wrapper {
+  position: relative;
+  background-color: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 80px rgba(0, 0, 0, 0.03);
+  transition: transform 100ms ease-out;
+  transform-origin: center center;
+}
+
+.editor__canvas {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - 80px - 64px);
+}
+
+.editor__overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.editor__guide {
+  position: absolute;
+  background-color: #0B84FF;
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.editor__guide--v {
+  top: 0;
+  bottom: 0;
+  width: 0.5px;
+}
+
+.editor__guide--h {
+  left: 0;
+  right: 0;
+  height: 0.5px;
+}
+
+.textbox {
+  position: absolute;
+  pointer-events: auto;
+  border-style: solid;
+  border-color: transparent;
+  cursor: text;
+  box-sizing: border-box;
+}
+
+.textbox::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  pointer-events: auto;
+  cursor: move;
+  z-index: 0;
+}
+
+.textbox--dragging {
+  cursor: grabbing;
+}
+
+.textbox:hover {
+  border-color: rgba(0, 140, 255, 0.6);
+}
+
+.textbox--active {
+  border-color: #008CFF;
+}
+
+.textbox--active:hover {
+  border-color: #008CFF;
+}
+
+.textbox__content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  outline: none;
+  padding: 1px 2px;
+  cursor: text;
+  white-space: pre-wrap;
+  word-break: break-word;
+  box-sizing: border-box;
+  cursor: text;
+}
+
+.textbox__content:empty::before {
+  content: "Enter text...";
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.textbox__toolbar {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: auto;
+  transform-origin: center bottom;
+}
+
+.textbox__toolbar-size {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  background-color: #000;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.textbox__toolbar-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: background-color 150ms;
+}
+
+.textbox__toolbar-btn:hover {
+  background-color: #333;
+}
+
+.textbox__toolbar-delete {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #000;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 150ms;
+}
+
+.textbox__toolbar-delete:hover {
+  background-color: #333;
+}
+
+.textbox__toolbar-icon {
+  width: 20px;
+  height: 20px;
+  filter: brightness(0) invert(1);
+}
+
+.textbox__handle {
+  position: absolute;
+  z-index: 1;
+  background-color: white;
+  border-style: solid;
+  border-color: #008CFF;
+  border-radius: 50%;
+  cursor: nwse-resize;
+}
+
+.textbox__handle--tl {
+  top: -3px;
+  left: -3px;
+  cursor: nwse-resize;
+}
+
+.textbox__handle--tr {
+  top: -3px;
+  right: -3px;
+  cursor: nesw-resize;
+}
+
+.textbox__handle--bl {
+  bottom: -3px;
+  left: -3px;
+  cursor: nesw-resize;
+}
+
+.textbox__handle--br {
+  bottom: -3px;
+  right: -3px;
+  cursor: nwse-resize;
+}
+
+.signature-box {
+  position: absolute;
+  border-style: solid;
+  border-color: transparent;
+  cursor: move;
+  box-sizing: border-box;
+  background: transparent;
+  overflow: visible;
+  pointer-events: auto;
+}
+
+.signature-box--active {
+  border-color: #008CFF;
+}
+
+.signature-box__content {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.signature-box__image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  mix-blend-mode: darken;
+}
+
+.textbox__duplicate-hit {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.textbox__duplicate {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #0B84FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+
+.textbox__duplicate-icon {
+  width: 8px;
+  height: 8px;
+  background-image: url('/playground/duplicate.svg');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+
+.textbox__duplicate-hit--right {
+  top: 50%;
+  right: -8px;
+  transform: translate(50%, -50%);
+}
+
+.textbox__duplicate-hit--down {
+  left: 50%;
+  bottom: -8px;
+  transform: translate(-50%, 50%);
+}
+
+.textbox__duplicate-hit:hover .textbox__duplicate {
+  background-color: #0A74E6;
+}
+
+.editor__zoom-controls {
+  position: absolute;
+  bottom: 32px;
+  right: 32px;
+  width: 40px;
+  height: 80px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 9999px;
+  overflow: hidden;
+  background-color: white;
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+  border: 0.5px solid rgba(0, 0, 0, 0.1);
+}
+
+.editor__zoom-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: background-color 150ms;
+}
+
+.editor__zoom-btn:hover {
+  background-color: #f5f5f5;
+}
+
+.editor__zoom-icon {
+  width: 20px;
+  height: 20px;
+}

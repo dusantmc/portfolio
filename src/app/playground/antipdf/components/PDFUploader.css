@@ -1,0 +1,80 @@
+.uploader {
+  width: 100%;
+  height: 100vh;
+  padding: 32px;
+  transition: background-color 200ms;
+  background-color: black;
+}
+
+.uploader.dragging {
+  background-color: rgb(15 23 42); /* slate-900 */
+}
+
+.uploader__dropzone {
+  border: none;
+  border-radius: 1.5rem;
+  padding: 48px;
+  text-align: center;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 200ms;
+  background-color: rgb(2 6 23 / 0.3); /* slate-950/30 */
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3e%3crect width='100%25' height='100%25' fill='none' rx='24' ry='24' stroke='%2394a3b8' stroke-width='4' stroke-dasharray='8%2c 16' stroke-linecap='round'/%3e%3c/svg%3e");
+}
+
+.uploader__dropzone.dragging {
+  background-color: rgb(15 23 42 / 0.5); /* slate-900/50 */
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3e%3crect width='100%25' height='100%25' fill='none' rx='24' ry='24' stroke='%23ffffff' stroke-width='4' stroke-dasharray='8%2c 16' stroke-linecap='round'/%3e%3c/svg%3e");
+}
+
+.uploader__logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.uploader__description {
+  color: rgb(148 163 184); /* slate-400 */
+  margin-bottom: 32px;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
+.uploader__button {
+  display: inline-block;
+  padding: 16px 24px;
+  background-color: white;
+  color: black;
+  border-radius: 9999px;
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  transition: background-color 200ms, transform 200ms;
+  margin-bottom: 24px;
+  border: none;
+  cursor: pointer;
+  transform: scale(1);
+}
+
+.uploader__button:hover {
+  background-color: rgb(241 245 249); /* slate-100 */
+  transform: scale(1.03);
+}
+
+.uploader__button:active {
+  transform: scale(1.01);
+}
+
+.uploader__file-input {
+  display: none;
+}
+
+.uploader__hint {
+  color: rgb(100 116 139); /* slate-500 */
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
