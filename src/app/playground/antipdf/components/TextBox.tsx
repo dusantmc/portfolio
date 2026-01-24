@@ -53,7 +53,7 @@ export default function TextBox({
   const [isActive, setIsActive] = useState(!!autoFocus);
   const [isResizing, setIsResizing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [duplicateHover, setDuplicateHover] = useState<'left' | 'down' | null>(null);
+  const [duplicateHover, setDuplicateHover] = useState<'right' | 'down' | null>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const resizeStart = useRef({ x: 0, y: 0, w: 0, h: 0, corner: '' });
