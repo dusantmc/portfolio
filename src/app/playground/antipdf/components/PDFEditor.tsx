@@ -356,9 +356,131 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
   }, []);
 
   const handleDownload = async () => {
-    console.log('Download PDF with textBoxes:', textBoxes);
-    alert('Download functionality coming soon!');
+    try {
+      const [{ PDFDocument, StandardFonts, rgb, BlendMode }] = await Promise.all([
+        import('pdf-lib'),
+      ]);
+      const arrayBuffer = await pdfFile.arrayBuffer();
+      const pdfDoc = await PDFDocument.load(arrayBuffer);
+      const page = pdfDoc.getPage(currentPage - 1);
+      const pageWidth = page.getWidth();
+      const pageHeight = page.getHeight();
+      const canvas = canvasRef.current;
+      const displayWidth = canvas?.clientWidth || canvas?.width || pageWidth;
+      const displayHeight = canvas?.clientHeight || canvas?.height || pageHeight;
+      const scaleX = pageWidth / displayWidth;
+      const scaleY = pageHeight / displayHeight;
+
+      const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+      const drawTextBox = (tb: TextBoxData) => {
+        const padX = 2;
+        const padY = 2;
+        const fontSize = tb.fontSize * scaleY;
+        const lineHeight = fontSize;
+        const lines = (tb.text || '').split('\n');
+        const x = (tb.x + padX) * scaleX;
+        let y = pageHeight - (tb.y + padY) * scaleY - fontSize;
+        const font = tb.bold ? fontBold : fontRegular;
+
+        for (const line of lines) {
+          page.drawText(line, {
+            x,
+            y,
+            size: fontSize,
+            font,
+            color: rgb(0, 0, 0),
+          });
+          y -= lineHeight;
+        }
+      };
+
+      const dataUrlToBytes = (dataUrl: string) => {
+        const base64 = dataUrl.split(',')[1] || '';
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i += 1) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes;
+      };
+
+      const rasterizeImage = async (src: string, filter: string) => {
+        const img = new Image();
+        img.src = src;
+        await new Promise((resolve, reject) => {
+          img.onload = () => resolve(null);
+          img.onerror = reject;
+        });
+        const canvasEl = document.createElement('canvas');
+        canvasEl.width = img.naturalWidth;
+        canvasEl.height = img.naturalHeight;
+        const ctx = canvasEl.getContext('2d');
+        if (!ctx) return null;
+        ctx.filter = filter;
+        ctx.drawImage(img, 0, 0);
+        return dataUrlToBytes(canvasEl.toDataURL('image/png'));
+      };
+
+      const drawSignatureBox = async (sb: SignatureBoxData) => {
+        const boxX = sb.x * scaleX;
+        const boxY = pageHeight - (sb.y + sb.height) * scaleY;
+        const boxW = sb.width * scaleX;
+        const boxH = sb.height * scaleY;
+
+        let imageBytes: Uint8Array | null = null;
+        const isSvg = sb.src.startsWith('data:image/svg+xml');
+        const needsFilter = sb.style === 'gray';
+        if (needsFilter || isSvg) {
+          imageBytes = await rasterizeImage(
+            sb.src,
+            needsFilter ? 'grayscale(1) contrast(1.4)' : 'none'
+          );
+        } else {
+          imageBytes = dataUrlToBytes(sb.src);
+        }
+        if (!imageBytes) return;
+
+        const isPng = sb.src.startsWith('data:image/png');
+        const embed = isPng || isSvg || needsFilter
+          ? await pdfDoc.embedPng(imageBytes)
+          : await pdfDoc.embedJpg(imageBytes);
+
+        const imgW = embed.width;
+        const imgH = embed.height;
+        const fitScale = Math.min(boxW / imgW, boxH / imgH);
+        const drawW = imgW * fitScale;
+        const drawH = imgH * fitScale;
+        const drawX = boxX + (boxW - drawW) / 2;
+        const drawY = boxY + (boxH - drawH) / 2;
+
+        page.drawImage(embed, { x: drawX, y: drawY, width: drawW, height: drawH, blendMode: BlendMode.Darken });
+      };
+
+      textBoxes.forEach(drawTextBox);
+      for (const sb of signatureBoxes) {
+        await drawSignatureBox(sb);
+      }
+
+      const pdfBytes = await pdfDoc.save();
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = pdfFile.name.replace(/\\.pdf$/i, '') + '-edited.pdf';
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      alert('Failed to export PDF.');
+    }
   };
+
+  const handleClearSelection = useCallback(() => {
+    setActiveTextBoxId(null);
+    setActiveSignatureId(null);
+  }, []);
 
   return (
     <div className="editor">
@@ -471,6 +593,7 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
         className={`editor__content${isDragging ? ' dragging' : ''}`}
         ref={contentRef}
         onMouseDown={handleMouseDown}
+        onClick={handleClearSelection}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
