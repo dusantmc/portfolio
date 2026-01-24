@@ -464,11 +464,7 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
       }
 
       const pdfBytes = await pdfDoc.save();
-      const pdfBuffer = pdfBytes.buffer.slice(
-        pdfBytes.byteOffset,
-        pdfBytes.byteOffset + pdfBytes.byteLength
-      );
-      const blob = new Blob([pdfBuffer], { type: 'application/pdf' });
+      const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
