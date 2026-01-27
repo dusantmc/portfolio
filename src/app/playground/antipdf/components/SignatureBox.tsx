@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPuffEffect } from '../utils/puffEffect';
 
 export interface SignatureBoxData {
   id: string;
@@ -18,6 +19,7 @@ interface SignatureBoxProps extends SignatureBoxData {
   onActivate: (id: string) => void;
   onUpdate: (id: string, updates: Partial<SignatureBoxData>) => void;
   onRemove: (id: string) => void;
+  isDisintegratingExternal?: boolean;
 }
 
 export default function SignatureBox({
@@ -33,9 +35,12 @@ export default function SignatureBox({
   onActivate,
   onUpdate,
   onRemove,
+  isDisintegratingExternal,
 }: SignatureBoxProps) {
   const [isResizing, setIsResizing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isDisintegrating, setIsDisintegrating] = useState(false);
+  const boxRef = useRef<HTMLDivElement>(null);
   const resizeStart = useRef({ x: 0, y: 0, w: 0, h: 0, corner: '' });
   const dragStart = useRef({ x: 0, y: 0, boxX: 0, boxY: 0 });
 
@@ -98,10 +103,18 @@ export default function SignatureBox({
     resizeStart.current = { x: e.clientX, y: e.clientY, w: width, h: height, corner };
   }, [width, height]);
 
-  const signaturePalette = [
-    { style: 'default', className: 'signature-toolbar__swatch--gradient', label: 'Default' },
-    { style: 'gray', className: 'signature-toolbar__swatch--gray', label: 'Desaturated' },
-  ] as const;
+  // Detect if this is a drawn signature (SVG with blue stroke color)
+  const isDrawnSignature = src.includes('#334CCB') || src.includes('%23334CCB');
+
+  const signaturePalette = isDrawnSignature
+    ? ([
+        { style: 'default', className: 'signature-toolbar__swatch--blue', label: 'Blue' },
+        { style: 'gray', className: 'signature-toolbar__swatch--gray', label: 'Desaturated' },
+      ] as const)
+    : ([
+        { style: 'default', className: 'signature-toolbar__swatch--gradient', label: 'Default' },
+        { style: 'gray', className: 'signature-toolbar__swatch--gray', label: 'Desaturated' },
+      ] as const);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -110,6 +123,16 @@ export default function SignatureBox({
     onActivate(id);
     dragStart.current = { x: e.clientX, y: e.clientY, boxX: x, boxY: y };
   }, [id, onActivate, x, y]);
+
+  const handleDelete = useCallback(() => {
+    if (!boxRef.current || isDisintegrating) return;
+    setIsDisintegrating(true);
+    const rect = boxRef.current.getBoundingClientRect();
+    createPuffEffect(rect);
+    setTimeout(() => {
+      onRemove(id);
+    }, 120);
+  }, [id, isDisintegrating, onRemove]);
 
   const scale = 1 / zoom;
   const borderWidth = (active ? 4 : 3) * scale;
@@ -120,7 +143,9 @@ export default function SignatureBox({
 
   return (
     <div
-      className={`signature-box${active ? ' signature-box--active' : ''}${isDragging ? ' signature-box--dragging' : ''}`}
+      ref={boxRef}
+      className={`signature-box${active ? ' signature-box--active' : ''}${isDragging ? ' signature-box--dragging' : ''}${isDisintegrating || isDisintegratingExternal ? ' signature-box--disintegrating' : ''}`}
+      data-signature-id={id}
       style={{ left: x, top: y, width, height, borderWidth }}
       onMouseDown={handleMouseDown}
       onClick={(e) => {
@@ -129,7 +154,19 @@ export default function SignatureBox({
       }}
     >
       <div className="signature-box__content">
-        <img src={src} alt="Signature" className="signature-box__image" draggable={false} style={{ filter: style == 'gray' ? 'grayscale(1) contrast(1.4)' : 'none' }} />
+        <img
+          src={src}
+          alt="Signature"
+          className="signature-box__image"
+          draggable={false}
+          style={{
+            filter: style === 'gray'
+              ? isDrawnSignature
+                ? 'saturate(0) brightness(0) contrast(1.2)' // Blue to black
+                : 'grayscale(1) contrast(1.4)' // Photo to grayscale
+              : 'none'
+          }}
+        />
       </div>
 
       {active && (
@@ -164,7 +201,7 @@ export default function SignatureBox({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                onRemove(id);
+                handleDelete();
               }}
             >
               <img src="/playground/delete.svg" alt="Delete" className="signature-toolbar__icon" />

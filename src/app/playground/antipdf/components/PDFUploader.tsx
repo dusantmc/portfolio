@@ -63,14 +63,14 @@ export default function PDFUploader({ onPdfSelected }: PDFUploaderProps) {
         </div>
 
         <p className="uploader__description">
-          Edit your PDF with custom text fields and signatures
+          Stupid simple document filling and signing
         </p>
 
         <button
           onClick={() => fileInputRef.current?.click()}
           className="uploader__button"
         >
-          Upload File
+          Upload file
         </button>
 
         <input
@@ -82,7 +82,7 @@ export default function PDFUploader({ onPdfSelected }: PDFUploaderProps) {
         />
 
         <p className="uploader__hint">
-          or drag and drop a PDF file here
+          or drag & drop a PDF here
         </p>
       </div>
     </div>

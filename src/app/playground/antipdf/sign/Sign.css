@@ -1,0 +1,177 @@
+.sign-page {
+  min-height: 100vh;
+  background: #fff;
+  display: block;
+  padding: 0;
+  font-family: inherit;
+  color: #111827;
+}
+
+.sign-canvas-wrap {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+}
+
+.sign-helper-text {
+  position: absolute;
+  left: 44px;
+  top: 25%;
+  transform: rotate(90deg);
+  transform-origin: left top;
+  font-size: 14px;
+  color: rgba(17, 24, 39, 0.45);
+  letter-spacing: 0.01em;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.sign-canvas {
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.sign-actions {
+  position: absolute;
+  right: 8px;
+  bottom: 24px;
+  display: flex;
+  gap: 10px;
+  z-index: 2;
+}
+
+.sign-btn {
+  height: 44px;
+  border-radius: 9999px;
+  border: none;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0 18px;
+  transform: rotate(90deg);
+  transition: transform 150ms;
+}
+
+.sign-btn--primary {
+  background: #000;
+  color: #fff;
+}
+.sign-btn--success {
+    background: #000;
+  color: #fff;
+  transform: rotate(0deg);
+}
+
+.sign-btn--secondary {
+  background: #efefef;
+  color: #111827;
+}
+
+.sign-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sign-controls--dim {
+  opacity: 0.3;
+}
+
+.sign-finish {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  text-align: center;
+    transform: rotate(90deg);
+}
+
+.sign-finish p {
+  margin: 0;
+  font-size: 16px;
+  color: rgba(17, 24, 39, 0.7);
+  max-width: 400px;
+  
+}
+
+.sign-drawhint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  animation: sign-hint-fade 0.6s ease-out forwards;
+  animation-delay: 1.4s;
+  transform: rotate(90deg);
+}
+
+.sign-drawhint img {
+  width: 80px;
+  height: 80px;
+}
+
+@keyframes sign-hint-fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.sign-btn:active {
+}
+
+.sign-tools {
+  position: absolute;
+  right: 20px;
+  top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 2;
+}
+
+.sign-tool-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #f2f2f2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 150ms;
+}
+
+.sign-tool-btn:active {
+
+}
+
+.sign-tool-btn img {
+  width: 24px;
+  height: 24px;
+  transform: rotate(90deg);
+}
+
+@media (orientation: landscape) and (max-width: 900px) {
+  .sign-actions {
+    right: 16px;
+    bottom: 16px;
+    transform: rotate(90deg);
+    transform-origin: bottom right;
+  }
+
+  .sign-tools {
+    right: 16px;
+    top: 16px;
+    transform: rotate(90deg);
+    transform-origin: top right;
+  }
+}

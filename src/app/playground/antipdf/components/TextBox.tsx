@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPuffEffect } from '../utils/puffEffect';
 
 interface TextBoxProps {
   id: string;
@@ -11,14 +12,24 @@ interface TextBoxProps {
   text: string;
   fontSize: number;
   bold: boolean;
+  align?: 'left' | 'center' | 'right';
   zoom?: number;
   autoFocus?: boolean;
+  isSelected?: boolean;
+  isLastSelected?: boolean;
+  selectedTextBoxIds?: string[];
   onUpdate: (id: string, updates: Partial<TextBoxData>) => void;
   onRemove: (id: string) => void;
-  onActivate: (id: string) => void;
+  onUpdateSelected?: (updates: Partial<TextBoxData>) => void;
+  onRemoveSelected?: () => void;
+  onActivate: (id: string, shiftKey?: boolean) => void;
   onDuplicate: (id: string, direction: 'right' | 'down') => void;
   allTextBoxes: TextBoxData[];
   onGuidesChange: (guides: { x: number | null; y: number | null }) => void;
+  isDisintegratingExternal?: boolean;
+  onDragSelectedStart?: () => void;
+  onDragSelected?: (dx: number, dy: number) => void;
+  onDragSelectedEnd?: () => void;
 }
 
 export interface TextBoxData {
@@ -30,6 +41,8 @@ export interface TextBoxData {
   text: string;
   fontSize: number;
   bold: boolean;
+  align?: 'left' | 'center' | 'right';
+  duplicatedFrom?: string;
 }
 
 export default function TextBox({
@@ -41,18 +54,29 @@ export default function TextBox({
   text,
   fontSize,
   bold,
+  align = 'left',
   zoom = 1,
   autoFocus,
+  isSelected = false,
+  isLastSelected = false,
+  selectedTextBoxIds = [],
   onUpdate,
   onRemove,
+  onUpdateSelected,
+  onRemoveSelected,
   onActivate,
   onDuplicate,
   allTextBoxes,
   onGuidesChange,
+  isDisintegratingExternal,
+  onDragSelectedStart,
+  onDragSelected,
+  onDragSelectedEnd,
 }: TextBoxProps) {
-  const [isActive, setIsActive] = useState(!!autoFocus);
+  const [isEditing, setIsEditing] = useState(!!autoFocus);
   const [isResizing, setIsResizing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isDisintegrating, setIsDisintegrating] = useState(false);
   const [duplicateHover, setDuplicateHover] = useState<'right' | 'down' | null>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
@@ -102,9 +126,19 @@ export default function TextBox({
   useEffect(() => {
     if (!isDragging) return;
 
+    const isMultiSelect = selectedTextBoxIds.length > 1;
+
     const handleMouseMove = (e: MouseEvent) => {
       const dx = (e.clientX - dragStart.current.x) / zoom;
       const dy = (e.clientY - dragStart.current.y) / zoom;
+
+      // Multi-select: move all selected boxes together
+      if (isMultiSelect && onDragSelected) {
+        onDragSelected(dx, dy);
+        return;
+      }
+
+      // Single select: existing logic with snapping
       let nextX = dragStart.current.boxX + dx;
       let nextY = dragStart.current.boxY + dy;
 
@@ -162,6 +196,9 @@ export default function TextBox({
     const handleMouseUp = () => {
       setIsDragging(false);
       onGuidesChange({ x: null, y: null });
+      if (isMultiSelect) {
+        onDragSelectedEnd?.();
+      }
     };
 
     window.addEventListener('mousemove', handleMouseMove);
@@ -170,7 +207,7 @@ export default function TextBox({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [allTextBoxes, height, id, isDragging, onGuidesChange, onUpdate, width, zoom]);
+  }, [allTextBoxes, height, id, isDragging, onGuidesChange, onUpdate, width, zoom, selectedTextBoxIds.length, onDragSelected, onDragSelectedEnd]);
 
   const handleResizeStart = useCallback((e: React.MouseEvent, corner: string) => {
     e.stopPropagation();
@@ -181,6 +218,7 @@ export default function TextBox({
 
   const handleBoxMouseDown = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     const box = boxRef.current;
     if (!box) return;
 
@@ -191,25 +229,29 @@ export default function TextBox({
     const nearEdge = mx < edgeThreshold || mx > rect.width - edgeThreshold ||
                      my < edgeThreshold || my > rect.height - edgeThreshold;
 
-    if (nearEdge || !isActive) {
-      e.preventDefault();
-      setIsActive(true);
-      onActivate(id);
+    // Multi-select: clicking any selected box starts dragging all without changing selection
+    if (isSelected && selectedTextBoxIds.length > 1) {
+      onDragSelectedStart?.();
+      setIsDragging(true);
+      dragStart.current = { x: e.clientX, y: e.clientY, boxX: x, boxY: y };
+      return;
+    }
+
+    if (nearEdge || !isSelected) {
+      onActivate(id, e.shiftKey);
       setIsDragging(true);
       dragStart.current = { x: e.clientX, y: e.clientY, boxX: x, boxY: y };
     }
-  }, [id, isActive, onActivate, x, y, zoom]);
+  }, [id, isSelected, selectedTextBoxIds.length, onActivate, onDragSelectedStart, x, y]);
 
   const handleBoxClick = useCallback((e: React.MouseEvent) => {
     if (isDragging) return;
     e.stopPropagation();
-    setIsActive(true);
-    onActivate(id);
     textRef.current?.focus();
-  }, [id, isDragging, onActivate]);
+  }, [isDragging]);
 
   const handleBlur = useCallback(() => {
-    setIsActive(false);
+    setIsEditing(false);
     if (textRef.current) {
       const newText = textRef.current.textContent || '';
       onUpdate(id, { text: newText });
@@ -217,12 +259,25 @@ export default function TextBox({
   }, [id, onUpdate]);
 
   const handleFocus = useCallback(() => {
-    setIsActive(true);
-    onActivate(id);
-  }, [id, onActivate]);
+    setIsEditing(true);
+  }, []);
+
+  const handleDelete = useCallback(() => {
+    if (!boxRef.current || isDisintegrating) return;
+    if (selectedTextBoxIds.length >= 1 && onRemoveSelected) {
+      onRemoveSelected();
+      return;
+    }
+    setIsDisintegrating(true);
+    const rect = boxRef.current.getBoundingClientRect();
+    createPuffEffect(rect);
+    setTimeout(() => {
+      onRemove(id);
+    }, 120);
+  }, [id, isDisintegrating, onRemove, onRemoveSelected, selectedTextBoxIds.length]);
 
   const scale = 1 / zoom;
-  const borderWidth = (isActive ? 4 : 3) * scale;
+  const borderWidth = 4 * scale;
   const handleSize = 14 * scale;
   const handleOffset = -handleSize / 2;
   const handleBorderWidth = 4 * scale;
@@ -230,7 +285,8 @@ export default function TextBox({
   return (
     <div
       ref={boxRef}
-      className={`textbox${isActive ? ' textbox--active' : ''}${isDragging ? ' textbox--dragging' : ''}`}
+      className={`textbox${isSelected ? ' textbox--active' : ''}${isDragging ? ' textbox--dragging' : ''}${isDisintegrating || isDisintegratingExternal ? ' textbox--disintegrating' : ''}`}
+      data-textbox-id={id}
       style={{ left: x, top: y, width, height, minHeight: minHeight, borderWidth }}
       onClick={handleBoxClick}
       onMouseDown={handleBoxMouseDown}
@@ -258,55 +314,108 @@ export default function TextBox({
         suppressContentEditableWarning
         onFocus={handleFocus}
         onBlur={handleBlur}
-        style={{ fontSize, lineHeight: `${lineHeight}px`, fontWeight: bold ? 'bold' : 'normal' }}
+        style={{
+          fontSize,
+          lineHeight: `${lineHeight}px`,
+          fontWeight: bold ? 'bold' : 'normal',
+          textAlign: align ?? 'left',
+        }}
       >
         {text}
       </div>
 
-      {isActive && (
+      {isSelected && (
         <>
-          <div
-            className="textbox__toolbar"
-            style={{ transform: `translateX(-50%) scale(${scale})`, bottom: `calc(100% + ${8 * scale}px)` }}
-            onMouseDown={(e) => e.preventDefault()}
-            onDoubleClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-          >
-            <div className="textbox__toolbar-size">
-              <button
-                className="textbox__toolbar-btn"
-                onDoubleClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onClick={() => onUpdate(id, { fontSize: fontSize + 1 })}
-              >
-                <img src="/playground/aplus.svg" alt="Increase size" className="textbox__toolbar-icon" />
-              </button>
-              <button
-                className="textbox__toolbar-btn"
-                onDoubleClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onClick={() => onUpdate(id, { fontSize: Math.max(8, fontSize - 1) })}
-              >
-                <img src="/playground/aminus.svg" alt="Decrease size" className="textbox__toolbar-icon" />
-              </button>
-            </div>
-            <button
-              className="textbox__toolbar-delete"
+          {isLastSelected && (
+            <div
+              className="textbox__toolbar"
+              style={{ transform: `translateX(-50%) scale(${scale})`, bottom: `calc(100% + ${8 * scale}px)` }}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
               onDoubleClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
               }}
-              onClick={() => onRemove(id)}
             >
-              <img src="/playground/delete.svg" alt="Delete" className="textbox__toolbar-icon" />
-            </button>
-          </div>
+              <div className="textbox__toolbar-size">
+                <button
+                  className="textbox__toolbar-btn"
+                  onDoubleClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (selectedTextBoxIds.length >= 1 && onUpdateSelected) {
+                      onUpdateSelected({ fontSize: fontSize + 1 });
+                    } else {
+                      onUpdate(id, { fontSize: fontSize + 1 });
+                    }
+                  }}
+                >
+                  <img src="/playground/aplus.svg" alt="Increase size" className="textbox__toolbar-icon" />
+                </button>
+                <button
+                  className="textbox__toolbar-btn"
+                  onDoubleClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (selectedTextBoxIds.length >= 1 && onUpdateSelected) {
+                      onUpdateSelected({ fontSize: Math.max(8, fontSize - 1) });
+                    } else {
+                      onUpdate(id, { fontSize: Math.max(8, fontSize - 1) });
+                    }
+                  }}
+                >
+                  <img src="/playground/aminus.svg" alt="Decrease size" className="textbox__toolbar-icon" />
+                </button>
+                <button
+                  className="textbox__toolbar-btn textbox__toolbar-btn--align"
+                  onDoubleClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const nextAlign =
+                      (align ?? 'left') === 'left'
+                        ? 'center'
+                        : (align ?? 'left') === 'center'
+                        ? 'right'
+                        : 'left';
+                    if (selectedTextBoxIds.length >= 1 && onUpdateSelected) {
+                      onUpdateSelected({ align: nextAlign });
+                    } else {
+                      onUpdate(id, { align: nextAlign });
+                    }
+                  }}
+                >
+                  <span
+                    className={`textbox__toolbar-align-icon textbox__toolbar-align-icon--${align ?? 'left'}`}
+                    aria-hidden="true"
+                  />
+                </button>
+              </div>
+              <button
+                className="textbox__toolbar-delete"
+                onDoubleClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete();
+                }}
+              >
+                <img src="/playground/delete.svg" alt="Delete" className="textbox__toolbar-icon" />
+              </button>
+            </div>
+          )}
 
           <div className="textbox__handle textbox__handle--tl" style={{ width: handleSize, height: handleSize, top: handleOffset, left: handleOffset, borderWidth: handleBorderWidth }} onMouseDown={(e) => handleResizeStart(e, 'tl')} />
           <div className="textbox__handle textbox__handle--tr" style={{ width: handleSize, height: handleSize, top: handleOffset, right: handleOffset, borderWidth: handleBorderWidth }} onMouseDown={(e) => handleResizeStart(e, 'tr')} />
