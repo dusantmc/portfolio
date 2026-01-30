@@ -1,9 +1,25 @@
 .uploader {
+  position: relative;
   width: 100%;
   height: 100vh;
   padding: 32px;
   transition: background-color 200ms;
   background-color: black;
+}
+
+.uploader__cursor-light {
+  position: fixed;
+  top: 24px;
+  left: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: white;
+  filter: blur(32px);
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  z-index: 10;
+  will-change: transform;
 }
 
 .uploader.dragging {
@@ -32,9 +48,45 @@
 }
 
 .uploader__logo {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 24px;
+  position: relative;
+  width: min(548px, 90vw);
+  aspect-ratio: 548 / 140;
+  margin-bottom: 12px;
+}
+
+.uploader__wordmark {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.uploader__brandmark {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.uploader__brandmark-mask {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  mask-image: url('/playground/brandmark.svg');
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  mask-position: center;
+  -webkit-mask-image: url('/playground/brandmark.svg');
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  -webkit-mask-position: center;
+}
+
+.uploader__brandmark-shader {
+  position: absolute;
+  inset: 0;
+  transform: translateX(30px);
 }
 
 .uploader__description {
@@ -47,8 +99,8 @@
 .uploader__button {
   display: inline-block;
   padding: 16px 24px;
-  background-color: white;
-  color: black;
+  background-color: #006FFF;
+  color: white;
   border-radius: 9999px;
   font-family: inherit;
   font-size: 18px;
@@ -61,7 +113,7 @@
 }
 
 .uploader__button:hover {
-  background-color: rgb(241 245 249); /* slate-100 */
+  background-color: #197DFF;
   transform: scale(1.03);
 }
 /*

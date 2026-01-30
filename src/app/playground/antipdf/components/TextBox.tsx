@@ -27,6 +27,7 @@ interface TextBoxProps {
   allTextBoxes: TextBoxData[];
   onGuidesChange: (guides: { x: number | null; y: number | null }) => void;
   isDisintegratingExternal?: boolean;
+  isDraggingSelected?: boolean;
   onDragSelectedStart?: () => void;
   onDragSelected?: (dx: number, dy: number) => void;
   onDragSelectedEnd?: () => void;
@@ -69,6 +70,7 @@ export default function TextBox({
   allTextBoxes,
   onGuidesChange,
   isDisintegratingExternal,
+  isDraggingSelected,
   onDragSelectedStart,
   onDragSelected,
   onDragSelectedEnd,
@@ -84,7 +86,7 @@ export default function TextBox({
   const dragStart = useRef({ x: 0, y: 0, boxX: 0, boxY: 0 });
 
   const lineHeight = Math.ceil(fontSize * 1.0);
-  const minHeight = lineHeight + 4;
+  const minHeight = lineHeight + 8;
 
   useEffect(() => {
     if (autoFocus && textRef.current) {
@@ -328,8 +330,8 @@ export default function TextBox({
         <>
           {isLastSelected && (
             <div
-              className="textbox__toolbar"
-              style={{ transform: `translateX(-50%) scale(${scale})`, bottom: `calc(100% + ${8 * scale}px)` }}
+              className={`textbox__toolbar${isDragging || isDraggingSelected ? ' textbox__toolbar--hidden' : ''}`}
+              style={{ transform: `translateX(-50%) scale(${(isDragging || isDraggingSelected) ? scale * 0.92 : scale})`, bottom: `calc(100% + ${8 * scale}px)` }}
               onMouseDown={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

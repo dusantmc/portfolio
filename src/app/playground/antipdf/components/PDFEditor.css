@@ -445,6 +445,12 @@
   align-items: center;
   gap: 8px;
   z-index: 2;
+  transition: opacity 100ms ease-out, transform 100ms ease-out;
+}
+
+.signature-toolbar--hidden {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .signature-toolbar__palette {
@@ -537,7 +543,7 @@
 .editor__download-btn {
   height: 48px;
   padding: 0 20px;
-  background-color: #000;
+  background-color: #006FFF;
   color: #fff;
   border: none;
   border-radius: 9999px;
@@ -557,7 +563,7 @@
 }
 
 .editor__download-btn:hover {
-  background-color: #222;
+  background-color: #197DFF;
 }
 
 .editor__content {
@@ -580,7 +586,7 @@
   position: relative;
   background-color: white;
   border-radius: 12px;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: 0 4px 80px rgba(0, 0, 0, 0.03);
   transition: transform 100ms ease-out;
   transform-origin: center center;
@@ -597,8 +603,7 @@
 
 .editor__canvas {
   display: block;
-  max-width: 100%;
-  max-height: calc(100vh - 80px - 64px);
+  border-radius: 12px;
 }
 
 .editor__overlay {
@@ -696,6 +701,12 @@
   gap: 10px;
   pointer-events: auto;
   transform-origin: center bottom;
+  transition: opacity 100ms ease-out, transform 100ms ease-out;
+}
+
+.textbox__toolbar--hidden {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .textbox__toolbar-size {

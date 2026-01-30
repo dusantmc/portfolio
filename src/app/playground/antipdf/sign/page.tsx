@@ -281,7 +281,7 @@ function SignPageContent() {
       <div className="sign-canvas-wrap" ref={containerRef}>
         {!isSubmitted && (
           <div className="sign-helper-text">
-            Draw your signature and click Save when you are done
+            Draw your signature and tap Save when you’re done
           </div>
         )}
         {!hasInk && !isSubmitted && (
@@ -292,7 +292,7 @@ function SignPageContent() {
         {isSubmitted ? (
           <div className="sign-finish">
             <p>
-              You signature is now added to document. You can close this tab and return to desktop.
+              Your signature is added. You can close this tab and return to your desktop.
             </p>
             <button type="button" className="sign-btn sign-btn--success" onClick={handleStartOver}>
               Start Over

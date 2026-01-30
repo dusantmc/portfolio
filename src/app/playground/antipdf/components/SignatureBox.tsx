@@ -135,7 +135,7 @@ export default function SignatureBox({
   }, [id, isDisintegrating, onRemove]);
 
   const scale = 1 / zoom;
-  const borderWidth = (active ? 4 : 3) * scale;
+  const borderWidth = 4 * scale;
   const handleSize = 14 * scale;
   const handleOffset = -handleSize / 2;
   const handleBorderWidth = 4 * scale;
@@ -172,13 +172,16 @@ export default function SignatureBox({
       {active && (
         <>
           <div
-            className="signature-toolbar"
+            className={`signature-toolbar${isDragging ? ' signature-toolbar--hidden' : ''}`}
             style={{
-              transform: `translateX(-50%) scale(${scale})`,
+              transform: `translateX(-50%) scale(${isDragging ? scale * 0.92 : scale})`,
               transformOrigin: 'bottom center',
               bottom: `calc(100% + ${toolbarOffset}px)`,
             }}
-            onMouseDown={(e) => e.preventDefault()}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
           >
             <div className="signature-toolbar__palette">
               {signaturePalette.map((item) => (
@@ -198,6 +201,10 @@ export default function SignatureBox({
             <button
               type="button"
               className="signature-toolbar__delete"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

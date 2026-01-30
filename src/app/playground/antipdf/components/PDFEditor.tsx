@@ -14,6 +14,7 @@ interface PDFEditorProps {
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 4;
 const ZOOM_STEP = 0.4;
+const RENDER_SCALE = 2;
 const SIGNATURES_STORAGE_KEY = 'antipdf.signatures';
 const SIGN_SESSION_ENDPOINT = '/api/antipdf?action=session';
 const SIGN_STREAM_ENDPOINT = '/api/antipdf?action=stream';
@@ -25,7 +26,7 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [textBoxes, setTextBoxes] = useState<TextBoxData[]>([]);
-  const [zoom, setZoom] = useState(2);
+  const [zoom, setZoom] = useState(1);
   const [defaultFontSize, setDefaultFontSize] = useState(12);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [selectedTextBoxIds, setSelectedTextBoxIds] = useState<string[]>([]);
@@ -45,6 +46,7 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
   const [signatureBoxes, setSignatureBoxes] = useState<SignatureBoxData[]>([]);
   const [hasAutoFit, setHasAutoFit] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isDraggingSelected, setIsDraggingSelected] = useState(false);
   const [isMarqueeSelecting, setIsMarqueeSelecting] = useState(false);
   const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
@@ -59,6 +61,7 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
   const signatureDrawRef = useRef<HTMLDivElement>(null);
   const signatureEventSourceRef = useRef<EventSource | null>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
+  const dragStartPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
 
   // Undo/Redo history
   type HistorySnapshot = { textBoxes: TextBoxData[]; signatureBoxes: SignatureBoxData[] };
@@ -288,9 +291,17 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
       const context = canvas.getContext('2d');
       if (!context) return;
 
-      const viewport = page.getViewport({ scale: 2 });
+      // Always render without page rotation — rotation: 0 overrides
+      // the page's /Rotate entry, which some PDF generators set incorrectly.
+      const viewport = page.getViewport({ scale: RENDER_SCALE, rotation: 0 });
       canvas.width = viewport.width;
       canvas.height = viewport.height;
+
+      // Set CSS dimensions to 1x so the canvas displays at natural PDF size
+      const cssWidth = viewport.width / RENDER_SCALE;
+      const cssHeight = viewport.height / RENDER_SCALE;
+      canvas.style.width = `${cssWidth}px`;
+      canvas.style.height = `${cssHeight}px`;
 
       await page.render({
         canvasContext: context,
@@ -298,21 +309,20 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
       }).promise;
 
       if (!hasAutoFit) {
-        const fitZoom = 2;
         const content = contentRef.current;
-        const canvasEl = canvasRef.current;
 
-        let panY = 0;
-        if (content && canvasEl) {
-          const viewportH = content.clientHeight;
-          const canvasH = canvasEl.clientHeight;
-          const padding = 48;
-          panY = (canvasH * fitZoom) / 2 - viewportH / 2 + padding;
-          panY = Math.max(0, panY);
+        if (content) {
+          const contentW = content.clientWidth;
+          const contentH = content.clientHeight;
+          const fitZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, (0.8 * contentW) / cssWidth));
+
+          setZoom(fitZoom);
+
+          // Position 40px from the top of the content area
+          const panY = 40 - contentH / 2 + (cssHeight * fitZoom) / 2;
+          setPan({ x: 0, y: panY });
         }
 
-        setZoom(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, fitZoom)));
-        setPan({ x: 0, y: panY });
         setHasAutoFit(true);
 
         // Enable transitions after initial positioning
@@ -505,8 +515,8 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
     saveHistory();
 
     const canvas = canvasRef.current;
-    const cw = canvas?.width || 600;
-    const ch = canvas?.height || 800;
+    const cw = canvas?.clientWidth || 600;
+    const ch = canvas?.clientHeight || 800;
 
     // Calculate gap: if source was duplicated from another, use the same distance
     let dx: number;
@@ -609,7 +619,7 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
     const id = Date.now().toString();
     const fontSize = lastUsedFontSize ?? Math.max(8, defaultFontSize - 2);
     const boxWidth = 100;
-    const boxHeight = Math.ceil(fontSize * 1.0) + 4;
+    const boxHeight = Math.ceil(fontSize * 1.0) + 8;
 
     // Calculate viewport center in canvas coordinates
     const viewportCenterX = cw / 2 - pan.x / zoom;
@@ -681,6 +691,35 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
 
   const handleGuidesChange = useCallback((guides: { x: number | null; y: number | null }) => {
     setAlignmentGuides(guides);
+  }, []);
+
+  const handleDragSelectedStart = useCallback(() => {
+    saveHistory();
+    setIsDraggingSelected(true);
+    const positions = new Map<string, { x: number; y: number }>();
+    for (const tb of textBoxes) {
+      if (selectedTextBoxIds.includes(tb.id)) {
+        positions.set(tb.id, { x: tb.x, y: tb.y });
+      }
+    }
+    dragStartPositionsRef.current = positions;
+  }, [textBoxes, selectedTextBoxIds, saveHistory]);
+
+  const handleDragSelected = useCallback((dx: number, dy: number) => {
+    const positions = dragStartPositionsRef.current;
+    if (positions.size === 0) return;
+    setTextBoxes((prev) =>
+      prev.map((tb) => {
+        const startPos = positions.get(tb.id);
+        if (!startPos) return tb;
+        return { ...tb, x: startPos.x + dx, y: startPos.y + dy };
+      })
+    );
+  }, []);
+
+  const handleDragSelectedEnd = useCallback(() => {
+    dragStartPositionsRef.current = new Map();
+    setIsDraggingSelected(false);
   }, []);
 
   const handleSignatureActivate = useCallback((id: string) => {
@@ -1138,7 +1177,7 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
                         )}
                       </div>
                     </div>
-                    <span className="signature-menu__body">Scan this QR code to turn your phone into a signature pad. Or <a href="#" className="signature-menu__link">draw here</a> instead</span>
+                    <span className="signature-menu__body">Scan this QR code to use your phone as a signature pad. Or <a href="#" className="signature-menu__link">draw here</a> instead</span>
                   </div>
                 </div>
               </div>
@@ -1214,6 +1253,10 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
                   onGuidesChange={handleGuidesChange}
                   selectedTextBoxIds={selectedTextBoxIds}
                   isDisintegratingExternal={disintegratingTextBoxIds.includes(tb.id)}
+                  isDraggingSelected={isDraggingSelected}
+                  onDragSelectedStart={handleDragSelectedStart}
+                  onDragSelected={handleDragSelected}
+                  onDragSelectedEnd={handleDragSelectedEnd}
                 />
               );
             })}

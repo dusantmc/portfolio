@@ -54,11 +54,11 @@
 }
 
 .sign-btn--primary {
-  background: #000;
+  background: #006FFF;
   color: #fff;
 }
 .sign-btn--success {
-    background: #000;
+    background: #006FFF;
   color: #fff;
   transform: rotate(0deg);
 }

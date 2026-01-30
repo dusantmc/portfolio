@@ -1,7 +1,8 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import Image from 'next/image';
+import { Dithering } from '@paper-design/shaders-react';
 import './PDFUploader.css';
 
 interface PDFUploaderProps {
@@ -11,6 +12,13 @@ interface PDFUploaderProps {
 export default function PDFUploader({ onPdfSelected }: PDFUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cursorRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (cursorRef.current) {
+      cursorRef.current.style.transform = `translate(${e.clientX - 32}px, ${e.clientY - 32}px)`;
+    }
+  }, []);
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -50,20 +58,39 @@ export default function PDFUploader({ onPdfSelected }: PDFUploaderProps) {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      onMouseMove={handleMouseMove}
     >
+      <div ref={cursorRef} className="uploader__cursor-light" />
       <div className={`uploader__dropzone${isDragging ? ' dragging' : ''}`}>
         <div className="uploader__logo">
+          <div className="uploader__brandmark" aria-hidden="true">
+            <div className="uploader__brandmark-mask">
+              <div className="uploader__brandmark-shader">
+                <Dithering
+                  speed={1}
+                  shape="sphere"
+                  type="4x4"
+                  size={2}
+                  scale={1.0}
+                  colorBack="#00000000"
+                  colorFront="#008CFF"
+                  style={{ height: '100%', width: '100%' }}
+                />
+              </div>
+            </div>
+          </div>
           <Image
-            src="/playground/antipdflogo.png"
-            alt="ANTI PDF Logo"
-            width={496}
-            height={186}
+            src="/playground/wordmark.svg"
+            alt="Anti PDF wordmark"
+            width={548}
+            height={140}
             priority
+            className="uploader__wordmark"
           />
         </div>
 
         <p className="uploader__description">
-          Stupid simple document filling and signing
+          Stupid-simple document filling and signing
         </p>
 
         <button
