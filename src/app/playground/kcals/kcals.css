@@ -1,0 +1,820 @@
+/* ===========================
+   Kcals - Design Tokens
+   From Figma: V7iFUBiioQuCLO56L8UO86
+   =========================== */
+
+.kcals-app {
+  --background: #fefdfb;
+  --white: #ffffff;
+  --black-100: #191815;
+  --black-70: #676663;
+  --black-50: #91908e;
+  --border-8: rgba(25, 24, 21, 0.08);
+  --green: #28908e;
+  --blue: #007bff;
+  --red: #e53e3e;
+
+  --shadow-item: 0px 4px 16px rgba(0, 0, 0, 0.03);
+  --shadow-chatbox: 0px 8px 24px rgba(25, 24, 21, 0.06);
+
+  --radius-pill: 20px;
+  --radius-input: 28px;
+  --radius-chip: 36px;
+    --radius-modal: 32px;
+
+  background: var(--background);
+  color: var(--black-100);
+  min-height: 100vh;
+  min-height: 100dvh;
+  max-width: 390px;
+  margin: 0 auto;
+  position: relative;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ===========================
+   Top Bar
+   =========================== */
+
+.kcals-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 0;
+}
+
+.kcals-topbar-right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.kcals-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 8px 12px 8px 8px;
+  background: var(--white);
+  border: 0.5px solid var(--border-8);
+  border-radius: var(--radius-chip);
+  box-shadow: var(--shadow-item);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.kcals-chip-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+/* ===========================
+   Calorie Display
+   =========================== */
+
+.kcals-calorie-display {
+  text-align: center;
+  padding: 98px 0 40px;
+}
+
+.kcals-calorie-number {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+  font-weight: 700;
+}
+
+.kcals-calorie-value {
+  font-size: 50px;
+  line-height: 50px;
+  letter-spacing: -2px;
+}
+
+.kcals-calorie-unit {
+  font-size: 40px;
+  line-height: 56px;
+  letter-spacing: -1.2px;
+}
+
+.kcals-calorie-remaining {
+  font-size: 17px;
+  line-height: 20px;
+  margin-top: 0;
+}
+
+.kcals-calorie-remaining strong {
+  font-weight: 700;
+  color: var(--green);
+}
+
+.kcals-calorie-remaining span {
+  color: #939393;
+}
+
+/* ===========================
+   Food List
+   =========================== */
+
+.kcals-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  opacity: 0.5;
+  padding: 0 24px;
+  margin-bottom: 10px;
+}
+
+.kcals-food-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 16px;
+}
+
+.kcals-food-item {
+  --swipe-x: 0px;
+  --press-scale: 1;
+  display: flex;
+  align-items: center;
+  height: 56px;
+  background: var(--white);
+  border: 0.5px solid var(--border-8);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-item);
+  padding: 0 16px 0 12px;
+  transform: translateX(var(--swipe-x)) scale(var(--press-scale));
+}
+.kcals-food-item:active {
+  --press-scale: 0.97;
+}
+
+.kcals-food-emoji {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.kcals-food-image {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.kcals-food-name {
+  font-size: 16px;
+  font-weight: 500;
+  margin-left: 12px;
+  flex: 1;
+}
+
+.kcals-food-name.loading {
+  opacity: 0.5;
+}
+
+.kcals-food-kcal {
+  font-size: 16px;
+  font-weight: 400;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.kcals-food-kcal-unknown {
+  color: var(--black-50);
+  font-style: italic;
+}
+
+.kcals-food-loading-dots {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.kcals-food-loading-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--black-50);
+  animation: kcals-dot-pulse 1.2s ease-in-out infinite;
+}
+
+.kcals-food-loading-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.kcals-food-loading-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes kcals-dot-pulse {
+  0%, 60%, 100% { opacity: 0.3; }
+  30% { opacity: 1; }
+}
+
+.kcals-status-text {
+  font-size: 13px;
+  font-weight: 400;
+  text-transform: none;
+  opacity: 0.8;
+}
+
+/* ===========================
+   Input Bar
+   =========================== */
+
+.kcals-input-bar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 390px;
+  padding: 12px 16px;
+  padding-bottom: max(40px, env(safe-area-inset-bottom));
+  background: var(--background);
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .kcals-input-bar:focus-within {
+    padding-bottom: max(12px);
+  }
+}
+
+.kcals-input-wrapper {
+  display: flex;
+  align-items: center;
+  height: 56px;
+  background: var(--white);
+  border: 1px solid var(--border-8);
+  border-radius: var(--radius-input);
+  box-shadow: var(--shadow-chatbox);
+  padding: 0 10px 0 18px;
+}
+
+.kcals-input-tag {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--blue);
+  white-space: nowrap;
+  margin-right: 4px;
+}
+
+.kcals-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: none;
+  font-size: 16px;
+  font-family: inherit;
+  color: var(--black-100);
+  line-height: 20px;
+}
+
+.kcals-input::placeholder {
+  color: var(--black-50);
+}
+
+.kcals-input-action {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 50%;
+  color: var(--black-50);
+  font-size: 20px;
+}
+
+.kcals-submit-btn {
+  width: 44px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: none;
+  background: var(--blue);
+  cursor: pointer;
+  border-radius: 20px;
+  color: var(--white);
+}
+
+.kcals-submit-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* ===========================
+   Suggestions Panel
+   =========================== */
+
+.kcals-suggestions {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100dvh - 100px);
+}
+
+.kcals-suggestions-dismiss {
+  flex: 1;
+}
+
+.kcals-suggestions-content {
+  padding: 0 16px 8px;
+}
+
+.kcals-suggestion-section {
+  margin-bottom: 16px;
+}
+
+.kcals-suggestion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  opacity: 0.5;
+  padding: 0 8px;
+  margin-bottom: 10px;
+}
+
+.kcals-add-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--black-50);
+  opacity: 1;
+}
+
+.kcals-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.kcals-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px 0 10px;
+  background: var(--white);
+  border: 0.5px solid var(--border-8);
+  border-radius: var(--radius-chip);
+  box-shadow: var(--shadow-item);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  color: var(--black-100);
+}
+
+.kcals-pill-emoji {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.kcals-pill-image {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+/* ===========================
+   Custom Food Modal
+   =========================== */
+
+.kcals-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.kcals-modal {
+  width: 100%;
+  max-width: 390px;
+  background: var(--white);
+  border-radius: var(--radius-modal) var(--radius-modal) 0 0;
+  padding: 12px 24px 32px;
+  padding-bottom: max(40px, env(safe-area-inset-bottom));
+  position: relative;
+}
+
+.kcals-modal-handle {
+  width: 40px;
+  height: 4px;
+  background: var(--border-8);
+  border-radius: 2px;
+  margin: 0 auto 20px;
+}
+
+.kcals-modal-delete {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: #fde8e8;
+  color: var(--red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.kcals-modal-camera {
+  width: 80px;
+  height: 80px;
+  background: white;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+  color: var(--black-50);
+  overflow: hidden;
+}
+
+.kcals-modal-image-wrapper {
+  width: 80px;
+  height: 80px;
+  background: white;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+  overflow: hidden;
+}
+
+.kcals-modal-camera-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.kcals-modal-fields {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.kcals-modal-field {
+  flex: 1;
+}
+
+.kcals-modal-field:first-child {
+  flex: 1.2;
+}
+
+.kcals-modal-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--black-50);
+  margin-bottom: 8px;
+}
+
+.kcals-modal-input {
+  width: 100%;
+  height: 48px;
+  border: 1px solid var(--border-8);
+  border-radius: 12px;
+  padding: 0 16px;
+  font-size: 16px;
+  font-family: inherit;
+  color: var(--black-100);
+  background: var(--white);
+  outline: none;
+}
+
+.kcals-modal-input:focus {
+  border-color: var(--blue);
+}
+
+.kcals-modal-kcal-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.kcals-modal-kcal-row .kcals-modal-input {
+  flex: 1;
+}
+
+.kcals-modal-kcal-suffix {
+  height: 48px;
+  padding: 0 16px;
+  border: 1px solid var(--border-8);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: var(--black-50);
+  white-space: nowrap;
+}
+
+.kcals-modal-submit {
+  width: 100%;
+  height: 56px;
+  border: none;
+  border-radius: 16px;
+  background: var(--blue);
+  color: var(--white);
+  font-size: 17px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* ===========================
+   Swipe Actions
+   =========================== */
+
+.kcals-swipeable {
+  position: relative;
+  border-radius: var(--radius-pill);
+}
+
+.kcals-swipeable .kcals-food-item {
+  position: relative;
+  z-index: 1;
+  transition: transform 0.2s ease-out;
+}
+
+.kcals-swipe-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  padding-right: 4px;
+}
+
+.kcals-swipe-delete {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  border-radius: 14px;
+}
+
+.kcals-swipe-delete {
+  background: var(--red);
+  color: var(--white);
+  transform: scale(var(--delete-scale, 0.5));
+  transition: transform 0.2s ease-out;
+}
+
+.kcals-swipe-open .kcals-swipe-delete {
+  transform: scale(1);
+}
+
+/* ===========================
+   Drag & Drop
+   =========================== */
+
+.kcals-dragging {
+  opacity: 1;
+}
+
+.kcals-drop-target {
+  border-radius: var(--radius-pill);
+}
+
+.kcals-drop-target .kcals-food-item {
+  border: 1.5px solid #007bff;
+  background: #e3f0fd;
+}
+
+.kcals-drag-ghost {
+  position: fixed;
+  z-index: 999;
+  pointer-events: none;
+  transform: scale(1.05);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  border-radius: var(--radius-pill);
+  background: var(--white);
+  overflow: hidden;
+}
+
+/* ===========================
+   Group Item
+   =========================== */
+
+.kcals-group-item {
+  cursor: pointer;
+}
+
+.kcals-group-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  background: var(--blue);
+  color: var(--white);
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kcals-food-emoji {
+  position: relative;
+}
+
+/* ===========================
+   Group Modal
+   =========================== */
+
+.kcals-group-modal {
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+}
+
+.kcals-group-emoji {
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 80px;
+  margin: 0 auto 20px;
+}
+
+.kcals-group-name-input {
+  width: 100%;
+  height: 52px;
+  border: 1px solid var(--border-8);
+  border-radius: 14px;
+  padding: 0 16px;
+  font-size: 17px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--black-100);
+  background: var(--white);
+  outline: none;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.kcals-group-name-input:focus {
+  border-color: var(--blue);
+}
+
+.kcals-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  opacity: 0.5;
+  padding: 0 4px;
+  margin-bottom: 10px;
+}
+
+.kcals-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kcals-group-list-item {
+  display: flex;
+  align-items: center;
+  height: 52px;
+  background: var(--white);
+  border: 0.5px solid var(--border-8);
+  border-radius: 16px;
+  padding: 0 8px 0 12px;
+}
+
+.kcals-group-list-item .kcals-food-emoji {
+  font-size: 20px;
+  width: 28px;
+  height: 28px;
+}
+
+.kcals-group-list-item .kcals-food-name {
+  font-size: 15px;
+  margin-left: 10px;
+}
+
+.kcals-group-list-item .kcals-food-kcal {
+  font-size: 15px;
+}
+
+.kcals-group-remove-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 20px;
+  color: var(--black-50);
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+/* ===========================
+   Empty State
+   =========================== */
+
+.kcals-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 80px 40px;
+  gap: 8px;
+}
+
+.kcals-empty-icon {
+  font-size: 60px;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.kcals-empty-title {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.kcals-empty-subtitle {
+  font-size: 14px;
+  color: var(--black-50);
+  line-height: 1.4;
+}
+
+/* ===========================
+   Utilities
+   =========================== */
+
+.kcals-app *,
+.kcals-app *::before,
+.kcals-app *::after {
+  box-sizing: border-box;
+}
+
+/* Safe area spacing for bottom input */
+.kcals-content {
+  padding-bottom: 100px;
+}
+
+/* Standalone PWA: respect safe area inset */
+@media all and (display-mode: standalone) {
+  .kcals-topbar {
+    padding-top: calc(env(safe-area-inset-top) + 16px);
+  }
+}
