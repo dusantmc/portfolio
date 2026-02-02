@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Nunito_Sans } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Analytics } from "@vercel/analytics/next"
+import VercelAnalytics from "../components/VercelAnalytics";
 import "./globals.css";
 
 const nunitoSans = Nunito_Sans({
@@ -82,7 +82,7 @@ export default function RootLayout({
       <body className={`${nunitoSans.variable} antialiased`}>
         {children}
         <SpeedInsights />
-        <Analytics />
+        <VercelAnalytics />
       </body>
     </html>
   );

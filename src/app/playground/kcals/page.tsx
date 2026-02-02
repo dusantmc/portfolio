@@ -37,6 +37,7 @@ function formatCompact(n: number): string {
 }
 const SWIPE_THRESHOLD = 48;
 const LONG_PRESS_MS = 1000;
+const MODAL_ANIM_MS = 250;
 const DRAG_MOVE_CANCEL = 10;
 const DROP_OVERLAP = 0.3;
 
@@ -409,6 +410,16 @@ export default function KcalsPage() {
   const [weeklyBurn, setWeeklyBurn] = useState(0);
   const [showWeeklyModal, setShowWeeklyModal] = useState(false);
   const [weeklyBreakdown, setWeeklyBreakdown] = useState<WeeklyEntry[]>([]);
+  const [closingModal, setClosingModal] = useState<string | null>(null);
+
+  const animateModalClose = useCallback((id: string, onDone: () => void) => {
+    if (closingModal) return;
+    setClosingModal(id);
+    setTimeout(() => {
+      onDone();
+      setClosingModal(null);
+    }, MODAL_ANIM_MS);
+  }, [closingModal]);
 
   useEffect(() => {
     const hasFood = foods.some((f) => !f.loading && f.kcal != null);
@@ -519,13 +530,15 @@ export default function KcalsPage() {
     }
     setCustomFoods(updated);
     saveCustomFoods(updated);
-    setShowModal(false);
-    if (modalImageBlob && modalImageUrl) {
-      URL.revokeObjectURL(modalImageUrl);
-    }
-    setModalImageUrl(null);
-    setModalImageBlob(null);
-    setTimeout(() => inputRef.current?.focus(), 50);
+    animateModalClose('custom', () => {
+      setShowModal(false);
+      if (modalImageBlob && modalImageUrl) {
+        URL.revokeObjectURL(modalImageUrl);
+      }
+      setModalImageUrl(null);
+      setModalImageBlob(null);
+      setTimeout(() => inputRef.current?.focus(), 50);
+    });
   };
 
   const handleDeleteCustomFood = async () => {
@@ -541,23 +554,27 @@ export default function KcalsPage() {
       }
       removeImageUrlForId(editingFood.imageId);
     }
-    setShowModal(false);
-    if (modalImageBlob && modalImageUrl) {
-      URL.revokeObjectURL(modalImageUrl);
-    }
-    setModalImageUrl(null);
-    setModalImageBlob(null);
-    setTimeout(() => inputRef.current?.focus(), 50);
+    animateModalClose('custom', () => {
+      setShowModal(false);
+      if (modalImageBlob && modalImageUrl) {
+        URL.revokeObjectURL(modalImageUrl);
+      }
+      setModalImageUrl(null);
+      setModalImageBlob(null);
+      setTimeout(() => inputRef.current?.focus(), 50);
+    });
   };
 
   const handleCloseModal = () => {
-    setShowModal(false);
-    if (modalImageBlob && modalImageUrl) {
-      URL.revokeObjectURL(modalImageUrl);
-    }
-    setModalImageUrl(null);
-    setModalImageBlob(null);
-    setTimeout(() => inputRef.current?.focus(), 50);
+    animateModalClose('custom', () => {
+      setShowModal(false);
+      if (modalImageBlob && modalImageUrl) {
+        URL.revokeObjectURL(modalImageUrl);
+      }
+      setModalImageUrl(null);
+      setModalImageBlob(null);
+      setTimeout(() => inputRef.current?.focus(), 50);
+    });
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -867,13 +884,13 @@ export default function KcalsPage() {
         f.id === editFoodModal.id ? { ...f, name, kcal } : f
       )
     );
-    setEditFoodModal(null);
+    animateModalClose('edit', () => setEditFoodModal(null));
   };
 
   const handleDeleteEditFood = () => {
     if (!editFoodModal) return;
     updateFoods((prev) => prev.filter((f) => f.id !== editFoodModal.id));
-    setEditFoodModal(null);
+    animateModalClose('edit', () => setEditFoodModal(null));
   };
 
   /* ===========================
@@ -1027,6 +1044,7 @@ export default function KcalsPage() {
   const handleRemoveFromGroup = (childId: string) => {
     if (!groupModal) return;
 
+    let shouldClose = false;
     updateFoods((prev) => {
       const idx = prev.findIndex((f) => f.id === groupModal.id);
       if (idx === -1) return prev;
@@ -1040,7 +1058,7 @@ export default function KcalsPage() {
         // Ungroup: replace group with remaining item(s) + removed item
         const result = [...prev];
         result.splice(idx, 1, ...remaining, ...(removed ? [removed] : []));
-        setGroupModal(null);
+        shouldClose = true;
         return result;
       }
 
@@ -1057,6 +1075,9 @@ export default function KcalsPage() {
       setGroupModal(updatedGroup);
       return result;
     });
+    if (shouldClose) {
+      animateModalClose('group', () => setGroupModal(null));
+    }
   };
 
   const handleDeleteGroup = () => {
@@ -1071,7 +1092,7 @@ export default function KcalsPage() {
       result.splice(idx, 1, ...items);
       return result;
     });
-    setGroupModal(null);
+    animateModalClose('group', () => setGroupModal(null));
   };
 
   /* ===========================
@@ -1301,8 +1322,8 @@ export default function KcalsPage() {
       </div>
 
       {/* Custom Food Modal */}
-      {showModal && (
-        <div className="kcals-modal-overlay" onClick={handleCloseModal}>
+      {(showModal || closingModal === 'custom') && (
+        <div className={`kcals-modal-overlay${closingModal === 'custom' ? ' kcals-closing' : ''}`} onClick={handleCloseModal}>
           <div className="kcals-modal" onClick={(e) => e.stopPropagation()}>
             <div className="kcals-modal-handle" />
             {editingFood && (
@@ -1370,19 +1391,19 @@ export default function KcalsPage() {
       )}
 
       {/* Edit Food Modal */}
-      {editFoodModal && (
-        <div className="kcals-modal-overlay" onClick={() => setEditFoodModal(null)}>
+      {(editFoodModal || closingModal === 'edit') && (
+        <div className={`kcals-modal-overlay${closingModal === 'edit' ? ' kcals-closing' : ''}`} onClick={() => animateModalClose('edit', () => setEditFoodModal(null))}>
           <div className="kcals-modal" onClick={(e) => e.stopPropagation()}>
             <div className="kcals-modal-handle" />
-            <div className={(editFoodModal.imageId ? imageUrls[editFoodModal.imageId] : editFoodModal.image) ? "kcals-modal-image-wrapper" : "kcals-modal-camera"}>
-              {(editFoodModal.imageId ? imageUrls[editFoodModal.imageId] : editFoodModal.image) ? (
+            <div className={(editFoodModal?.imageId ? imageUrls[editFoodModal.imageId] : editFoodModal?.image) ? "kcals-modal-image-wrapper" : "kcals-modal-camera"}>
+              {(editFoodModal?.imageId ? imageUrls[editFoodModal.imageId] : editFoodModal?.image) ? (
                 <img
-                  src={editFoodModal.imageId ? imageUrls[editFoodModal.imageId] : editFoodModal.image}
+                  src={editFoodModal?.imageId ? imageUrls[editFoodModal.imageId] : editFoodModal?.image}
                   alt=""
                   className="kcals-modal-camera-image"
                 />
               ) : (
-                <span style={{ fontSize: 60 }}>{editFoodModal.emoji}</span>
+                <span style={{ fontSize: 60 }}>{editFoodModal?.emoji}</span>
               )}
             </div>
             <div className="kcals-modal-fields">
