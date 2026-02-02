@@ -216,6 +216,7 @@ export default function KcalsPage() {
   // Group modal state
   const [groupModal, setGroupModal] = useState<FoodItem | null>(null);
   const [groupName, setGroupName] = useState("");
+  const [isCompact, setIsCompact] = useState(false);
   const imageUrlsRef = useRef<Record<string, string>>({});
   const hasMigratedImagesRef = useRef(false);
 
@@ -234,6 +235,19 @@ export default function KcalsPage() {
     setCustomFoods(loadCustomFoods());
     setRecentFoods(loadRecentFoods());
   }, []);
+
+  useEffect(() => {
+    if (inputFocused) {
+      setIsCompact(false);
+      return;
+    }
+    const handleScroll = () => {
+      setIsCompact(window.scrollY > 100);
+    };
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [inputFocused]);
 
   const updateFoods = useCallback((updater: (prev: FoodItem[]) => FoodItem[]) => {
     setFoods((prev) => {
@@ -1305,7 +1319,7 @@ export default function KcalsPage() {
       {!inputFocused && (
         <>
           {/* Top Bar */}
-          <div className="kcals-topbar">
+          <div className={`kcals-topbar${isCompact ? " is-compact" : ""}`}>
             <div className="kcals-chip">
               <span className="kcals-chip-icon">{"\u{1F5D3}\uFE0F"}</span>
               {todayLabel}
@@ -1322,10 +1336,14 @@ export default function KcalsPage() {
                 {weeklyBreakdown.some((e) => CALORIE_GOAL - e.remaining >= 800) ? formatCompact(weeklyBurn) : "0"}
               </button>
             </div>
+            <div className="kcals-topbar-compact">
+              <span className="kcals-topbar-compact-value">{totalKcal} kcal</span>
+              <span className="kcals-topbar-compact-remaining">+{remaining.toLocaleString()} remaining</span>
+            </div>
           </div>
 
           {/* Calorie Display */}
-          <div className="kcals-calorie-display">
+          <div className={`kcals-calorie-display${isCompact ? " is-hidden" : ""}`}>
             <div className="kcals-calorie-number">
               <span className="kcals-calorie-value">{totalKcal}</span>
               <span className="kcals-calorie-unit">kcal</span>

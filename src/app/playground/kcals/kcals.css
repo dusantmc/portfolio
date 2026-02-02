@@ -67,10 +67,17 @@
    =========================== */
 
 .kcals-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 16px 0;
+  padding: 16px 16px 12px;
+  background: rgba(254, 253, 251, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .kcals-topbar-right {
@@ -90,6 +97,7 @@
   border-radius: var(--radius-chip);
   box-shadow: var(--shadow-item);
   font-size: 14px;
+  line-height: 16px;
   font-weight: 600;
 }
 
@@ -104,6 +112,35 @@
   margin-top:2px;
 }
 
+.kcals-topbar-compact {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.2s ease;
+}
+
+.kcals-topbar.is-compact .kcals-topbar-compact {
+  max-height: 32px;
+  opacity: 1;
+}
+
+.kcals-topbar-compact-value {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.kcals-topbar-compact-remaining {
+  font-size: 13px;
+  color: var(--green);
+  font-weight: 600;
+}
+
 /* ===========================
    Calorie Display
    =========================== */
@@ -111,6 +148,11 @@
 .kcals-calorie-display {
   text-align: center;
   padding: 64px 0 48px;
+  transition: opacity 0.2s ease;
+}
+
+.kcals-calorie-display.is-hidden {
+  opacity: 0;
 }
 
 .kcals-calorie-number {
@@ -279,6 +321,17 @@
   background: transparent;
 }
 
+.kcals-input-bar::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 80px;
+  background: linear-gradient(to bottom, transparent, var(--background));
+  pointer-events: none;
+}
+
 @media (hover: none) and (pointer: coarse) {
   .kcals-input-bar:focus-within {
     padding-bottom: max(12px);
@@ -361,7 +414,7 @@
 .kcals-suggestions {
   display: flex;
   flex-direction: column;
-  min-height: calc(100dvh - 64px);
+  min-height: calc(100dvh - 120px);
 
 }
 
@@ -386,6 +439,8 @@
   text-transform: uppercase;
   opacity: 0.5;
   padding: 0;
+  margin-bottom:4px;
+  margin-top:24px;
 }
 
 .kcals-add-btn {
