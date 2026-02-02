@@ -615,13 +615,17 @@ export default function KcalsPage() {
     food: CustomFood | RecentFood,
     e: React.TouchEvent
   ) => {
-    const touch = e.touches[0];
-    const x = touch.clientX;
-    const y = touch.clientY;
+    const target = e.currentTarget as HTMLElement;
     pillLongPressRef.current.triggered = false;
     pillLongPressRef.current.timer = setTimeout(() => {
       pillLongPressRef.current.triggered = true;
       if (navigator.vibrate) navigator.vibrate(50);
+      const rect = target.getBoundingClientRect();
+      const menuWidth = 180;
+      const left = rect.left + rect.width / 2 - menuWidth / 2;
+      const maxLeft = Math.max(8, window.innerWidth - menuWidth - 8);
+      const x = Math.min(Math.max(8, left), maxLeft);
+      const y = rect.bottom;
       setChipMenu(
         type === "custom"
           ? { type: "custom", customFood: food as CustomFood, x, y }

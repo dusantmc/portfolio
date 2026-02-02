@@ -4,26 +4,26 @@ const PROXY_URL = "/playground/kcals/api/usda";
    Input Parser
    =========================== */
 
-export function parseFoodInput(text: string): { name: string; grams: number } {
+export function parseFoodInput(text: string): { name: string; quantity: number; unit: "g" | "count" } {
   const trimmed = text.trim();
 
   // Match patterns like "Bananas 250g", "Chicken 200 grams", "Rice 1.5kg"
-  const match = trimmed.match(/^(.+?)\s+(\d+(?:\.\d+)?)\s*(kg|g|grams?)?\s*$/i);
+  const gramMatch = trimmed.match(/^(.+?)\s+(\d+(?:\.\d+)?)\s*(kg|g|grams?)\s*$/i);
+  if (gramMatch) {
+    const name = gramMatch[1].trim();
+    let grams = parseFloat(gramMatch[2]);
+    if (gramMatch[3].toLowerCase() === "kg") grams *= 1000;
+    return { name, quantity: grams, unit: "g" };
+  }
 
-  if (match) {
-    const name = match[1].trim();
-    let grams = parseFloat(match[2]);
-    const unit = (match[3] || "g").toLowerCase();
-
-    if (unit === "kg") {
-      grams *= 1000;
-    }
-
-    return { name, grams };
+  // Match count patterns like "2 eggs", "2 boiled eggs"
+  const countMatch = trimmed.match(/^(\d+(?:\.\d+)?)\s+(.+)$/);
+  if (countMatch) {
+    return { name: countMatch[2].trim(), quantity: parseFloat(countMatch[1]), unit: "count" };
   }
 
   // No quantity found — treat entire input as food name, default 100g
-  return { name: trimmed, grams: 100 };
+  return { name: trimmed, quantity: 100, unit: "g" };
 }
 
 /* ===========================

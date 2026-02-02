@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ foods: [] });
   }
 
-  const url = `${USDA_URL}?api_key=${USDA_API_KEY}&query=${encodeURIComponent(query)}&pageSize=10`;
+  const url = `${USDA_URL}?api_key=${USDA_API_KEY}&query=${encodeURIComponent(query)}&pageSize=10&dataType=Foundation&dataType=SR%20Legacy`;
   const res = await fetch(url);
 
   if (!res.ok) {
