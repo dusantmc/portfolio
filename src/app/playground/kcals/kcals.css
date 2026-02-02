@@ -798,6 +798,88 @@
 }
 
 /* ===========================
+   Chip Button
+   =========================== */
+
+.kcals-chip-btn {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* ===========================
+   Weekly Breakdown Modal
+   =========================== */
+
+.kcals-weekly-overlay {
+  align-items: center;
+}
+
+.kcals-weekly-modal {
+  width: calc(100% - 64px);
+  max-width: 320px;
+  background: var(--white);
+  border-radius: 24px;
+  padding: 28px 24px;
+  text-align: center;
+}
+
+.kcals-weekly-emoji {
+  font-size: 48px;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.kcals-weekly-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.kcals-weekly-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.kcals-weekly-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 15px;
+}
+
+.kcals-weekly-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.kcals-weekly-value {
+  font-weight: 600;
+}
+
+.kcals-weekly-under {
+  color: var(--green);
+}
+
+.kcals-weekly-over {
+  color: var(--red);
+}
+
+.kcals-weekly-summary {
+  font-size: 14px;
+  color: var(--black-70);
+  line-height: 1.5;
+}
+
+.kcals-weekly-summary strong {
+  color: var(--black-100);
+  font-weight: 700;
+}
+
+/* ===========================
    Utilities
    =========================== */
 

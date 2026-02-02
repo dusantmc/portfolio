@@ -178,7 +178,7 @@ export interface DailyEntry {
   logged: boolean;
 }
 
-function formatDateKey(d: Date): string {
+export function formatDateKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
@@ -230,11 +230,30 @@ export function getWeeklyRemaining(): number {
   const log = loadDailyLog();
   let total = 0;
   const d = new Date();
-  d.setDate(d.getDate() - 1); // exclude today
   for (let i = 0; i < 7; i++) {
     const entry = log[formatDateKey(d)];
     if (entry) total += entry.remaining;
     d.setDate(d.getDate() - 1);
   }
   return total;
+}
+
+export interface WeeklyEntry {
+  dateKey: string;
+  remaining: number;
+}
+
+export function getWeeklyBreakdown(): WeeklyEntry[] {
+  const log = loadDailyLog();
+  const entries: WeeklyEntry[] = [];
+  const d = new Date();
+  for (let i = 0; i < 7; i++) {
+    const dateKey = formatDateKey(d);
+    const entry = log[dateKey];
+    if (entry?.logged) {
+      entries.push({ dateKey, remaining: entry.remaining });
+    }
+    d.setDate(d.getDate() - 1);
+  }
+  return entries.reverse(); // oldest first
 }
