@@ -78,7 +78,7 @@ async function fetchFoods(query: string): Promise<USDAFood[] | null> {
   return data.foods;
 }
 
-function pickKcal(foods: USDAFood[]): number | null {
+function pickFood(foods: USDAFood[]): { kcal: number; description: string } | null {
   const hasKcal = (f: USDAFood) => {
     const v = getEnergy(f);
     return v != null && v > 0;
@@ -88,23 +88,25 @@ function pickKcal(foods: USDAFood[]): number | null {
   const rawMatch = foods.find(
     (f) => /\braw\b/i.test(f.description) && hasKcal(f)
   );
-  if (rawMatch) return getEnergy(rawMatch);
+  if (rawMatch) return { kcal: getEnergy(rawMatch)!, description: rawMatch.description };
 
   // Next: prefer results without cooked/processed keywords
   const freshMatch = foods.find(
     (f) => !COOKED_KEYWORDS.test(f.description) && hasKcal(f)
   );
-  if (freshMatch) return getEnergy(freshMatch);
+  if (freshMatch) return { kcal: getEnergy(freshMatch)!, description: freshMatch.description };
 
   // Fallback: first result with energy data
   for (const food of foods) {
-    if (hasKcal(food)) return getEnergy(food);
+    if (hasKcal(food)) return { kcal: getEnergy(food)!, description: food.description };
   }
 
   return null;
 }
 
-export async function fetchKcalPer100g(foodName: string): Promise<number | null> {
+export async function fetchKcalPer100g(
+  foodName: string
+): Promise<{ kcalPer100g: number; description: string } | null> {
   const normalized = singularize(foodName);
   const isCooked = COOKED_KEYWORDS.test(normalized);
 
@@ -112,15 +114,15 @@ export async function fetchKcalPer100g(foodName: string): Promise<number | null>
     if (!isCooked) {
       const rawFoods = await fetchFoods(`${normalized} raw`);
       if (rawFoods) {
-        const kcal = pickKcal(rawFoods);
-        if (kcal != null) return kcal;
+        const match = pickFood(rawFoods);
+        if (match) return { kcalPer100g: match.kcal, description: match.description };
       }
     }
 
     const fallbackFoods = await fetchFoods(normalized);
     if (fallbackFoods) {
-      const kcal = pickKcal(fallbackFoods);
-      if (kcal != null) return kcal;
+      const match = pickFood(fallbackFoods);
+      if (match) return { kcalPer100g: match.kcal, description: match.description };
     }
 
     return null;

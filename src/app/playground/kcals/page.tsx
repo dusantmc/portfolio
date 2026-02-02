@@ -14,6 +14,7 @@ import {
   saveCustomFoods,
   loadRecentFoods,
   trackRecentFood,
+  removeRecentFood,
   findCachedFood,
   saveCustomFoodImage,
   loadCustomFoodImage,
@@ -172,6 +173,15 @@ export default function KcalsPage() {
   const blurTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
   const pillLongPressRef = useRef<{ timer: ReturnType<typeof setTimeout> | null; triggered: boolean }>({ timer: null, triggered: false });
 
+  // Chip context menu state
+  const [chipMenu, setChipMenu] = useState<{
+    type: "custom" | "recent";
+    customFood?: CustomFood;
+    recentFood?: RecentFood;
+    x: number;
+    y: number;
+  } | null>(null);
+
   // Swipe state
   const [swipedItemId, setSwipedItemId] = useState<string | null>(null);
   const swipeRef = useRef<{
@@ -185,7 +195,7 @@ export default function KcalsPage() {
   // Edit food modal state
   const [editFoodModal, setEditFoodModal] = useState<FoodItem | null>(null);
   const [editFoodName, setEditFoodName] = useState("");
-  const [editFoodKcal, setEditFoodKcal] = useState("");
+  const [editFoodGrams, setEditFoodGrams] = useState("");
 
   // Drag state
   const [dragItemId, setDragItemId] = useState<string | null>(null);
@@ -600,12 +610,23 @@ export default function KcalsPage() {
     requestAnimationFrame(() => inputRef.current?.focus());
   };
 
-  const handlePillTouchStart = (food: CustomFood) => {
+  const handlePillLongPress = (
+    type: "custom" | "recent",
+    food: CustomFood | RecentFood,
+    e: React.TouchEvent
+  ) => {
+    const touch = e.touches[0];
+    const x = touch.clientX;
+    const y = touch.clientY;
     pillLongPressRef.current.triggered = false;
     pillLongPressRef.current.timer = setTimeout(() => {
       pillLongPressRef.current.triggered = true;
       if (navigator.vibrate) navigator.vibrate(50);
-      handleEditCustomFood(food);
+      setChipMenu(
+        type === "custom"
+          ? { type: "custom", customFood: food as CustomFood, x, y }
+          : { type: "recent", recentFood: food as RecentFood, x, y }
+      );
     }, LONG_PRESS_MS);
   };
 
@@ -614,6 +635,51 @@ export default function KcalsPage() {
       clearTimeout(pillLongPressRef.current.timer);
       pillLongPressRef.current.timer = null;
     }
+  };
+
+  const handleChipMenuClose = () => {
+    animateModalClose("chipMenu", () => setChipMenu(null));
+  };
+
+  const handleChipMenuInsert = () => {
+    if (!chipMenu) return;
+    if (chipMenu.type === "custom" && chipMenu.customFood) {
+      handleCustomPillTap(chipMenu.customFood);
+    } else if (chipMenu.type === "recent" && chipMenu.recentFood) {
+      handlePillTap(chipMenu.recentFood.name);
+    }
+    setChipMenu(null);
+  };
+
+  const handleChipMenuEdit = () => {
+    if (!chipMenu?.customFood) return;
+    const food = chipMenu.customFood;
+    setChipMenu(null);
+    handleEditCustomFood(food);
+  };
+
+  const handleChipMenuRemoveCustom = async () => {
+    if (!chipMenu?.customFood) return;
+    const food = chipMenu.customFood;
+    setChipMenu(null);
+    const updated = customFoods.filter((f) => f.id !== food.id);
+    setCustomFoods(updated);
+    saveCustomFoods(updated);
+    if (food.imageId) {
+      try {
+        await deleteCustomFoodImage(food.imageId);
+      } catch {
+        // ignore
+      }
+      removeImageUrlForId(food.imageId);
+    }
+  };
+
+  const handleChipMenuRemoveRecent = () => {
+    if (!chipMenu?.recentFood) return;
+    removeRecentFood(chipMenu.recentFood.name);
+    setRecentFoods(loadRecentFoods());
+    setChipMenu(null);
   };
 
   /* ===========================
@@ -636,6 +702,9 @@ export default function KcalsPage() {
           emoji: "\u{1F4E6}",
           name: displayName,
           kcal,
+          source: "manual",
+          sourceName: selectedCustomFood.name,
+          kcalPer100g: selectedCustomFood.kcalPer100g,
           ...(selectedCustomFood.imageId ? { imageId: selectedCustomFood.imageId } : {}),
         },
         ...prev,
@@ -670,8 +739,17 @@ export default function KcalsPage() {
     if (cachedKcalPer100g != null) {
       // Cached: add immediately
       const kcal = Math.round((cachedKcalPer100g * grams) / 100);
+      const isCustom = customMatch != null;
       updateFoods((prev) => [
-        { id: itemId, emoji, name: displayName, kcal },
+        {
+          id: itemId,
+          emoji,
+          name: displayName,
+          kcal,
+          source: isCustom ? "manual" as const : "usda" as const,
+          sourceName: isCustom ? customMatch.name : (cached?.name ?? name),
+          kcalPer100g: cachedKcalPer100g,
+        },
         ...prev,
       ]);
       trackRecentFood(name, emoji, cachedKcalPer100g);
@@ -683,21 +761,32 @@ export default function KcalsPage() {
         ...prev,
       ]);
 
-      fetchKcalPer100g(name).then((kcalPer100g) => {
-        if (kcalPer100g != null) {
-          const kcal = Math.round((kcalPer100g * grams) / 100);
+      fetchKcalPer100g(name).then((result) => {
+        if (result != null) {
+          const kcal = Math.round((result.kcalPer100g * grams) / 100);
           updateFoods((prev) =>
             prev.map((f) =>
-              f.id === itemId ? { ...f, kcal, loading: false } : f
+              f.id === itemId
+                ? {
+                    ...f,
+                    kcal,
+                    loading: false,
+                    source: "usda" as const,
+                    sourceName: result.description,
+                    kcalPer100g: result.kcalPer100g,
+                  }
+                : f
             )
           );
-          trackRecentFood(name, emoji, kcalPer100g);
+          trackRecentFood(name, emoji, result.kcalPer100g);
           setRecentFoods(loadRecentFoods());
         } else {
           // API failed — keep kcal null so it shows as "?"
           updateFoods((prev) =>
             prev.map((f) =>
-              f.id === itemId ? { ...f, kcal: null, loading: false } : f
+              f.id === itemId
+                ? { ...f, kcal: null, loading: false, source: "manual" as const, sourceName: name }
+                : f
             )
           );
         }
@@ -868,20 +957,27 @@ export default function KcalsPage() {
   const handleEditFood = (food: FoodItem) => {
     setSwipedItemId(null);
     closeSwipe(food.id);
-    setEditFoodName(food.name);
-    setEditFoodKcal(food.kcal?.toString() ?? "");
+    const parsed = parseFoodInput(food.name);
+    setEditFoodName(parsed.name);
+    setEditFoodGrams(parsed.grams.toString());
     setEditFoodModal(food);
   };
 
   const handleSaveEditFood = () => {
     if (!editFoodModal) return;
     const name = editFoodName.trim();
-    const kcal = Number(editFoodKcal);
-    if (!name || isNaN(kcal) || kcal <= 0) return;
+    const grams = Number(editFoodGrams);
+    if (!name || isNaN(grams) || grams <= 0) return;
+
+    const displayName = `${name} ${grams}g`;
+    const kcalPer100g = editFoodModal.kcalPer100g;
+    const kcal = kcalPer100g != null
+      ? Math.round((kcalPer100g * grams) / 100)
+      : editFoodModal.kcal;
 
     updateFoods((prev) =>
       prev.map((f) =>
-        f.id === editFoodModal.id ? { ...f, name, kcal } : f
+        f.id === editFoodModal.id ? { ...f, name: displayName, kcal } : f
       )
     );
     animateModalClose('edit', () => setEditFoodModal(null));
@@ -1241,7 +1337,7 @@ export default function KcalsPage() {
                       key={food.id}
                       className="kcals-pill"
                       onPointerDown={(e) => e.preventDefault()}
-                      onTouchStart={() => handlePillTouchStart(food)}
+                      onTouchStart={(e) => handlePillLongPress("custom", food, e)}
                       onTouchEnd={handlePillTouchEnd}
                       onClick={() => {
                         if (!pillLongPressRef.current.triggered) {
@@ -1277,7 +1373,13 @@ export default function KcalsPage() {
                       key={food.name}
                       className="kcals-pill"
                       onPointerDown={(e) => e.preventDefault()}
-                      onClick={() => handlePillTap(food.name)}
+                      onTouchStart={(e) => handlePillLongPress("recent", food, e)}
+                      onTouchEnd={handlePillTouchEnd}
+                      onClick={() => {
+                        if (!pillLongPressRef.current.triggered) {
+                          handlePillTap(food.name);
+                        }
+                      }}
                       type="button"
                     >
                       <span className="kcals-pill-emoji">{food.emoji}</span>
@@ -1355,7 +1457,6 @@ export default function KcalsPage() {
             />
             <div className="kcals-modal-fields">
               <div className="kcals-modal-field">
-                <label className="kcals-modal-label">Name</label>
                 <input
                   className="kcals-modal-input"
                   type="text"
@@ -1365,7 +1466,6 @@ export default function KcalsPage() {
                 />
               </div>
               <div className="kcals-modal-field">
-                <label className="kcals-modal-label">Calories in 100g</label>
                 <div className="kcals-modal-kcal-row">
                   <input
                     className="kcals-modal-input"
@@ -1408,7 +1508,6 @@ export default function KcalsPage() {
             </div>
             <div className="kcals-modal-fields">
               <div className="kcals-modal-field">
-                <label className="kcals-modal-label">Name</label>
                 <input
                   className="kcals-modal-input"
                   type="text"
@@ -1418,20 +1517,26 @@ export default function KcalsPage() {
                 />
               </div>
               <div className="kcals-modal-field">
-                <label className="kcals-modal-label">Calories</label>
                 <div className="kcals-modal-kcal-row">
                   <input
                     className="kcals-modal-input"
                     type="number"
-                    value={editFoodKcal}
-                    onChange={(e) => setEditFoodKcal(e.target.value)}
-                    placeholder="0"
+                    value={editFoodGrams}
+                    onChange={(e) => setEditFoodGrams(e.target.value)}
+                    placeholder="100"
                     inputMode="numeric"
                   />
-                  <span className="kcals-modal-kcal-suffix">kcal</span>
+                  <span className="kcals-modal-kcal-suffix">g</span>
                 </div>
               </div>
             </div>
+            {editFoodModal?.source && editFoodModal.kcalPer100g != null && (
+              <div className="kcals-modal-source">
+                {editFoodModal.source === "usda" ? "USDA" : "Manual"}
+                {editFoodModal.sourceName ? ` \u2013 ${editFoodModal.sourceName}` : ""}
+                {` \u2013 ${Math.round(editFoodModal.kcalPer100g)}kcal per 100g`}
+              </div>
+            )}
             <button
               className="kcals-modal-submit"
               onClick={handleSaveEditFood}
@@ -1444,8 +1549,8 @@ export default function KcalsPage() {
       )}
 
       {/* Group Modal */}
-      {groupModal && (
-        <div className="kcals-modal-overlay" onClick={() => setGroupModal(null)}>
+      {(groupModal || closingModal === 'group') && (
+        <div className={`kcals-modal-overlay${closingModal === 'group' ? ' kcals-closing' : ''}`} onClick={() => animateModalClose('group', () => setGroupModal(null))}>
           <div className="kcals-modal kcals-group-modal" onClick={(e) => e.stopPropagation()}>
             <div className="kcals-modal-handle" />
             <button
@@ -1456,7 +1561,7 @@ export default function KcalsPage() {
               <TrashIcon />
             </button>
             <div className="kcals-group-emoji">
-              {groupModal.emoji}
+              {groupModal?.emoji}
             </div>
             <input
               className="kcals-group-name-input"
@@ -1466,11 +1571,11 @@ export default function KcalsPage() {
               placeholder="Group name"
             />
             <div className="kcals-group-header">
-              <span>Group items ({groupModal.items?.length ?? 0})</span>
-              <span>+{groupKcal(groupModal).toLocaleString()}Kcal</span>
+              <span>Group items ({groupModal?.items?.length ?? 0})</span>
+              <span>+{groupModal ? groupKcal(groupModal).toLocaleString() : 0}Kcal</span>
             </div>
             <div className="kcals-group-list">
-              {groupModal.items?.map((item) => (
+              {groupModal?.items?.map((item) => (
                 <div key={item.id} className="kcals-group-list-item">
                   <div className="kcals-food-emoji">
                     {(item.imageId ? imageUrls[item.imageId] : item.image) ? (
@@ -1501,8 +1606,38 @@ export default function KcalsPage() {
         </div>
       )}
 
+      {/* Chip Context Menu */}
+      {(chipMenu || closingModal === 'chipMenu') && (
+        <div className={`kcals-chip-menu-overlay${closingModal === 'chipMenu' ? ' kcals-closing' : ''}`} onClick={handleChipMenuClose}>
+          <div
+            className="kcals-chip-menu"
+            style={{
+              left: Math.min((chipMenu?.x ?? 0), window.innerWidth - 180),
+              top: (chipMenu?.y ?? 0) + 8,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button className="kcals-chip-menu-item" onClick={handleChipMenuInsert} type="button">
+              Insert
+            </button>
+            {chipMenu?.type === "custom" && (
+              <button className="kcals-chip-menu-item" onClick={handleChipMenuEdit} type="button">
+                Edit
+              </button>
+            )}
+            <button
+              className="kcals-chip-menu-item kcals-chip-menu-danger"
+              onClick={chipMenu?.type === "custom" ? handleChipMenuRemoveCustom : handleChipMenuRemoveRecent}
+              type="button"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Weekly Breakdown Modal */}
-      {showWeeklyModal && (() => {
+      {(showWeeklyModal || closingModal === 'weekly') && (() => {
         const visibleEntries = weeklyBreakdown.filter(
           (e) => CALORIE_GOAL - e.remaining >= 800
         );
@@ -1510,7 +1645,7 @@ export default function KcalsPage() {
         const isOnTrack = weeklyBurn >= 0;
         const absTotal = Math.abs(weeklyBurn);
         return (
-          <div className="kcals-modal-overlay kcals-weekly-overlay" onClick={() => setShowWeeklyModal(false)}>
+          <div className={`kcals-modal-overlay kcals-weekly-overlay${closingModal === 'weekly' ? ' kcals-closing' : ''}`} onClick={() => animateModalClose('weekly', () => setShowWeeklyModal(false))}>
             <div className="kcals-weekly-modal" onClick={(e) => e.stopPropagation()}>
               {!hasData ? (
                 <>

@@ -7,6 +7,9 @@ export interface FoodItem {
   items?: FoodItem[]; // present = this is a group
   imageId?: string;
   image?: string; // legacy base64 data URL for custom food avatars (migrate to IndexedDB)
+  source?: "usda" | "manual";
+  sourceName?: string; // USDA food description or entered name
+  kcalPer100g?: number;
 }
 
 export function isGroup(item: FoodItem): boolean {
@@ -126,6 +129,12 @@ export function trackRecentFood(name: string, emoji: string, kcalPer100g: number
   }
   recent.sort((a, b) => b.count - a.count);
   localStorage.setItem(RECENT_KEY, JSON.stringify(recent.slice(0, 10)));
+}
+
+export function removeRecentFood(name: string): void {
+  const recent = loadRecentFoods();
+  const filtered = recent.filter((f) => f.name.toLowerCase() !== name.toLowerCase());
+  localStorage.setItem(RECENT_KEY, JSON.stringify(filtered));
 }
 
 export function findCachedFood(query: string): RecentFood | undefined {
