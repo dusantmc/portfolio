@@ -1,5 +1,4 @@
-const USDA_API_KEY = process.env.NEXT_PUBLIC_USDA_API_KEY || "DEMO_KEY";
-const USDA_URL = "https://api.nal.usda.gov/fdc/v1/foods/search";
+const PROXY_URL = "/playground/kcals/api/usda";
 
 /* ===========================
    Input Parser
@@ -65,7 +64,7 @@ function getEnergy(food: USDAFood): number | null {
 }
 
 async function fetchFoods(query: string): Promise<USDAFood[] | null> {
-  const url = `${USDA_URL}?api_key=${USDA_API_KEY}&query=${encodeURIComponent(query)}&pageSize=10`;
+  const url = `${PROXY_URL}?query=${encodeURIComponent(query)}`;
   const res = await fetch(url);
   if (!res.ok) {
     console.warn(`[USDA] ${res.status} for "${query}"`);
