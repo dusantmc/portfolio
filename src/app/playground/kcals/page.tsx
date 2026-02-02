@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { SmokeRing } from "@paper-design/shaders-react";
 import {
   type FoodItem,
   type CustomFood,
@@ -694,10 +695,13 @@ export default function KcalsPage() {
     const text = inputValue.trim();
 
     if (selectedCustomFood) {
-      const combinedText = `${selectedCustomFood.name} ${text || "100g"}`;
-      const { name, grams } = parseFoodInput(combinedText);
+      let amountText = text || "100g";
+      if (!/\s*(kg|g|grams?)\s*$/i.test(amountText)) amountText = `${amountText.trim()}g`;
+      const combinedText = `${selectedCustomFood.name} ${amountText}`;
+      const parsed = parseFoodInput(combinedText);
+      const grams = parsed.quantity;
       const itemId = Date.now().toString();
-      const displayName = `${name} ${grams}g`;
+      const displayName = `${parsed.name} ${grams}g`;
       const kcal = Math.round((selectedCustomFood.kcalPer100g * grams) / 100);
 
       updateFoods((prev) => [
@@ -723,17 +727,21 @@ export default function KcalsPage() {
 
     if (!text) return;
 
-    const { name, grams } = parseFoodInput(text);
-    const emoji = getFoodEmoji(name);
+    const parsed = parseFoodInput(text);
+    const emoji = getFoodEmoji(parsed.name);
     const itemId = Date.now().toString();
-    const displayName = `${name} ${grams}g`;
+    const toGrams = (gramsPerUnit?: number) =>
+      parsed.unit === "count"
+        ? Math.round(parsed.quantity * (gramsPerUnit ?? 100))
+        : parsed.quantity;
 
     // Check cache first (recent foods or custom foods)
-    const cached = findCachedFood(name);
+    const cached = findCachedFood(parsed.name);
     const customMatch = customFoods.find(
-      (f) => f.name.toLowerCase() === name.toLowerCase()
+      (f) => f.name.toLowerCase() === parsed.name.toLowerCase()
     );
     const cachedKcalPer100g = cached?.kcalPer100g ?? customMatch?.kcalPer100g;
+    const cachedGramsPerUnit = cached?.gramsPerUnit;
 
     // Clear input and dismiss suggestions
     setInputValue("");
@@ -741,7 +749,8 @@ export default function KcalsPage() {
     inputRef.current?.blur();
 
     if (cachedKcalPer100g != null) {
-      // Cached: add immediately
+      const grams = toGrams(cachedGramsPerUnit);
+      const displayName = `${parsed.name} ${grams}g`;
       const kcal = Math.round((cachedKcalPer100g * grams) / 100);
       const isCustom = customMatch != null;
       updateFoods((prev) => [
@@ -751,45 +760,53 @@ export default function KcalsPage() {
           name: displayName,
           kcal,
           source: isCustom ? "manual" as const : "usda" as const,
-          sourceName: isCustom ? customMatch.name : (cached?.name ?? name),
+          sourceName: isCustom ? customMatch.name : (cached?.name ?? parsed.name),
           kcalPer100g: cachedKcalPer100g,
+          gramsPerUnit: cachedGramsPerUnit,
         },
         ...prev,
       ]);
-      trackRecentFood(name, emoji, cachedKcalPer100g);
+      trackRecentFood(parsed.name, emoji, cachedKcalPer100g, cachedGramsPerUnit);
       setRecentFoods(loadRecentFoods());
     } else {
       // Not cached: add loading item, fetch from USDA
+      const loadingName = parsed.unit === "count"
+        ? `${parsed.name} x${parsed.quantity}`
+        : `${parsed.name} ${parsed.quantity}g`;
       updateFoods((prev) => [
-        { id: itemId, emoji, name: displayName, kcal: null, loading: true },
+        { id: itemId, emoji, name: loadingName, kcal: null, loading: true },
         ...prev,
       ]);
 
-      fetchKcalPer100g(name).then((result) => {
+      fetchKcalPer100g(parsed.name).then((result) => {
         if (result != null) {
+          const grams = toGrams(result.gramsPerUnit);
+          const displayName = `${parsed.name} ${grams}g`;
           const kcal = Math.round((result.kcalPer100g * grams) / 100);
           updateFoods((prev) =>
             prev.map((f) =>
               f.id === itemId
                 ? {
                     ...f,
+                    name: displayName,
                     kcal,
                     loading: false,
                     source: "usda" as const,
                     sourceName: result.description,
                     kcalPer100g: result.kcalPer100g,
+                    gramsPerUnit: result.gramsPerUnit,
                   }
                 : f
             )
           );
-          trackRecentFood(name, emoji, result.kcalPer100g);
+          trackRecentFood(parsed.name, emoji, result.kcalPer100g, result.gramsPerUnit);
           setRecentFoods(loadRecentFoods());
         } else {
           // API failed — keep kcal null so it shows as "?"
           updateFoods((prev) =>
             prev.map((f) =>
               f.id === itemId
-                ? { ...f, kcal: null, loading: false, source: "manual" as const, sourceName: name }
+                ? { ...f, kcal: null, loading: false, source: "manual" as const, sourceName: parsed.name }
                 : f
             )
           );
@@ -963,7 +980,7 @@ export default function KcalsPage() {
     closeSwipe(food.id);
     const parsed = parseFoodInput(food.name);
     setEditFoodName(parsed.name);
-    setEditFoodGrams(parsed.grams.toString());
+    setEditFoodGrams(parsed.quantity.toString());
     setEditFoodModal(food);
   };
 
@@ -1267,6 +1284,24 @@ export default function KcalsPage() {
 
   return (
     <div className="kcals-content" onClick={handleContentClick}>
+      <div className={`kcals-shader-bg${inputFocused ? " is-hidden" : ""}`} aria-hidden="true">
+        <SmokeRing
+          speed={0.5}
+          scale={1.25}
+          thickness={0.7}
+          radius={0.24}
+          innerShape={0.7}
+          noiseScale={3}
+          noiseIterations={8}
+          offsetX={0}
+          offsetY={1}
+          frame={334878.6819999591}
+          colors={["#FF8837", "#FFD537"]}
+          colorBack="#00000000"
+          minPixelRatio={1}
+          style={{ backgroundColor: "#FEFDFB", width: "100%", height: "100%" }}
+        />
+      </div>
       {!inputFocused && (
         <>
           {/* Top Bar */}

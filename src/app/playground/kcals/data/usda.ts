@@ -38,9 +38,15 @@ interface USDANutrient {
   unitName: string;
 }
 
+interface USDAFoodMeasure {
+  disseminationText: string;
+  gramWeight: number;
+}
+
 interface USDAFood {
   description: string;
   foodNutrients: USDANutrient[];
+  foodMeasures?: USDAFoodMeasure[];
 }
 
 interface USDAResponse {
@@ -78,27 +84,47 @@ async function fetchFoods(query: string): Promise<USDAFood[] | null> {
   return data.foods;
 }
 
-function pickFood(foods: USDAFood[]): { kcal: number; description: string } | null {
+const VOLUME_MEASURE = /\b(cup|tbsp|tablespoon|tsp|teaspoon|fl oz|fluid|ml|liter)\b/i;
+
+function pickGramsPerUnit(measures?: USDAFoodMeasure[]): number | undefined {
+  if (!measures || measures.length === 0) return undefined;
+  const medium = measures.find((m) => /\bmedium\b/i.test(m.disseminationText) && m.gramWeight > 0);
+  if (medium) return medium.gramWeight;
+  const single = measures.find(
+    (m) => /^1\s/.test(m.disseminationText) && !VOLUME_MEASURE.test(m.disseminationText) && m.gramWeight > 0
+  );
+  if (single) return single.gramWeight;
+  const first = measures.find((m) => m.gramWeight > 0);
+  return first?.gramWeight;
+}
+
+function pickFood(foods: USDAFood[]): { kcal: number; description: string; gramsPerUnit?: number } | null {
   const hasKcal = (f: USDAFood) => {
     const v = getEnergy(f);
     return v != null && v > 0;
   };
 
+  const toResult = (f: USDAFood) => ({
+    kcal: getEnergy(f)!,
+    description: f.description,
+    gramsPerUnit: pickGramsPerUnit(f.foodMeasures),
+  });
+
   // Prefer raw/fresh: find first result with "raw" in description
   const rawMatch = foods.find(
     (f) => /\braw\b/i.test(f.description) && hasKcal(f)
   );
-  if (rawMatch) return { kcal: getEnergy(rawMatch)!, description: rawMatch.description };
+  if (rawMatch) return toResult(rawMatch);
 
   // Next: prefer results without cooked/processed keywords
   const freshMatch = foods.find(
     (f) => !COOKED_KEYWORDS.test(f.description) && hasKcal(f)
   );
-  if (freshMatch) return { kcal: getEnergy(freshMatch)!, description: freshMatch.description };
+  if (freshMatch) return toResult(freshMatch);
 
   // Fallback: first result with energy data
   for (const food of foods) {
-    if (hasKcal(food)) return { kcal: getEnergy(food)!, description: food.description };
+    if (hasKcal(food)) return toResult(food);
   }
 
   return null;
@@ -106,7 +132,7 @@ function pickFood(foods: USDAFood[]): { kcal: number; description: string } | nu
 
 export async function fetchKcalPer100g(
   foodName: string
-): Promise<{ kcalPer100g: number; description: string } | null> {
+): Promise<{ kcalPer100g: number; description: string; gramsPerUnit?: number } | null> {
   const normalized = singularize(foodName);
   const isCooked = COOKED_KEYWORDS.test(normalized);
 
@@ -115,14 +141,14 @@ export async function fetchKcalPer100g(
       const rawFoods = await fetchFoods(`${normalized} raw`);
       if (rawFoods) {
         const match = pickFood(rawFoods);
-        if (match) return { kcalPer100g: match.kcal, description: match.description };
+        if (match) return { kcalPer100g: match.kcal, description: match.description, gramsPerUnit: match.gramsPerUnit };
       }
     }
 
     const fallbackFoods = await fetchFoods(normalized);
     if (fallbackFoods) {
       const match = pickFood(fallbackFoods);
-      if (match) return { kcalPer100g: match.kcal, description: match.description };
+      if (match) return { kcalPer100g: match.kcal, description: match.description, gramsPerUnit: match.gramsPerUnit };
     }
 
     return null;
