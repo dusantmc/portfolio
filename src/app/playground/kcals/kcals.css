@@ -44,7 +44,7 @@
   width: min(390px, 100vw);
   height: 549px;
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
   opacity: 1;
   transition: opacity 0.25s ease-in-out;
 }
@@ -110,7 +110,7 @@
 
 .kcals-calorie-display {
   text-align: center;
-  padding: 98px 0 40px;
+  padding: 64px 0 48px;
 }
 
 .kcals-calorie-number {
@@ -170,25 +170,6 @@
   gap: 10px;
   padding: 0 16px;
   margin-bottom: 20px;
-  --kcals-fade-height: calc(120px + env(safe-area-inset-bottom));
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    #000 0%,
-    #000 calc(100% - var(--kcals-fade-height)),
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    #000 0%,
-    #000 calc(100% - var(--kcals-fade-height)),
-    transparent 100%
-  );
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-size: 100% 100%;
-  mask-size: 100% 100%;
-  -webkit-mask-attachment: fixed;
-  mask-attachment: fixed;
 }
 
 .kcals-food-item {
@@ -380,7 +361,8 @@
 .kcals-suggestions {
   display: flex;
   flex-direction: column;
-  min-height: calc(100dvh - 100px);
+  min-height: calc(100dvh - 64px);
+
 }
 
 .kcals-suggestions-dismiss {
@@ -388,7 +370,7 @@
 }
 
 .kcals-suggestions-content {
-  padding: 0 16px 8px;
+  padding: 0 16px;
 }
 
 .kcals-suggestion-section {
@@ -403,8 +385,7 @@
   font-weight: 600;
   text-transform: uppercase;
   opacity: 0.5;
-  padding: 0 8px;
-  margin-bottom: 10px;
+  padding: 0;
 }
 
 .kcals-add-btn {
