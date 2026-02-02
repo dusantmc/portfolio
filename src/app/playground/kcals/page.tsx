@@ -20,7 +20,6 @@ import {
   deleteCustomFoodImage,
   saveDailyEntry,
   getStreak,
-  getWeeklyRemaining,
   getWeeklyBreakdown,
 } from "./data/storage";
 import { parseFoodInput, fetchKcalPer100g, getFoodEmoji } from "./data/usda";
@@ -415,8 +414,12 @@ export default function KcalsPage() {
     const hasFood = foods.some((f) => !f.loading && f.kcal != null);
     saveDailyEntry(remaining, hasFood);
     setStreak(getStreak());
-    setWeeklyBurn(getWeeklyRemaining());
-    setWeeklyBreakdown(getWeeklyBreakdown());
+    const breakdown = getWeeklyBreakdown();
+    setWeeklyBreakdown(breakdown);
+    const qualifying = breakdown.filter(
+      (e) => CALORIE_GOAL - e.remaining >= 800
+    );
+    setWeeklyBurn(qualifying.reduce((sum, e) => sum + e.remaining, 0));
   }, [foods, remaining]);
 
   /* ===========================
@@ -1157,8 +1160,10 @@ export default function KcalsPage() {
                 {streak}
               </div>
               <button className="kcals-chip kcals-chip-btn" type="button" onClick={() => setShowWeeklyModal(true)}>
-                <span className="kcals-chip-icon">{"\u{1F525}"}</span>
-                {formatCompact(weeklyBurn)}
+                <span className="kcals-chip-icon">
+                  {weeklyBreakdown.some((e) => CALORIE_GOAL - e.remaining >= 800) ? "\u{1F525}" : "\u231B\uFE0F"}
+                </span>
+                {weeklyBreakdown.some((e) => CALORIE_GOAL - e.remaining >= 800) ? formatCompact(weeklyBurn) : "0"}
               </button>
             </div>
           </div>
@@ -1480,43 +1485,56 @@ export default function KcalsPage() {
         const visibleEntries = weeklyBreakdown.filter(
           (e) => CALORIE_GOAL - e.remaining >= 800
         );
+        const hasData = visibleEntries.length > 0;
         const isOnTrack = weeklyBurn >= 0;
         const absTotal = Math.abs(weeklyBurn);
         return (
           <div className="kcals-modal-overlay kcals-weekly-overlay" onClick={() => setShowWeeklyModal(false)}>
             <div className="kcals-weekly-modal" onClick={(e) => e.stopPropagation()}>
-              <div className="kcals-weekly-emoji">
-                {isOnTrack ? "\u{1F525}" : "\u{1F437}"}
-              </div>
-              <div className="kcals-weekly-title">
-                {isOnTrack ? "You're on track!" : "Watch out!"}
-              </div>
-              <div className="kcals-weekly-list">
-                {visibleEntries.map((entry) => {
-                  const under = entry.remaining >= 0;
-                  const abs = Math.abs(entry.remaining);
-                  const d = new Date(entry.dateKey + "T00:00:00");
-                  const label = new Intl.DateTimeFormat("en-US", {
-                    month: "short",
-                    day: "numeric",
-                  }).format(d);
-                  return (
-                    <div key={entry.dateKey} className="kcals-weekly-row">
-                      <div className="kcals-weekly-date">
-                        <span>{under ? "\u{1F525}" : "\u{1F437}"}</span>
-                        {label}
-                      </div>
-                      <div className={`kcals-weekly-value ${under ? "kcals-weekly-under" : "kcals-weekly-over"}`}>
-                        {under ? `- ${abs.toLocaleString()} kcal` : `+ ${abs.toLocaleString()} kcal`}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="kcals-weekly-summary">
-                Over the last 7 days you ate<br />
-                <strong>{absTotal.toLocaleString()} kcal</strong> {isOnTrack ? "less" : "over"} than the limit
-              </div>
+              {!hasData ? (
+                <>
+                  <div className="kcals-weekly-emoji">{"\u26C5"}</div>
+                  <div className="kcals-weekly-title">Keep logging</div>
+                  <div className="kcals-weekly-subtitle">
+                    You will see the breakdown once you start logging in calories
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="kcals-weekly-emoji">
+                    {isOnTrack ? "\u{1F525}" : "\u{1F437}"}
+                  </div>
+                  <div className="kcals-weekly-title">
+                    {isOnTrack ? "You're on track!" : "Watch out!"}
+                  </div>
+                  <div className="kcals-weekly-list">
+                    {visibleEntries.map((entry) => {
+                      const under = entry.remaining >= 0;
+                      const abs = Math.abs(entry.remaining);
+                      const d = new Date(entry.dateKey + "T00:00:00");
+                      const label = new Intl.DateTimeFormat("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      }).format(d);
+                      return (
+                        <div key={entry.dateKey} className="kcals-weekly-row">
+                          <div className="kcals-weekly-date">
+                            <span>{under ? "\u{1F525}" : "\u{1F437}"}</span>
+                            {label}
+                          </div>
+                          <div className={`kcals-weekly-value ${under ? "kcals-weekly-under" : "kcals-weekly-over"}`}>
+                            {under ? `- ${abs.toLocaleString()} kcal` : `+ ${abs.toLocaleString()} kcal`}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="kcals-weekly-summary">
+                    Over the last 7 days you ate<br />
+                    <strong>{absTotal.toLocaleString()} kcal</strong> {isOnTrack ? "less" : "over"} than the limit
+                  </div>
+                </>
+              )}
             </div>
           </div>
         );
