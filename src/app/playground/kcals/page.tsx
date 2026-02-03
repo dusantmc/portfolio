@@ -25,6 +25,7 @@ import {
   getWeeklyBreakdown,
 } from "./data/storage";
 import { parseFoodInput, fetchKcalPer100g, getFoodEmoji } from "./data/usda";
+import { BottomSheet } from "./BottomSheet";
 
 const CALORIE_GOAL = 1600;
 
@@ -219,7 +220,6 @@ export default function KcalsPage() {
   const [isCompact, setIsCompact] = useState(false);
   const imageUrlsRef = useRef<Record<string, string>>({});
   const hasMigratedImagesRef = useRef(false);
-  const modalScrollRef = useRef(0);
 
   useEffect(() => {
     imageUrlsRef.current = imageUrls;
@@ -489,56 +489,6 @@ export default function KcalsPage() {
   const [weeklyBurn, setWeeklyBurn] = useState(0);
   const [showWeeklyModal, setShowWeeklyModal] = useState(false);
   const [weeklyBreakdown, setWeeklyBreakdown] = useState<WeeklyEntry[]>([]);
-  const [closingModal, setClosingModal] = useState<string | null>(null);
-
-  const isModalOpen = !!(showModal || editFoodModal || groupModal || showWeeklyModal);
-
-  useEffect(() => {
-    if (!isModalOpen) return;
-    modalScrollRef.current = window.scrollY;
-    const body = document.body;
-    body.style.position = "fixed";
-    body.style.top = `-${modalScrollRef.current}px`;
-    body.style.left = "0";
-    body.style.right = "0";
-    body.style.width = "100%";
-    return () => {
-      body.style.position = "";
-      body.style.top = "";
-      body.style.left = "";
-      body.style.right = "";
-      body.style.width = "";
-      window.scrollTo(0, modalScrollRef.current);
-    };
-  }, [isModalOpen]);
-
-  // Delayed viewport updates when inputs inside modals get focus
-  useEffect(() => {
-    if (!isModalOpen) return;
-    const handleFocus = () => {
-      updateViewportVars();
-      const t1 = setTimeout(updateViewportVars, 60);
-      const t2 = setTimeout(updateViewportVars, 240);
-      const t3 = setTimeout(updateViewportVars, 500);
-      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
-    };
-    let cleanup: (() => void) | undefined;
-    const onFocusIn = () => { cleanup?.(); cleanup = handleFocus(); };
-    document.addEventListener("focusin", onFocusIn);
-    return () => {
-      document.removeEventListener("focusin", onFocusIn);
-      cleanup?.();
-    };
-  }, [isModalOpen, updateViewportVars]);
-
-  const animateModalClose = useCallback((id: string, onDone: () => void) => {
-    if (closingModal) return;
-    setClosingModal(id);
-    setTimeout(() => {
-      onDone();
-      setClosingModal(null);
-    }, MODAL_ANIM_MS);
-  }, [closingModal]);
 
   useEffect(() => {
     const hasFood = foods.some((f) => !f.loading && f.kcal != null);
@@ -586,7 +536,8 @@ export default function KcalsPage() {
      =========================== */
 
   const handleAddCustomFood = () => {
-    cancelDismiss();
+    setInputFocused(false);
+    inputRef.current?.blur();
     setEditingFood(null);
     setModalName("");
     setModalKcal("");
@@ -599,7 +550,8 @@ export default function KcalsPage() {
   };
 
   const handleEditCustomFood = async (food: CustomFood) => {
-    cancelDismiss();
+    setInputFocused(false);
+    inputRef.current?.blur();
     setEditingFood(food);
     setModalName(food.name);
     setModalKcal(food.kcalPer100g.toString());
@@ -649,15 +601,13 @@ export default function KcalsPage() {
     }
     setCustomFoods(updated);
     saveCustomFoods(updated);
-    animateModalClose('custom', () => {
-      setShowModal(false);
-      if (modalImageBlob && modalImageUrl) {
-        URL.revokeObjectURL(modalImageUrl);
-      }
-      setModalImageUrl(null);
-      setModalImageBlob(null);
-      setTimeout(() => inputRef.current?.focus(), 50);
-    });
+    setShowModal(false);
+    if (modalImageBlob && modalImageUrl) {
+      URL.revokeObjectURL(modalImageUrl);
+    }
+    setModalImageUrl(null);
+    setModalImageBlob(null);
+    setTimeout(() => inputRef.current?.focus(), 300);
   };
 
   const handleDeleteCustomFood = async () => {
@@ -673,27 +623,23 @@ export default function KcalsPage() {
       }
       removeImageUrlForId(editingFood.imageId);
     }
-    animateModalClose('custom', () => {
-      setShowModal(false);
-      if (modalImageBlob && modalImageUrl) {
-        URL.revokeObjectURL(modalImageUrl);
-      }
-      setModalImageUrl(null);
-      setModalImageBlob(null);
-      setTimeout(() => inputRef.current?.focus(), 50);
-    });
+    setShowModal(false);
+    if (modalImageBlob && modalImageUrl) {
+      URL.revokeObjectURL(modalImageUrl);
+    }
+    setModalImageUrl(null);
+    setModalImageBlob(null);
+    setTimeout(() => inputRef.current?.focus(), 300);
   };
 
   const handleCloseModal = () => {
-    animateModalClose('custom', () => {
-      setShowModal(false);
-      if (modalImageBlob && modalImageUrl) {
-        URL.revokeObjectURL(modalImageUrl);
-      }
-      setModalImageUrl(null);
-      setModalImageBlob(null);
-      setTimeout(() => inputRef.current?.focus(), 50);
-    });
+    setShowModal(false);
+    if (modalImageBlob && modalImageUrl) {
+      URL.revokeObjectURL(modalImageUrl);
+    }
+    setModalImageUrl(null);
+    setModalImageBlob(null);
+    setTimeout(() => inputRef.current?.focus(), 300);
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -750,8 +696,14 @@ export default function KcalsPage() {
     }
   };
 
+  const [closingChipMenu, setClosingChipMenu] = useState(false);
+
   const handleChipMenuClose = () => {
-    animateModalClose("chipMenu", () => setChipMenu(null));
+    setClosingChipMenu(true);
+    setTimeout(() => {
+      setChipMenu(null);
+      setClosingChipMenu(false);
+    }, MODAL_ANIM_MS);
   };
 
   const handleChipMenuInsert = () => {
@@ -1109,13 +1061,13 @@ export default function KcalsPage() {
         f.id === editFoodModal.id ? { ...f, name: displayName, kcal } : f
       )
     );
-    animateModalClose('edit', () => setEditFoodModal(null));
+    setEditFoodModal(null);
   };
 
   const handleDeleteEditFood = () => {
     if (!editFoodModal) return;
     updateFoods((prev) => prev.filter((f) => f.id !== editFoodModal.id));
-    animateModalClose('edit', () => setEditFoodModal(null));
+    setEditFoodModal(null);
   };
 
   /* ===========================
@@ -1301,7 +1253,7 @@ export default function KcalsPage() {
       return result;
     });
     if (shouldClose) {
-      animateModalClose('group', () => setGroupModal(null));
+      setGroupModal(null);
     }
   };
 
@@ -1317,7 +1269,7 @@ export default function KcalsPage() {
       result.splice(idx, 1, ...items);
       return result;
     });
-    animateModalClose('group', () => setGroupModal(null));
+    setGroupModal(null);
   };
 
   /* ===========================
@@ -1391,6 +1343,7 @@ export default function KcalsPage() {
   };
 
   return (
+    <>
     <div className={`kcals-content${inputFocused ? " is-focused" : ""}`} onClick={handleContentClick}>
       <div className={`kcals-shader-bg${inputFocused ? " is-hidden" : ""}`} aria-hidden="true">
         <SmokeRing
@@ -1573,193 +1526,182 @@ export default function KcalsPage() {
           )}
         </div>
       </div>
+    </div>
 
       {/* Custom Food Modal */}
-      {(showModal || closingModal === 'custom') && (
-        <div className={`kcals-modal-overlay${closingModal === 'custom' ? ' kcals-closing' : ''}`} onClick={handleCloseModal}>
-          <div className="kcals-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="kcals-modal-handle" />
-            {editingFood && (
-              <button
-                className="kcals-modal-delete"
-                onClick={handleDeleteCustomFood}
-                type="button"
-              >
-                <TrashIcon />
-              </button>
-            )}
-            <div
-              className={modalImageUrl ? "kcals-modal-image-wrapper" : "kcals-modal-camera"}
-              onClick={() => fileInputRef.current?.click()}
-              style={{ cursor: "pointer" }}
-            >
-              {modalImageUrl ? (
-                <img src={modalImageUrl} alt="" className="kcals-modal-camera-image" />
-              ) : (
-                <CameraIcon />
-              )}
-            </div>
+      <BottomSheet open={showModal} onClose={handleCloseModal}>
+        <div className="kcals-modal-handle" />
+        {editingFood && (
+          <button
+            className="kcals-modal-delete"
+            onClick={handleDeleteCustomFood}
+            type="button"
+          >
+            <TrashIcon />
+          </button>
+        )}
+        <div
+          className={modalImageUrl ? "kcals-modal-image-wrapper" : "kcals-modal-camera"}
+          onClick={() => fileInputRef.current?.click()}
+          style={{ cursor: "pointer" }}
+        >
+          {modalImageUrl ? (
+            <img src={modalImageUrl} alt="" className="kcals-modal-camera-image" />
+          ) : (
+            <CameraIcon />
+          )}
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleImageUpload}
+          style={{ display: "none" }}
+        />
+        <div className="kcals-modal-fields">
+          <div className="kcals-modal-field">
             <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              style={{ display: "none" }}
+              className="kcals-modal-input"
+              type="text"
+              value={modalName}
+              onChange={(e) => setModalName(e.target.value)}
+              placeholder="Food name"
             />
-            <div className="kcals-modal-fields">
-              <div className="kcals-modal-field">
-                <input
-                  className="kcals-modal-input"
-                  type="text"
-                  value={modalName}
-                  onChange={(e) => setModalName(e.target.value)}
-                  placeholder="Food name"
-                />
-              </div>
-              <div className="kcals-modal-field">
-                <div className="kcals-modal-kcal-row">
-                  <input
-                    className="kcals-modal-input"
-                    type="number"
-                    value={modalKcal}
-                    onChange={(e) => setModalKcal(e.target.value)}
-                    placeholder="0"
-                    inputMode="numeric"
-                  />
-                  <span className="kcals-modal-kcal-suffix">kcal</span>
-                </div>
-              </div>
+          </div>
+          <div className="kcals-modal-field">
+            <div className="kcals-modal-kcal-row">
+              <input
+                className="kcals-modal-input"
+                type="number"
+                value={modalKcal}
+                onChange={(e) => setModalKcal(e.target.value)}
+                placeholder="0"
+                inputMode="numeric"
+              />
+              <span className="kcals-modal-kcal-suffix">kcal</span>
             </div>
-            <button
-              className="kcals-modal-submit"
-              onClick={handleSaveCustomFood}
-              type="button"
-            >
-              {editingFood ? "Update" : "Add"}
-            </button>
           </div>
         </div>
-      )}
+        <button
+          className="kcals-modal-submit"
+          onClick={handleSaveCustomFood}
+          type="button"
+        >
+          {editingFood ? "Update" : "Add"}
+        </button>
+      </BottomSheet>
 
       {/* Edit Food Modal */}
-      {(editFoodModal || closingModal === 'edit') && (
-        <div className={`kcals-modal-overlay${closingModal === 'edit' ? ' kcals-closing' : ''}`} onClick={() => animateModalClose('edit', () => setEditFoodModal(null))}>
-          <div className="kcals-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="kcals-modal-handle" />
-            <div className={(editFoodModal?.imageId ? imageUrls[editFoodModal.imageId] : editFoodModal?.image) ? "kcals-modal-image-wrapper" : "kcals-modal-camera"}>
-              {(editFoodModal?.imageId ? imageUrls[editFoodModal.imageId] : editFoodModal?.image) ? (
-                <img
-                  src={editFoodModal?.imageId ? imageUrls[editFoodModal.imageId] : editFoodModal?.image}
-                  alt=""
-                  className="kcals-modal-camera-image"
-                />
-              ) : (
-                <span style={{ fontSize: 60 }}>{editFoodModal?.emoji}</span>
-              )}
+      <BottomSheet open={!!editFoodModal} onClose={() => setEditFoodModal(null)}>
+        <div className="kcals-modal-handle" />
+        <div className={(editFoodModal?.imageId ? imageUrls[editFoodModal.imageId] : editFoodModal?.image) ? "kcals-modal-image-wrapper" : "kcals-modal-camera"}>
+          {(editFoodModal?.imageId ? imageUrls[editFoodModal.imageId] : editFoodModal?.image) ? (
+            <img
+              src={editFoodModal?.imageId ? imageUrls[editFoodModal.imageId] : editFoodModal?.image}
+              alt=""
+              className="kcals-modal-camera-image"
+            />
+          ) : (
+            <span style={{ fontSize: 60 }}>{editFoodModal?.emoji}</span>
+          )}
+        </div>
+        <div className="kcals-modal-fields">
+          <div className="kcals-modal-field">
+            <input
+              className="kcals-modal-input"
+              type="text"
+              value={editFoodName}
+              onChange={(e) => setEditFoodName(e.target.value)}
+              placeholder="Food name"
+            />
+          </div>
+          <div className="kcals-modal-field">
+            <div className="kcals-modal-kcal-row">
+              <input
+                className="kcals-modal-input"
+                type="number"
+                value={editFoodGrams}
+                onChange={(e) => setEditFoodGrams(e.target.value)}
+                placeholder="100"
+                inputMode="numeric"
+              />
+              <span className="kcals-modal-kcal-suffix">g</span>
             </div>
-            <div className="kcals-modal-fields">
-              <div className="kcals-modal-field">
-                <input
-                  className="kcals-modal-input"
-                  type="text"
-                  value={editFoodName}
-                  onChange={(e) => setEditFoodName(e.target.value)}
-                  placeholder="Food name"
-                />
-              </div>
-              <div className="kcals-modal-field">
-                <div className="kcals-modal-kcal-row">
-                  <input
-                    className="kcals-modal-input"
-                    type="number"
-                    value={editFoodGrams}
-                    onChange={(e) => setEditFoodGrams(e.target.value)}
-                    placeholder="100"
-                    inputMode="numeric"
-                  />
-                  <span className="kcals-modal-kcal-suffix">g</span>
-                </div>
-              </div>
-            </div>
-            {editFoodModal?.source && editFoodModal.kcalPer100g != null && (
-              <div className="kcals-modal-source">
-                {editFoodModal.source === "usda" ? "USDA" : "Manual"}
-                {editFoodModal.sourceName ? ` \u2013 ${editFoodModal.sourceName}` : ""}
-                {` \u2013 ${Math.round(editFoodModal.kcalPer100g)}kcal per 100g`}
-              </div>
-            )}
-            <button
-              className="kcals-modal-submit"
-              onClick={handleSaveEditFood}
-              type="button"
-            >
-              Update
-            </button>
           </div>
         </div>
-      )}
+        {editFoodModal?.source && editFoodModal.kcalPer100g != null && (
+          <div className="kcals-modal-source">
+            {editFoodModal.source === "usda" ? "USDA" : "Manual"}
+            {editFoodModal.sourceName ? ` \u2013 ${editFoodModal.sourceName}` : ""}
+            {` \u2013 ${Math.round(editFoodModal.kcalPer100g)}kcal per 100g`}
+          </div>
+        )}
+        <button
+          className="kcals-modal-submit"
+          onClick={handleSaveEditFood}
+          type="button"
+        >
+          Update
+        </button>
+      </BottomSheet>
 
       {/* Group Modal */}
-      {(groupModal || closingModal === 'group') && (
-        <div className={`kcals-modal-overlay${closingModal === 'group' ? ' kcals-closing' : ''}`} onClick={() => animateModalClose('group', () => setGroupModal(null))}>
-          <div className="kcals-modal kcals-group-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="kcals-modal-handle" />
-            <button
-              className="kcals-modal-delete"
-              onClick={handleDeleteGroup}
-              type="button"
-            >
-              <TrashIcon />
-            </button>
-            <div className="kcals-group-emoji">
-              {groupModal?.emoji}
-            </div>
-            <input
-              className="kcals-group-name-input"
-              type="text"
-              value={groupName}
-              onChange={(e) => handleSaveGroupName(e.target.value)}
-              placeholder="Group name"
-            />
-            <div className="kcals-group-header">
-              <span>Group items ({groupModal?.items?.length ?? 0})</span>
-              <span>+{groupModal ? groupKcal(groupModal).toLocaleString() : 0}Kcal</span>
-            </div>
-            <div className="kcals-group-list">
-              {groupModal?.items?.map((item) => (
-                <div key={item.id} className="kcals-group-list-item">
-                  <div className="kcals-food-emoji">
-                    {(item.imageId ? imageUrls[item.imageId] : item.image) ? (
-                      <img
-                        src={item.imageId ? imageUrls[item.imageId] : item.image}
-                        alt=""
-                        className="kcals-food-image"
-                      />
-                    ) : (
-                      item.emoji
-                    )}
-                  </div>
-                  <div className="kcals-food-name">{item.name}</div>
-                  <div className="kcals-food-kcal">
-                    + {(item.kcal ?? 0).toLocaleString()}kcal
-                  </div>
-                  <button
-                    className="kcals-group-remove-btn"
-                    onClick={() => handleRemoveFromGroup(item.id)}
-                    type="button"
-                  >
-                    &times;
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
+      <BottomSheet open={!!groupModal} onClose={() => setGroupModal(null)} className="kcals-group-modal">
+        <div className="kcals-modal-handle" />
+        <button
+          className="kcals-modal-delete"
+          onClick={handleDeleteGroup}
+          type="button"
+        >
+          <TrashIcon />
+        </button>
+        <div className="kcals-group-emoji">
+          {groupModal?.emoji}
         </div>
-      )}
+        <input
+          className="kcals-group-name-input"
+          type="text"
+          value={groupName}
+          onChange={(e) => handleSaveGroupName(e.target.value)}
+          placeholder="Group name"
+        />
+        <div className="kcals-group-header">
+          <span>Group items ({groupModal?.items?.length ?? 0})</span>
+          <span>+{groupModal ? groupKcal(groupModal).toLocaleString() : 0}Kcal</span>
+        </div>
+        <div className="kcals-group-list">
+          {groupModal?.items?.map((item) => (
+            <div key={item.id} className="kcals-group-list-item">
+              <div className="kcals-food-emoji">
+                {(item.imageId ? imageUrls[item.imageId] : item.image) ? (
+                  <img
+                    src={item.imageId ? imageUrls[item.imageId] : item.image}
+                    alt=""
+                    className="kcals-food-image"
+                  />
+                ) : (
+                  item.emoji
+                )}
+              </div>
+              <div className="kcals-food-name">{item.name}</div>
+              <div className="kcals-food-kcal">
+                + {(item.kcal ?? 0).toLocaleString()}kcal
+              </div>
+              <button
+                className="kcals-group-remove-btn"
+                onClick={() => handleRemoveFromGroup(item.id)}
+                type="button"
+              >
+                &times;
+              </button>
+            </div>
+          ))}
+        </div>
+      </BottomSheet>
 
       {/* Chip Context Menu */}
-      {(chipMenu || closingModal === 'chipMenu') && (
-        <div className={`kcals-chip-menu-overlay${closingModal === 'chipMenu' ? ' kcals-closing' : ''}`} onClick={handleChipMenuClose}>
+      {(chipMenu || closingChipMenu) && (
+        <div className={`kcals-chip-menu-overlay${closingChipMenu ? ' kcals-closing' : ''}`} onClick={handleChipMenuClose}>
           <div
             className="kcals-chip-menu"
             style={{
@@ -1788,64 +1730,60 @@ export default function KcalsPage() {
       )}
 
       {/* Weekly Breakdown Modal */}
-      {(showWeeklyModal || closingModal === 'weekly') && (() => {
-        const visibleEntries = weeklyBreakdown.filter(
-          (e) => CALORIE_GOAL - e.remaining >= 800
-        );
-        const hasData = visibleEntries.length > 0;
-        const isOnTrack = weeklyBurn >= 0;
-        const absTotal = Math.abs(weeklyBurn);
-        return (
-          <div className={`kcals-modal-overlay kcals-weekly-overlay${closingModal === 'weekly' ? ' kcals-closing' : ''}`} onClick={() => animateModalClose('weekly', () => setShowWeeklyModal(false))}>
-            <div className="kcals-weekly-modal" onClick={(e) => e.stopPropagation()}>
-              {!hasData ? (
-                <>
-                  <div className="kcals-weekly-emoji">{"\u26C5"}</div>
-                  <div className="kcals-weekly-title">Keep logging</div>
-                  <div className="kcals-weekly-subtitle">
-                    You will see the breakdown once you start logging in calories
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="kcals-weekly-emoji">
-                    {isOnTrack ? "\u{1F525}" : "\u{1F437}"}
-                  </div>
-                  <div className="kcals-weekly-title">
-                    {isOnTrack ? "You're on track!" : "Watch out!"}
-                  </div>
-                  <div className="kcals-weekly-list">
-                    {visibleEntries.map((entry) => {
-                      const under = entry.remaining >= 0;
-                      const abs = Math.abs(entry.remaining);
-                      const d = new Date(entry.dateKey + "T00:00:00");
-                      const label = new Intl.DateTimeFormat("en-US", {
-                        month: "short",
-                        day: "numeric",
-                      }).format(d);
-                      return (
-                        <div key={entry.dateKey} className="kcals-weekly-row">
-                          <div className="kcals-weekly-date">
-                            <span>{under ? "\u{1F525}" : "\u{1F437}"}</span>
-                            {label}
-                          </div>
-                          <div className={`kcals-weekly-value ${under ? "kcals-weekly-under" : "kcals-weekly-over"}`}>
-                            {under ? `- ${abs.toLocaleString()} kcal` : `+ ${abs.toLocaleString()} kcal`}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div className="kcals-weekly-summary">
-                    Over the last 7 days you ate<br />
-                    <strong>{absTotal.toLocaleString()} kcal</strong> {isOnTrack ? "less" : "over"} than the limit
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        );
-      })()}
-    </div>
+      <BottomSheet open={showWeeklyModal} onClose={() => setShowWeeklyModal(false)} variant="center">
+        {(() => {
+          const visibleEntries = weeklyBreakdown.filter(
+            (e) => CALORIE_GOAL - e.remaining >= 800
+          );
+          const hasData = visibleEntries.length > 0;
+          const isOnTrack = weeklyBurn >= 0;
+          const absTotal = Math.abs(weeklyBurn);
+          return !hasData ? (
+            <>
+              <div className="kcals-weekly-emoji">{"\u26C5"}</div>
+              <div className="kcals-weekly-title">Keep logging</div>
+              <div className="kcals-weekly-subtitle">
+                You will see the breakdown once you start logging in calories
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="kcals-weekly-emoji">
+                {isOnTrack ? "\u{1F525}" : "\u{1F437}"}
+              </div>
+              <div className="kcals-weekly-title">
+                {isOnTrack ? "You're on track!" : "Watch out!"}
+              </div>
+              <div className="kcals-weekly-list">
+                {visibleEntries.map((entry) => {
+                  const under = entry.remaining >= 0;
+                  const abs = Math.abs(entry.remaining);
+                  const d = new Date(entry.dateKey + "T00:00:00");
+                  const label = new Intl.DateTimeFormat("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  }).format(d);
+                  return (
+                    <div key={entry.dateKey} className="kcals-weekly-row">
+                      <div className="kcals-weekly-date">
+                        <span>{under ? "\u{1F525}" : "\u{1F437}"}</span>
+                        {label}
+                      </div>
+                      <div className={`kcals-weekly-value ${under ? "kcals-weekly-under" : "kcals-weekly-over"}`}>
+                        {under ? `- ${abs.toLocaleString()} kcal` : `+ ${abs.toLocaleString()} kcal`}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="kcals-weekly-summary">
+                Over the last 7 days you ate<br />
+                <strong>{absTotal.toLocaleString()} kcal</strong> {isOnTrack ? "less" : "over"} than the limit
+              </div>
+            </>
+          );
+        })()}
+      </BottomSheet>
+    </>
   );
 }

@@ -597,17 +597,27 @@
 
 .kcals-modal-overlay {
   position: fixed;
-  left: 0;
-  right: 0;
-  top: var(--vv-offset-top, 0px);
-  bottom: 0;
+  inset: 0;
   background: rgba(0, 0, 0, 0.4);
   z-index: 100;
+  overflow: hidden;
+  overscroll-behavior: none;
+  animation: kcals-fade-in 0.3s ease-out;
+}
+
+.kcals-modal-vp {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 100%;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding-bottom: var(--keyboard-inset, 0px);
-  animation: kcals-fade-in 0.3s ease-out;
+}
+
+.kcals-modal-vp-center {
+  align-items: center;
 }
 
 .kcals-modal-overlay.kcals-closing {
@@ -624,8 +634,9 @@
   padding-bottom: max(40px, env(safe-area-inset-bottom));
   position: relative;
   animation: kcals-slide-up 0.35s cubic-bezier(0.32, 0.72, 0, 1);
-  max-height: var(--vvh, 100dvh);
+  max-height: 100%;
   overflow-y: auto;
+  overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }
 
