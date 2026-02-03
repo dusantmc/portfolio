@@ -1,0 +1,31 @@
+/* Global styles scoped to the Taste playground route */
+
+/* Load Instrument Sans & Instrument Serif from Google Fonts */
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Sans:opsz,wght@14..32,400;14..32,500;14..32,600&family=Instrument+Serif:ital,wght@0,400;1,400&display=swap");
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family: "Instrument Sans", system-ui, -apple-system, BlinkMacSystemFont,
+    "SF Pro Text", sans-serif;
+  background-color: #F8F8F8;
+  color: #111111;
+}
+
+:root {
+  --taste-bg: #f7f7f7;
+  --taste-border-subtle: rgba(0, 0, 0, 0.06);
+  --taste-shadow-subtle: 4px 5px 0 rgba(0, 0, 0, 0.05);
+}
+

@@ -1,0 +1,224 @@
+.panel {
+  position: fixed;
+  right: 40px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 232px;
+  padding: 20px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 4px 5px 0 rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  font-family: "Instrument Sans", sans-serif;
+}
+
+.header { 
+}
+
+.title {
+  margin: 0;
+  font-size: 26px;
+  line-height: 34px;
+  font-family: var(--font-instrument-serif), "Instrument Serif", serif;
+  font-weight: 400;
+}
+
+.titlePrimary {
+  font-style: normal;
+  font-family: "Instrument Serif", serif;
+}
+
+.titleSecondary {
+  font-style: italic;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.groupLabel {
+  font-size: 11px;
+  line-height: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #777777;
+  font-family: "Instrument Sans", system-ui, -apple-system, BlinkMacSystemFont,
+    "SF Pro Text", sans-serif;
+}
+
+.slider {
+  display: flex;
+  flex-direction: column;
+}
+
+.sliderLabel {
+  font-size: 12px;
+  line-height: 15px;
+  color: #222222;
+  font-weight: 500;
+  font-family: "Instrument Sans", sans-serif;
+}
+
+.sliderTrackWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.sliderInput {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(
+    to right,
+    rgba(90, 90, 90, 1) 0,
+    rgba(90, 90, 90, 1) var(--slider-progress, 50%),
+    rgba(90, 90, 90, 0.1) var(--slider-progress, 50%),
+    rgba(90, 90, 90, 0.1) 100%
+  );
+  border-radius: 999px;
+  outline: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sliderInput:focus-visible {
+  outline: 2px solid #111111;
+  outline-offset: 4px;
+}
+
+.sliderInput::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  border: 2px solid rgba(0, 0, 0, 0.6);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  transition: transform 120ms ease-out, box-shadow 120ms ease-out;
+}
+
+.sliderInput:active::-webkit-slider-thumb {
+  transform: scale(1.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.18);
+}
+
+.sliderInput::-moz-range-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background-color: rgba(90, 90, 90, 0.1);
+}
+
+.sliderInput::-moz-range-progress {
+  background-color: rgba(90, 90, 90, 1);
+  height: 4px;
+  border-radius: 999px;
+}
+
+.sliderInput::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.6);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  transition: transform 120ms ease-out, box-shadow 120ms ease-out;
+}
+
+.sliderInput:active::-moz-range-thumb {
+  transform: scale(1.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.18);
+}
+
+.sourceRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.thumbnailButton {
+  border: none;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.thumbnail {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: #f0f0f0;
+}
+
+.thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sourceNameButton {
+  border: none;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  flex: 1;
+  text-align: left;
+}
+
+.sourceName {
+  font-size: 12px;
+  line-height: 15px;
+  font-family: "Instrument Sans", system-ui, -apple-system, BlinkMacSystemFont,
+    "SF Pro Text", sans-serif;
+  color: #222222;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.trashButton {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 999px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.trashButton:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.fileInput {
+  display: none;
+}
+
+@media (max-width: 1120px) {
+  .panel {
+    right: 24px;
+  }
+}
+
+@media (max-width: 960px) {
+  .panel {
+    position: absolute;
+    right: 50%;
+    transform: translate(50%, 0);
+    top: auto;
+    bottom: 24px;
+  }
+}
+
