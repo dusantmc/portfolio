@@ -219,6 +219,7 @@ export default function KcalsPage() {
   const [isCompact, setIsCompact] = useState(false);
   const imageUrlsRef = useRef<Record<string, string>>({});
   const hasMigratedImagesRef = useRef(false);
+  const modalScrollRef = useRef(0);
 
   useEffect(() => {
     imageUrlsRef.current = imageUrls;
@@ -235,6 +236,59 @@ export default function KcalsPage() {
     setCustomFoods(loadCustomFoods());
     setRecentFoods(loadRecentFoods());
   }, []);
+
+  const updateViewportVars = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const vv = window.visualViewport;
+    const height = Math.min(window.innerHeight, vv?.height ?? window.innerHeight);
+    const offsetTop = vv?.offsetTop ?? 0;
+    const keyboardInsetRaw = Math.max(0, window.innerHeight - height - offsetTop);
+    const active = document.activeElement;
+    const hasTextFocus =
+      !!active &&
+      (active instanceof HTMLInputElement ||
+        active instanceof HTMLTextAreaElement ||
+        (active as HTMLElement).isContentEditable);
+    const keyboardInset = hasTextFocus ? keyboardInsetRaw : 0;
+    const root = document.documentElement;
+    root.style.setProperty("--vvh", `${height}px`);
+    root.style.setProperty("--vv-offset-top", `${offsetTop}px`);
+    root.style.setProperty("--keyboard-inset", `${keyboardInset}px`);
+  }, []);
+
+  useEffect(() => {
+    updateViewportVars();
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", updateViewportVars);
+    vv?.addEventListener("scroll", updateViewportVars);
+    window.addEventListener("resize", updateViewportVars);
+    window.addEventListener("orientationchange", updateViewportVars);
+    window.addEventListener("focusin", updateViewportVars);
+    window.addEventListener("focusout", updateViewportVars);
+    return () => {
+      vv?.removeEventListener("resize", updateViewportVars);
+      vv?.removeEventListener("scroll", updateViewportVars);
+      window.removeEventListener("resize", updateViewportVars);
+      window.removeEventListener("orientationchange", updateViewportVars);
+      window.removeEventListener("focusin", updateViewportVars);
+      window.removeEventListener("focusout", updateViewportVars);
+    };
+  }, [updateViewportVars]);
+
+  useEffect(() => {
+    if (!inputFocused) return;
+    updateViewportVars();
+    const t1 = setTimeout(updateViewportVars, 60);
+    const t2 = setTimeout(updateViewportVars, 240);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [inputFocused, updateViewportVars]);
+
+  useEffect(() => {
+    updateViewportVars();
+  }, [inputFocused, updateViewportVars]);
 
   useEffect(() => {
     if (inputFocused) {
@@ -436,6 +490,46 @@ export default function KcalsPage() {
   const [showWeeklyModal, setShowWeeklyModal] = useState(false);
   const [weeklyBreakdown, setWeeklyBreakdown] = useState<WeeklyEntry[]>([]);
   const [closingModal, setClosingModal] = useState<string | null>(null);
+
+  const isModalOpen = !!(showModal || editFoodModal || groupModal || showWeeklyModal);
+
+  useEffect(() => {
+    if (!isModalOpen) return;
+    modalScrollRef.current = window.scrollY;
+    const body = document.body;
+    body.style.position = "fixed";
+    body.style.top = `-${modalScrollRef.current}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+    return () => {
+      body.style.position = "";
+      body.style.top = "";
+      body.style.left = "";
+      body.style.right = "";
+      body.style.width = "";
+      window.scrollTo(0, modalScrollRef.current);
+    };
+  }, [isModalOpen]);
+
+  // Delayed viewport updates when inputs inside modals get focus
+  useEffect(() => {
+    if (!isModalOpen) return;
+    const handleFocus = () => {
+      updateViewportVars();
+      const t1 = setTimeout(updateViewportVars, 60);
+      const t2 = setTimeout(updateViewportVars, 240);
+      const t3 = setTimeout(updateViewportVars, 500);
+      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    };
+    let cleanup: (() => void) | undefined;
+    const onFocusIn = () => { cleanup?.(); cleanup = handleFocus(); };
+    document.addEventListener("focusin", onFocusIn);
+    return () => {
+      document.removeEventListener("focusin", onFocusIn);
+      cleanup?.();
+    };
+  }, [isModalOpen, updateViewportVars]);
 
   const animateModalClose = useCallback((id: string, onDone: () => void) => {
     if (closingModal) return;
@@ -1297,10 +1391,10 @@ export default function KcalsPage() {
   };
 
   return (
-    <div className="kcals-content" onClick={handleContentClick}>
+    <div className={`kcals-content${inputFocused ? " is-focused" : ""}`} onClick={handleContentClick}>
       <div className={`kcals-shader-bg${inputFocused ? " is-hidden" : ""}`} aria-hidden="true">
         <SmokeRing
-          speed={0.5}
+          speed={0.9}
           scale={1.25}
           thickness={0.7}
           radius={0.24}
@@ -1308,7 +1402,7 @@ export default function KcalsPage() {
           noiseScale={3}
           noiseIterations={8}
           offsetX={0}
-          offsetY={1}
+          offsetY={0.94}
           frame={334878.6819999591}
           colors={["#FF8837", "#FFD537"]}
           colorBack="#00000000"
@@ -1317,7 +1411,7 @@ export default function KcalsPage() {
         />
       </div>
       {!inputFocused && (
-        <>
+        <div className="kcals-main">
           {/* Top Bar */}
           <div className={`kcals-topbar${isCompact ? " is-compact" : ""}`}>
             <div className="kcals-chip">
@@ -1364,7 +1458,7 @@ export default function KcalsPage() {
           <div className="kcals-food-list">
             {foods.map(renderFoodRow)}
           </div>
-        </>
+        </div>
       )}
 
       {/* Suggestions Panel */}

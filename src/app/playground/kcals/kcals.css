@@ -21,11 +21,13 @@
   --radius-input: 28px;
   --radius-chip: 36px;
     --radius-modal: 32px;
+  --input-bar-height: 80px;
+  --input-bar-total-height: calc(var(--input-bar-height) + env(safe-area-inset-bottom));
 
   background: var(--background);
   color: var(--black-100);
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: var(--vvh, 100dvh);
   max-width: 390px;
   margin: 0 auto;
   position: relative;
@@ -58,6 +60,42 @@
   z-index: 1;
 }
 
+.kcals-main {
+  display: flex;
+  flex-direction: column;
+  height: calc(var(--vvh, 100dvh) - var(--input-bar-total-height));
+}
+
+.kcals-content.is-focused {
+  position: fixed;
+  top: var(--vv-offset-top, 0px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(390px, 100vw);
+  display: flex;
+  flex-direction: column;
+  height: var(--vvh, 100dvh);
+  padding-bottom: 0;
+  max-height: var(--vvh, 100dvh);
+  overflow: hidden;
+}
+
+.kcals-content.is-focused .kcals-suggestions {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.kcals-content.is-focused .kcals-input-bar {
+  position: static;
+  transform: none;
+  width: 100%;
+  max-width: none;
+  left: auto;
+  height: var(--input-bar-total-height);
+}
+
 .kcals-input-bar {
   z-index: 2;
 }
@@ -71,13 +109,17 @@
   top: 0;
   z-index: 10;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 16px 12px;
+  height: calc(68px + env(safe-area-inset-top));
+  padding: 0 16px;
+  padding-top: env(safe-area-inset-top);
+  box-sizing: border-box;
   background: rgba(254, 253, 251, 0.8);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  overflow: hidden;
 }
 
 .kcals-topbar-right {
@@ -109,10 +151,13 @@
   justify-content: center;
   font-size: 16px;
   line-height: 16px;
-  margin-top:2px;
 }
 
 .kcals-topbar-compact {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 6px;
   width: 100%;
   display: flex;
   align-items: baseline;
@@ -147,7 +192,12 @@
 
 .kcals-calorie-display {
   text-align: center;
-  padding: 64px 0 48px;
+  height: 164px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   transition: opacity 0.2s ease;
 }
 
@@ -211,7 +261,28 @@
   flex-direction: column;
   gap: 10px;
   padding: 0 16px;
-  margin-bottom: 20px;
+  margin-bottom: 0;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  --kcals-food-fade: 24px;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 calc(100% - var(--kcals-food-fade)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 calc(100% - var(--kcals-food-fade)),
+    transparent 100%
+  );
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
 }
 
 .kcals-food-item {
@@ -311,26 +382,16 @@
 
 .kcals-input-bar {
   position: fixed;
-  bottom: 0;
+  bottom: var(--keyboard-inset, 0px);
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
   max-width: 390px;
-  padding: 12px 16px;
-  padding-bottom: max(40px, env(safe-area-inset-bottom));
+  height: var(--input-bar-total-height);
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
   background: transparent;
 }
 
-.kcals-input-bar::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 100%;
-  height: 80px;
-  background: linear-gradient(to bottom, transparent, var(--background));
-  pointer-events: none;
-}
 
 @media (hover: none) and (pointer: coarse) {
   .kcals-input-bar:focus-within {
@@ -414,8 +475,7 @@
 .kcals-suggestions {
   display: flex;
   flex-direction: column;
-  min-height: calc(100dvh - 120px);
-
+  min-height: calc(var(--vvh, 100dvh) - 100px);
 }
 
 .kcals-suggestions-dismiss {
@@ -437,10 +497,10 @@
   font-size: 13px;
   font-weight: 600;
   text-transform: uppercase;
-  opacity: 0.5;
+  opacity: 0.4;
   padding: 0;
-  margin-bottom:4px;
-  margin-top:24px;
+  margin-bottom:6px;
+  margin-top:28px;
 }
 
 .kcals-add-btn {
@@ -537,12 +597,16 @@
 
 .kcals-modal-overlay {
   position: fixed;
-  inset: 0;
+  left: 0;
+  right: 0;
+  top: var(--vv-offset-top, 0px);
+  bottom: 0;
   background: rgba(0, 0, 0, 0.4);
   z-index: 100;
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  padding-bottom: var(--keyboard-inset, 0px);
   animation: kcals-fade-in 0.3s ease-out;
 }
 
@@ -560,6 +624,9 @@
   padding-bottom: max(40px, env(safe-area-inset-bottom));
   position: relative;
   animation: kcals-slide-up 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+  max-height: var(--vvh, 100dvh);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .kcals-closing .kcals-modal {
@@ -1102,12 +1169,13 @@
 
 /* Safe area spacing for bottom input */
 .kcals-content {
-  padding-bottom: 100px;
+  padding-bottom: 0;
 }
 
 /* Standalone PWA: respect safe area inset */
 @media all and (display-mode: standalone) {
   .kcals-topbar {
-    padding-top: calc(env(safe-area-inset-top) + 16px);
+    padding-top: env(safe-area-inset-top);
+    height: calc(68px + env(safe-area-inset-top));
   }
 }
