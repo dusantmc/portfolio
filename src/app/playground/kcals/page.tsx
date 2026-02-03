@@ -173,7 +173,20 @@ export default function KcalsPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const blurTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const pillLongPressRef = useRef<{ timer: ReturnType<typeof setTimeout> | null; triggered: boolean }>({ timer: null, triggered: false });
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const pillLongPressRef = useRef<{
+    timer: ReturnType<typeof setTimeout> | null;
+    triggered: boolean;
+    startX: number;
+    startY: number;
+  }>({
+    timer: null,
+    triggered: false,
+    startX: 0,
+    startY: 0,
+  });
+  const chipMenuAnchorRef = useRef<HTMLElement | null>(null);
+  const suggestionsScrollRef = useRef<HTMLDivElement | null>(null);
 
   // Chip context menu state
   const [chipMenu, setChipMenu] = useState<{
@@ -183,6 +196,31 @@ export default function KcalsPage() {
     x: number;
     y: number;
   } | null>(null);
+
+  const getChipMenuPosition = useCallback((target: HTMLElement) => {
+    const rect = target.getBoundingClientRect();
+    const contentRect = contentRef.current?.getBoundingClientRect();
+    const containerLeft = contentRect?.left ?? 0;
+    const containerTop = contentRect?.top ?? 0;
+    const containerWidth = contentRect?.width ?? window.innerWidth;
+    const menuWidth = 180;
+    const left = rect.left - containerLeft + rect.width / 2 - menuWidth / 2;
+    const maxLeft = Math.max(8, containerWidth - menuWidth - 8);
+    const x = Math.min(Math.max(8, left), maxLeft);
+    const y = rect.bottom - containerTop;
+    return { x, y };
+  }, []);
+
+  const updateChipMenuPosition = useCallback(() => {
+    const target = chipMenuAnchorRef.current;
+    if (!target) return;
+    const { x, y } = getChipMenuPosition(target);
+    setChipMenu((prev) => {
+      if (!prev) return prev;
+      if (Math.abs(prev.x - x) < 0.5 && Math.abs(prev.y - y) < 0.5) return prev;
+      return { ...prev, x, y };
+    });
+  }, [getChipMenuPosition]);
 
   // Swipe state
   const [swipedItemId, setSwipedItemId] = useState<string | null>(null);
@@ -665,22 +703,25 @@ export default function KcalsPage() {
     requestAnimationFrame(() => inputRef.current?.focus());
   };
 
-  const handlePillLongPress = (
+  const handlePillPointerDown = (
     type: "custom" | "recent",
     food: CustomFood | RecentFood,
-    e: React.TouchEvent
+    e: React.PointerEvent
   ) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
     const target = e.currentTarget as HTMLElement;
+    if (pillLongPressRef.current.timer) {
+      clearTimeout(pillLongPressRef.current.timer);
+      pillLongPressRef.current.timer = null;
+    }
     pillLongPressRef.current.triggered = false;
+    pillLongPressRef.current.startX = e.clientX;
+    pillLongPressRef.current.startY = e.clientY;
     pillLongPressRef.current.timer = setTimeout(() => {
       pillLongPressRef.current.triggered = true;
       if (navigator.vibrate) navigator.vibrate(50);
-      const rect = target.getBoundingClientRect();
-      const menuWidth = 180;
-      const left = rect.left + rect.width / 2 - menuWidth / 2;
-      const maxLeft = Math.max(8, window.innerWidth - menuWidth - 8);
-      const x = Math.min(Math.max(8, left), maxLeft);
-      const y = rect.bottom;
+      chipMenuAnchorRef.current = target;
+      const { x, y } = getChipMenuPosition(target);
       setChipMenu(
         type === "custom"
           ? { type: "custom", customFood: food as CustomFood, x, y }
@@ -689,18 +730,53 @@ export default function KcalsPage() {
     }, LONG_PRESS_MS);
   };
 
-  const handlePillTouchEnd = () => {
+  const handlePillPointerMove = (e: React.PointerEvent) => {
+    if (!pillLongPressRef.current.timer) return;
+    const dx = Math.abs(e.clientX - pillLongPressRef.current.startX);
+    const dy = Math.abs(e.clientY - pillLongPressRef.current.startY);
+    if (dx > DRAG_MOVE_CANCEL || dy > DRAG_MOVE_CANCEL) {
+      clearTimeout(pillLongPressRef.current.timer);
+      pillLongPressRef.current.timer = null;
+    }
+  };
+
+  const handlePillPointerEnd = () => {
     if (pillLongPressRef.current.timer) {
       clearTimeout(pillLongPressRef.current.timer);
       pillLongPressRef.current.timer = null;
     }
   };
 
+  useEffect(() => {
+    if (!chipMenu) return;
+    const update = () => updateChipMenuPosition();
+    const scroller = suggestionsScrollRef.current;
+    scroller?.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", update);
+    vv?.addEventListener("scroll", update);
+    update();
+    return () => {
+      scroller?.removeEventListener("scroll", update);
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      vv?.removeEventListener("resize", update);
+      vv?.removeEventListener("scroll", update);
+    };
+  }, [chipMenu, updateChipMenuPosition]);
+
   const [closingChipMenu, setClosingChipMenu] = useState(false);
+  const clearChipMenuImmediate = () => {
+    chipMenuAnchorRef.current = null;
+    setChipMenu(null);
+  };
 
   const handleChipMenuClose = () => {
     setClosingChipMenu(true);
     setTimeout(() => {
+      chipMenuAnchorRef.current = null;
       setChipMenu(null);
       setClosingChipMenu(false);
     }, MODAL_ANIM_MS);
@@ -713,20 +789,20 @@ export default function KcalsPage() {
     } else if (chipMenu.type === "recent" && chipMenu.recentFood) {
       handlePillTap(chipMenu.recentFood.name);
     }
-    setChipMenu(null);
+    clearChipMenuImmediate();
   };
 
   const handleChipMenuEdit = () => {
     if (!chipMenu?.customFood) return;
     const food = chipMenu.customFood;
-    setChipMenu(null);
+    clearChipMenuImmediate();
     handleEditCustomFood(food);
   };
 
   const handleChipMenuRemoveCustom = async () => {
     if (!chipMenu?.customFood) return;
     const food = chipMenu.customFood;
-    setChipMenu(null);
+    clearChipMenuImmediate();
     const updated = customFoods.filter((f) => f.id !== food.id);
     setCustomFoods(updated);
     saveCustomFoods(updated);
@@ -744,7 +820,7 @@ export default function KcalsPage() {
     if (!chipMenu?.recentFood) return;
     removeRecentFood(chipMenu.recentFood.name);
     setRecentFoods(loadRecentFoods());
-    setChipMenu(null);
+    clearChipMenuImmediate();
   };
 
   /* ===========================
@@ -1344,7 +1420,7 @@ export default function KcalsPage() {
 
   return (
     <>
-    <div className={`kcals-content${inputFocused ? " is-focused" : ""}`} onClick={handleContentClick}>
+    <div className={`kcals-content${inputFocused ? " is-focused" : ""}`} onClick={handleContentClick} ref={contentRef}>
       <div className={`kcals-shader-bg${inputFocused ? " is-hidden" : ""}`} aria-hidden="true">
         <SmokeRing
           speed={0.9}
@@ -1416,7 +1492,7 @@ export default function KcalsPage() {
 
       {/* Suggestions Panel */}
       {inputFocused && (
-        <div className="kcals-suggestions">
+        <div className="kcals-suggestions" ref={suggestionsScrollRef}>
           <div
             className="kcals-suggestions-dismiss"
             onClick={dismissSuggestions}
@@ -1440,9 +1516,13 @@ export default function KcalsPage() {
                     <button
                       key={food.id}
                       className="kcals-pill"
-                      onPointerDown={(e) => e.preventDefault()}
-                      onTouchStart={(e) => handlePillLongPress("custom", food, e)}
-                      onTouchEnd={handlePillTouchEnd}
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        handlePillPointerDown("custom", food, e);
+                      }}
+                      onPointerMove={handlePillPointerMove}
+                      onPointerUp={handlePillPointerEnd}
+                      onPointerCancel={handlePillPointerEnd}
                       onClick={() => {
                         if (!pillLongPressRef.current.triggered) {
                           handleCustomPillTap(food);
@@ -1476,9 +1556,13 @@ export default function KcalsPage() {
                     <button
                       key={food.name}
                       className="kcals-pill"
-                      onPointerDown={(e) => e.preventDefault()}
-                      onTouchStart={(e) => handlePillLongPress("recent", food, e)}
-                      onTouchEnd={handlePillTouchEnd}
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        handlePillPointerDown("recent", food, e);
+                      }}
+                      onPointerMove={handlePillPointerMove}
+                      onPointerUp={handlePillPointerEnd}
+                      onPointerCancel={handlePillPointerEnd}
                       onClick={() => {
                         if (!pillLongPressRef.current.triggered) {
                           handlePillTap(food.name);
@@ -1526,6 +1610,39 @@ export default function KcalsPage() {
           )}
         </div>
       </div>
+
+      {/* Chip Context Menu */}
+      {(chipMenu || closingChipMenu) && (
+        <div
+          className={`kcals-chip-menu-overlay${closingChipMenu ? ' kcals-closing' : ''}`}
+          onPointerDown={handleChipMenuClose}
+        >
+          <div
+            className="kcals-chip-menu"
+            style={{
+              left: chipMenu?.x ?? 0,
+              top: (chipMenu?.y ?? 0) + 8,
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <button className="kcals-chip-menu-item" onClick={handleChipMenuInsert} type="button">
+              Insert
+            </button>
+            {chipMenu?.type === "custom" && (
+              <button className="kcals-chip-menu-item" onClick={handleChipMenuEdit} type="button">
+                Edit
+              </button>
+            )}
+            <button
+              className="kcals-chip-menu-item kcals-chip-menu-danger"
+              onClick={chipMenu?.type === "custom" ? handleChipMenuRemoveCustom : handleChipMenuRemoveRecent}
+              type="button"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      )}
     </div>
 
       {/* Custom Food Modal */}
@@ -1698,36 +1815,6 @@ export default function KcalsPage() {
           ))}
         </div>
       </BottomSheet>
-
-      {/* Chip Context Menu */}
-      {(chipMenu || closingChipMenu) && (
-        <div className={`kcals-chip-menu-overlay${closingChipMenu ? ' kcals-closing' : ''}`} onClick={handleChipMenuClose}>
-          <div
-            className="kcals-chip-menu"
-            style={{
-              left: Math.min((chipMenu?.x ?? 0), window.innerWidth - 180),
-              top: (chipMenu?.y ?? 0) + 8,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button className="kcals-chip-menu-item" onClick={handleChipMenuInsert} type="button">
-              Insert
-            </button>
-            {chipMenu?.type === "custom" && (
-              <button className="kcals-chip-menu-item" onClick={handleChipMenuEdit} type="button">
-                Edit
-              </button>
-            )}
-            <button
-              className="kcals-chip-menu-item kcals-chip-menu-danger"
-              onClick={chipMenu?.type === "custom" ? handleChipMenuRemoveCustom : handleChipMenuRemoveRecent}
-              type="button"
-            >
-              Remove
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Weekly Breakdown Modal */}
       <BottomSheet open={showWeeklyModal} onClose={() => setShowWeeklyModal(false)} variant="center">

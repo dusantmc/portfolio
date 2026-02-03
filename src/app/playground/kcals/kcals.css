@@ -987,7 +987,7 @@
    =========================== */
 
 .kcals-chip-menu-overlay {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 200;
   animation: kcals-fade-in 0.15s ease-out;
@@ -999,7 +999,7 @@
 }
 
 .kcals-chip-menu {
-  position: fixed;
+  position: absolute;
   background: var(--white);
   border-radius: 14px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.16);
