@@ -208,12 +208,15 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: var(--border-8);
+  background: var(--white);
   color: var(--black-100);
+   outline: 0.5px solid var(--border-8);
+  border-radius: var(--radius-chip);
+  box-shadow: var(--shadow-item);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 15px;
 }
 
@@ -939,12 +942,12 @@
 }
 
 .kcals-profile-avatar {
-  width: 88px;
-  height: 88px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   background: var(--border-8);
   color: var(--black-100);
-  font-size: 28px;
+  font-size: 40px;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -952,17 +955,18 @@
 }
 
 .kcals-profile-email {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--black-100);
   text-align: center;
+    font-size: 18px;
+  line-height: 22px;
+  font-weight: 700;
+    color: var(--black-100);
 }
 
 .kcals-profile-link {
   background: none;
   border: none;
-  color: var(--red);
-  font-size: 13px;
+  color: var(--black-70);
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
 }
