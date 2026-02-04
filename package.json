@@ -13,6 +13,7 @@
     "@microsoft/clarity": "^1.0.0",
     "@paper-design/shaders-react": "0.0.71",
     "@rive-app/react-canvas": "^4.25.1",
+    "@supabase/supabase-js": "^2.94.1",
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
     "framer-motion": "^12.23.22",
