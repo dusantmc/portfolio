@@ -211,6 +211,14 @@ function loadDailyLog(): Record<string, DailyEntry> {
   }
 }
 
+export function loadDailyLogRaw(): Record<string, DailyEntry> {
+  return loadDailyLog();
+}
+
+export function saveDailyLogRaw(data: Record<string, DailyEntry>): void {
+  localStorage.setItem(DAILY_LOG_KEY, JSON.stringify(data));
+}
+
 export function saveDailyEntry(remaining: number, logged: boolean): void {
   const log = loadDailyLog();
   log[formatDateKey(new Date())] = { remaining, logged };

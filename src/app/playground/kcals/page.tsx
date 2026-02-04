@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import type { User } from "@supabase/supabase-js";
 import { SmokeRing } from "@paper-design/shaders-react";
 import {
   type FoodItem,
@@ -22,13 +23,17 @@ import {
   loadCustomFoodImage,
   deleteCustomFoodImage,
   saveDailyEntry,
+  loadDailyLogRaw,
+  saveDailyLogRaw,
+  formatDateKey,
   getStreak,
   getWeeklyBreakdown,
 } from "./data/storage";
 import { parseFoodInput, fetchKcalPer100g, getFoodEmoji } from "./data/usda";
 import { BottomSheet } from "./BottomSheet";
+import { supabase } from "./data/supabase";
 
-const CALORIE_GOAL = 1600;
+const DEFAULT_CALORIE_GOAL = 1600;
 
 function formatCompact(n: number): string {
   const abs = Math.abs(n);
@@ -44,6 +49,10 @@ const LONG_PRESS_MS = 1000;
 const MODAL_ANIM_MS = 250;
 const DRAG_MOVE_CANCEL = 10;
 const DROP_OVERLAP = 0.3;
+const SYNC_KEY = "kcals_last_sync";
+const CALORIE_GOAL_KEY = "kcals_calorie_goal";
+const AUTO_SYNC_KEY = "kcals_auto_sync_enabled";
+const AUTO_SYNC_DATE_KEY = "kcals_auto_sync_date";
 
 /* ===========================
    SVG Icons
@@ -163,6 +172,18 @@ export default function KcalsPage() {
   const [inputFocused, setInputFocused] = useState(false);
   const [customFoods, setCustomFoods] = useState<CustomFood[]>([]);
   const [recentFoods, setRecentFoods] = useState<RecentFood[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authStatus, setAuthStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "error" | "ok">("idle");
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
+  const [showGoalModal, setShowGoalModal] = useState(false);
+  const [calorieGoal, setCalorieGoal] = useState(DEFAULT_CALORIE_GOAL);
+  const [calorieGoalInput, setCalorieGoalInput] = useState(DEFAULT_CALORIE_GOAL.toString());
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingFood, setEditingFood] = useState<CustomFood | null>(null);
   const [modalName, setModalName] = useState("");
@@ -257,6 +278,16 @@ export default function KcalsPage() {
   const [portionValue, setPortionValue] = useState(100);
   const [portionCtaPressed, setPortionCtaPressed] = useState(false);
   const [portionTabPressed, setPortionTabPressed] = useState<number | null>(null);
+  const portionHeroSources = [
+    "/kcals/assets/plate-sprite.webp",
+    "/kcals/assets/pot-sprite.webp",
+    "/kcals/assets/bakeware-sprite.webp",
+    "",
+  ];
+  const [portionHero, setPortionHero] = useState(portionHeroSources[0]);
+  const [portionHeroPrev, setPortionHeroPrev] = useState<string | null>(null);
+  const [portionHeroAnimating, setPortionHeroAnimating] = useState(false);
+  const [portionHeroAnimKey, setPortionHeroAnimKey] = useState(0);
   const portionSliderRef = useRef<HTMLDivElement | null>(null);
   const portionDraggingRef = useRef(false);
   const portionRangeRef = useRef<HTMLInputElement | null>(null);
@@ -287,7 +318,151 @@ export default function KcalsPage() {
     setFoods(loadFoodList());
     setCustomFoods(loadCustomFoods());
     setRecentFoods(loadRecentFoods());
+    if (typeof window !== "undefined") {
+      setLastSyncAt(localStorage.getItem(SYNC_KEY));
+      const storedGoal = localStorage.getItem(CALORIE_GOAL_KEY);
+      if (storedGoal) {
+        const parsed = Number.parseInt(storedGoal, 10);
+        if (!Number.isNaN(parsed) && parsed > 0) {
+          setCalorieGoal(parsed);
+          setCalorieGoalInput(parsed.toString());
+        }
+      }
+      const autoSync = localStorage.getItem(AUTO_SYNC_KEY);
+      setAutoSyncEnabled(autoSync === "true");
+    }
   }, []);
+
+  const setLastSync = useCallback((value: string) => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(SYNC_KEY, value);
+    setLastSyncAt(value);
+  }, []);
+
+  const applyRemoteState = useCallback((row: {
+    food_list?: FoodItem[] | null;
+    custom_foods?: CustomFood[] | null;
+    recent_foods?: RecentFood[] | null;
+    daily_log?: Record<string, unknown> | null;
+    updated_at?: string | null;
+  }) => {
+    if (row.food_list) {
+      setFoods(row.food_list);
+      saveFoodList(row.food_list);
+    }
+    if (row.custom_foods) {
+      setCustomFoods(row.custom_foods);
+      saveCustomFoods(row.custom_foods);
+    }
+    if (row.recent_foods) {
+      setRecentFoods(row.recent_foods);
+      localStorage.setItem("kcals-recent-foods", JSON.stringify(row.recent_foods));
+    }
+    if (row.daily_log && typeof row.daily_log === "object") {
+      saveDailyLogRaw(row.daily_log as Record<string, any>);
+    }
+    if (row.updated_at) {
+      setLastSync(row.updated_at);
+    }
+  }, [setLastSync]);
+
+  const isWriteAllowed = typeof window !== "undefined"
+    ? ["www.dusantmc.com", "dusantmc.com"].includes(window.location.hostname)
+    : false;
+
+  const syncToSupabase = useCallback(async (reason: "manual" | "auto" = "manual") => {
+    if (!supabase || !user) return;
+    if (!isWriteAllowed) {
+      if (reason === "manual") {
+        setSyncStatus("error");
+        setSyncError("Uploads are disabled on this host.");
+      }
+      return;
+    }
+    setSyncStatus("syncing");
+    setSyncError(null);
+    const payload = {
+      user_id: user.id,
+      food_list: foods,
+      custom_foods: customFoods,
+      recent_foods: recentFoods,
+      daily_log: loadDailyLogRaw(),
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await supabase
+      .from("kcals_state")
+      .upsert(payload, { onConflict: "user_id" });
+    if (error) {
+      setSyncStatus("error");
+      setSyncError(error.message);
+      return;
+    }
+    setSyncStatus("ok");
+    setLastSync(payload.updated_at);
+    if (reason === "manual") {
+      setTimeout(() => setSyncStatus("idle"), 1200);
+    }
+  }, [user, foods, customFoods, recentFoods, setLastSync, isWriteAllowed]);
+
+  const syncFromSupabase = useCallback(async () => {
+    if (!supabase || !user) return;
+    const { data, error } = await supabase
+      .from("kcals_state")
+      .select("food_list, custom_foods, recent_foods, daily_log, updated_at")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (error && error.code !== "PGRST116") {
+      setSyncError(error.message);
+      return;
+    }
+    if (data) {
+      applyRemoteState(data);
+    } else {
+      await syncToSupabase("auto");
+    }
+  }, [user, applyRemoteState, syncToSupabase]);
+
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data }) => {
+      setUser(data.session?.user ?? null);
+    });
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!supabase || !user) return;
+    syncFromSupabase();
+  }, [user, syncFromSupabase]);
+
+  useEffect(() => {
+    if (!supabase || !user || !autoSyncEnabled) return;
+    const todayKey = formatDateKey(new Date());
+    const log = loadDailyLogRaw();
+    const entry = log[todayKey];
+    const lastAuto = typeof window !== "undefined" ? localStorage.getItem(AUTO_SYNC_DATE_KEY) : null;
+    if ((!entry || !entry.logged) && lastAuto !== todayKey) {
+      syncFromSupabase();
+      if (typeof window !== "undefined") {
+        localStorage.setItem(AUTO_SYNC_DATE_KEY, todayKey);
+      }
+    }
+  }, [user, autoSyncEnabled, foods, syncFromSupabase]);
+
+  useEffect(() => {
+    if (user) setShowAuthModal(false);
+  }, [user]);
+
+  useEffect(() => {
+    if (!showAuthModal) return;
+    setAuthStatus("idle");
+    setAuthError(null);
+  }, [showAuthModal]);
 
   const updateViewportVars = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -531,7 +706,7 @@ export default function KcalsPage() {
   }, [customFoods, foods, setImageUrlForId]);
 
   const totalKcal = foods.reduce((sum, f) => sum + groupKcal(f), 0);
-  const remaining = CALORIE_GOAL - totalKcal;
+  const remaining = calorieGoal - totalKcal;
   const todayLabel = new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
@@ -549,10 +724,10 @@ export default function KcalsPage() {
     const breakdown = getWeeklyBreakdown();
     setWeeklyBreakdown(breakdown);
     const qualifying = breakdown.filter(
-      (e) => CALORIE_GOAL - e.remaining >= 800
+      (e) => calorieGoal - e.remaining >= 800
     );
     setWeeklyBurn(qualifying.reduce((sum, e) => sum + e.remaining, 0));
-  }, [foods, remaining]);
+  }, [foods, remaining, calorieGoal]);
 
   /* ===========================
      Input focus handlers
@@ -575,6 +750,71 @@ export default function KcalsPage() {
   const dismissSuggestions = () => {
     setInputFocused(false);
     inputRef.current?.blur();
+  };
+
+  const commitCalorieGoal = (value: string) => {
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isNaN(parsed) || parsed <= 0) {
+      setCalorieGoalInput(calorieGoal.toString());
+      return;
+    }
+    setCalorieGoal(parsed);
+    setCalorieGoalInput(parsed.toString());
+    if (typeof window !== "undefined") {
+      localStorage.setItem(CALORIE_GOAL_KEY, parsed.toString());
+    }
+  };
+
+  const toggleAutoSync = () => {
+    if (!user) return;
+    setAutoSyncEnabled((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        localStorage.setItem(AUTO_SYNC_KEY, next ? "true" : "false");
+      }
+      return next;
+    });
+  };
+
+  const handleSendMagicLink = async () => {
+    if (!supabase) return;
+    if (!authEmail.trim()) {
+      setAuthError("Enter your email.");
+      return;
+    }
+    setAuthStatus("sending");
+    setAuthError(null);
+    const redirectTo = typeof window !== "undefined" ? window.location.origin + window.location.pathname : undefined;
+    const { error } = await supabase.auth.signInWithOtp({
+      email: authEmail.trim(),
+      options: redirectTo ? { emailRedirectTo: redirectTo } : undefined,
+    });
+    if (error) {
+      setAuthStatus("error");
+      setAuthError(error.message);
+      return;
+    }
+    setAuthStatus("sent");
+  };
+
+  const handleSignOut = async () => {
+    if (!supabase) return;
+    await supabase.auth.signOut();
+    setUser(null);
+  };
+
+  const handleSyncNow = async () => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+    if (!isWriteAllowed) {
+      await syncFromSupabase();
+      setSyncStatus("ok");
+      setTimeout(() => setSyncStatus("idle"), 1200);
+      return;
+    }
+    await syncToSupabase("manual");
   };
 
   const handlePillTap = (name: string) => {
@@ -963,6 +1203,17 @@ export default function KcalsPage() {
         }
       });
     }
+  };
+
+  const matchesFoodName = (name: string, query: string) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    const n = name.toLowerCase();
+    if (q.length === 1) {
+      const words = n.match(/[a-z0-9]+/g) ?? [];
+      return words.some((word) => word.startsWith(q));
+    }
+    return n.includes(q);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -1401,6 +1652,20 @@ export default function KcalsPage() {
     return 1;
   };
 
+  useEffect(() => {
+    const next = portionHeroSources[portionTab] ?? portionHeroSources[0];
+    if (next === portionHero) return;
+    setPortionHeroPrev(portionHero || null);
+    setPortionHero(next);
+    setPortionHeroAnimating(true);
+    setPortionHeroAnimKey((k) => k + 1);
+    const timer = setTimeout(() => {
+      setPortionHeroPrev(null);
+      setPortionHeroAnimating(false);
+    }, 260);
+    return () => clearTimeout(timer);
+  }, [portionTab, portionHero]);
+
   const updatePortionFromPointer = (clientX: number) => {
     const el = portionSliderRef.current;
     if (!el) return;
@@ -1552,10 +1817,26 @@ export default function KcalsPage() {
               </div>
               <button className="kcals-chip kcals-chip-btn" type="button" onClick={() => setShowWeeklyModal(true)}>
                 <span className="kcals-chip-icon">
-                  {weeklyBreakdown.some((e) => CALORIE_GOAL - e.remaining >= 800) ? "\u{1F525}" : "\u231B\uFE0F"}
+                  {weeklyBreakdown.some((e) => calorieGoal - e.remaining >= 800) ? "\u{1F525}" : "\u231B\uFE0F"}
                 </span>
-                {weeklyBreakdown.some((e) => CALORIE_GOAL - e.remaining >= 800) ? formatCompact(weeklyBurn) : "0"}
+                {weeklyBreakdown.some((e) => calorieGoal - e.remaining >= 800) ? formatCompact(weeklyBurn) : "0"}
               </button>
+              {supabase && (
+                <button
+                  className="kcals-chip kcals-chip-btn"
+                  type="button"
+                  onClick={user ? handleSyncNow : () => setShowAuthModal(true)}
+                >
+                  <span className="kcals-chip-icon">{user ? "\u2601\uFE0F" : "\u{1F512}"}</span>
+                  {user
+                    ? syncStatus === "syncing"
+                      ? "Syncing"
+                      : syncStatus === "ok"
+                        ? "Synced"
+                        : "Sync"
+                    : "Sign in"}
+                </button>
+              )}
             </div>
             <div className="kcals-topbar-compact">
               <span className="kcals-topbar-compact-value">{totalKcal} kcal</span>
@@ -1564,7 +1845,18 @@ export default function KcalsPage() {
           </div>
 
           {/* Calorie Display */}
-          <div className={`kcals-calorie-display${isCompact ? " is-hidden" : ""}`}>
+          <div
+            className={`kcals-calorie-display${isCompact ? " is-hidden" : ""}`}
+            onClick={() => setShowGoalModal(true)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setShowGoalModal(true);
+              }
+            }}
+          >
             <div className="kcals-calorie-number">
               <span className="kcals-calorie-value">{totalKcal}</span>
               <span className="kcals-calorie-unit">kcal</span>
@@ -1610,7 +1902,9 @@ export default function KcalsPage() {
               </div>
               {customFoods.length > 0 && (
                 <div className="kcals-pills">
-                  {customFoods.map((food) => (
+                  {customFoods
+                    .filter((food) => matchesFoodName(food.name, inputValue))
+                    .map((food) => (
                     <button
                       key={food.id}
                       className="kcals-pill"
@@ -1650,7 +1944,10 @@ export default function KcalsPage() {
                   <span>Frequently Used</span>
                 </div>
                 <div className="kcals-pills">
-                  {recentFoods.filter((rf) => !customFoods.some((cf) => cf.name.toLowerCase() === rf.name.toLowerCase())).map((food) => (
+                  {recentFoods
+                    .filter((rf) => !customFoods.some((cf) => cf.name.toLowerCase() === rf.name.toLowerCase()))
+                    .filter((food) => matchesFoodName(food.name, inputValue))
+                    .map((food) => (
                     <button
                       key={food.name}
                       className="kcals-pill"
@@ -1931,10 +2228,23 @@ export default function KcalsPage() {
               <div className="kcals-portion-spacer" />
             </div>
             <div className="kcals-portion-hero">
+              {portionHeroPrev && (
+                <div
+                  key={`prev-${portionHeroAnimKey}`}
+                  className={`kcals-portion-hero-image is-prev${portionHeroAnimating ? " is-exiting" : ""}`}
+                  aria-hidden="true"
+                  style={{
+                    backgroundImage: `url(${portionHeroPrev})`,
+                    ["--sprite-x" as never]: `${-(getPortionSpriteIndex(portionValue) - 1) * 224}px`,
+                  }}
+                />
+              )}
               <div
-                className="kcals-portion-hero-image"
+                key={`curr-${portionHeroAnimKey}`}
+                className={`kcals-portion-hero-image${portionHeroAnimating ? " is-entering" : ""}${portionHero ? "" : " is-placeholder"}`}
                 aria-hidden="true"
                 style={{
+                  backgroundImage: portionHero ? `url(${portionHero})` : "none",
                   ["--sprite-x" as never]: `${-(getPortionSpriteIndex(portionValue) - 1) * 224}px`,
                 }}
               />
@@ -2022,11 +2332,106 @@ export default function KcalsPage() {
         )}
       </BottomSheet>
 
+      {/* Calorie Goal & Sync Modal */}
+      <BottomSheet open={showGoalModal} onClose={() => setShowGoalModal(false)}>
+        <div className="kcals-modal-handle" />
+        <div className="kcals-settings-modal">
+          <div className="kcals-settings-title">Daily calorie limit</div>
+          <div className="kcals-settings-input">
+            <input
+              className="kcals-modal-input"
+              type="number"
+              value={calorieGoalInput}
+              onChange={(e) => setCalorieGoalInput(e.target.value)}
+              onBlur={(e) => commitCalorieGoal(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.currentTarget.blur();
+                }
+              }}
+              placeholder={DEFAULT_CALORIE_GOAL.toString()}
+              inputMode="numeric"
+            />
+            <span className="kcals-settings-suffix">kcal</span>
+          </div>
+          <div className="kcals-settings-row">
+            <span>Sync automatically</span>
+            <button
+              className={`kcals-toggle${autoSyncEnabled ? " is-on" : ""}${!user ? " is-disabled" : ""}`}
+              type="button"
+              onClick={toggleAutoSync}
+              disabled={!user}
+              aria-pressed={autoSyncEnabled}
+            >
+              <span className="kcals-toggle-thumb" />
+            </button>
+          </div>
+          <div className="kcals-settings-note">
+            Auto sync runs every morning when your daily log is empty.
+          </div>
+          <div className="kcals-settings-sync">
+            <span className="kcals-settings-last">
+              {lastSyncAt ? `Last sync ${new Date(lastSyncAt).toLocaleString()}` : "Never synced"}
+            </span>
+            <button className="kcals-settings-link" type="button" onClick={handleSyncNow}>
+              Sync now
+            </button>
+          </div>
+          {syncError && <div className="kcals-settings-error">{syncError}</div>}
+        </div>
+      </BottomSheet>
+
+      {/* Auth Modal */}
+      <BottomSheet open={showAuthModal} onClose={() => setShowAuthModal(false)} variant="center">
+        <div className="kcals-auth-modal">
+          <div className="kcals-auth-title">Cloud Sync</div>
+          <div className="kcals-auth-subtitle">
+            {user ? "Manage your sync settings." : "Sign in to sync your data across devices."}
+          </div>
+          {user ? (
+            <>
+              <div className="kcals-auth-row">Signed in as</div>
+              <div className="kcals-auth-email">{user.email ?? "Account"}</div>
+              <button className="kcals-modal-submit" type="button" onClick={handleSyncNow}>
+                {syncStatus === "syncing" ? "Syncing..." : "Sync now"}
+              </button>
+              {syncError && <div className="kcals-auth-error">{syncError}</div>}
+              {lastSyncAt && <div className="kcals-auth-hint">Last synced {new Date(lastSyncAt).toLocaleString()}</div>}
+              <button className="kcals-auth-secondary" type="button" onClick={handleSignOut}>
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <input
+                className="kcals-modal-input"
+                type="email"
+                value={authEmail}
+                onChange={(e) => setAuthEmail(e.target.value)}
+                placeholder="Email address"
+              />
+              <button
+                className="kcals-modal-submit"
+                type="button"
+                onClick={handleSendMagicLink}
+                disabled={authStatus === "sending"}
+              >
+                {authStatus === "sending" ? "Sending..." : "Send magic link"}
+              </button>
+              {authStatus === "sent" && (
+                <div className="kcals-auth-hint">Check your email for the sign-in link.</div>
+              )}
+              {authError && <div className="kcals-auth-error">{authError}</div>}
+            </>
+          )}
+        </div>
+      </BottomSheet>
+
       {/* Weekly Breakdown Modal */}
       <BottomSheet open={showWeeklyModal} onClose={() => setShowWeeklyModal(false)} variant="center">
         {(() => {
           const visibleEntries = weeklyBreakdown.filter(
-            (e) => CALORIE_GOAL - e.remaining >= 800
+            (e) => calorieGoal - e.remaining >= 800
           );
           const hasData = visibleEntries.length > 0;
           const isOnTrack = weeklyBurn >= 0;

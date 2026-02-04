@@ -200,6 +200,8 @@
   justify-content: center;
   padding: 0;
   transition: opacity 0.2s ease;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .kcals-calorie-display.is-hidden {
@@ -784,6 +786,171 @@
 }
 
 /* ===========================
+   Auth Modal
+   =========================== */
+
+.kcals-auth-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 4px 4px;
+}
+
+.kcals-auth-title {
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.kcals-auth-subtitle {
+  font-size: 13px;
+  color: var(--black-50);
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.kcals-auth-row {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--black-50);
+}
+
+.kcals-auth-email {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.kcals-auth-hint {
+  font-size: 12px;
+  color: var(--black-50);
+  text-align: center;
+}
+
+.kcals-auth-error {
+  font-size: 12px;
+  color: var(--red);
+  text-align: center;
+}
+
+.kcals-auth-secondary {
+  width: 100%;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid var(--border-8);
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ===========================
+   Settings Modal
+   =========================== */
+
+.kcals-settings-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 8px;
+}
+
+.kcals-settings-title {
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.kcals-settings-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.kcals-settings-input .kcals-modal-input {
+  padding-right: 56px;
+}
+
+.kcals-settings-suffix {
+  position: absolute;
+  right: 14px;
+  font-size: 14px;
+  color: var(--black-50);
+}
+
+.kcals-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.kcals-toggle {
+  width: 46px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--border-8);
+  background: #f2f2f2;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.kcals-toggle.is-on {
+  background: #e3f0ff;
+  border-color: rgba(0, 123, 255, 0.4);
+}
+
+.kcals-toggle.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.kcals-toggle-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  transform: translateX(0);
+  transition: transform 0.2s ease;
+}
+
+.kcals-toggle.is-on .kcals-toggle-thumb {
+  transform: translateX(18px);
+}
+
+.kcals-settings-note {
+  font-size: 12px;
+  color: var(--black-50);
+}
+
+.kcals-settings-sync {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--black-50);
+  gap: 12px;
+}
+
+.kcals-settings-link {
+  border: none;
+  background: none;
+  color: var(--blue);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.kcals-settings-error {
+  font-size: 12px;
+  color: var(--red);
+}
+
+/* ===========================
    Swipe Actions
    =========================== */
 
@@ -929,7 +1096,7 @@
   display: grid;
   grid-template-columns: 1fr auto 44px;
   align-items: center;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 32px;
   font-weight: 500;
   color: var(--black-50);
@@ -1018,21 +1185,63 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  overflow: hidden;
 }
 
 .kcals-portion-hero-image {
   width: 224px;
   height: 224px;
-  background-image: url("/kcals/assets/plate-sprite.webp");
   background-repeat: no-repeat;
   background-size: 1120px 224px;
   background-position: var(--sprite-x, 0px) 0px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 1;
+}
+
+.kcals-portion-hero-image.is-placeholder {
+  background: #f4f2ed;
+  border: 1px dashed var(--border-16);
+}
+
+.kcals-portion-hero-image.is-entering {
+  animation: kcals-hero-in 0.25s ease-out both;
+}
+
+.kcals-portion-hero-image.is-exiting {
+  animation: kcals-hero-out 0.25s ease-in both;
+}
+
+@keyframes kcals-hero-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateX(0);
+  }
+}
+
+@keyframes kcals-hero-out {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateX(-14px);
+  }
 }
 
 .kcals-portion-tabs {
   display: flex;
   justify-content: center;
   gap: 16px;
+  z-index:2;
 }
 
 .kcals-portion-tab {
