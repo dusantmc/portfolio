@@ -750,6 +750,7 @@ export default function KcalsPage() {
   const [badgeRotation, setBadgeRotation] = useState(0);
   const sharePreviewRef = useRef<HTMLDivElement | null>(null);
   const shareBadgeRef = useRef<HTMLDivElement | null>(null);
+  const shareBadgeCardRef = useRef<HTMLDivElement | null>(null);
   const shareGalleryInputRef = useRef<HTMLInputElement | null>(null);
   const badgeDragRef = useRef<{
     pointerId: number | null;
@@ -983,9 +984,9 @@ export default function KcalsPage() {
     try {
       const preview = sharePreviewRef.current;
       const badge = shareBadgeRef.current;
-      if (!badge) throw new Error("Badge missing.");
+      const badgeCard = shareBadgeCardRef.current;
+      if (!badge || !badgeCard) throw new Error("Badge missing.");
       const previewRect = preview.getBoundingClientRect();
-      const badgeRect = badge.getBoundingClientRect();
       const scale = 3;
       const width = Math.max(1, Math.round(previewRect.width * scale));
       const height = Math.max(1, Math.round(previewRect.height * scale));
@@ -1027,7 +1028,7 @@ export default function KcalsPage() {
       }
 
       const { toPng } = await import("html-to-image");
-      const badgeDataUrl = await toPng(badge, {
+      const badgeDataUrl = await toPng(badgeCard, {
         cacheBust: true,
         pixelRatio: scale,
       });
@@ -1037,11 +1038,22 @@ export default function KcalsPage() {
         image.onerror = () => reject(new Error("Failed to render badge."));
         image.src = badgeDataUrl;
       });
-      const badgeX = (badgeRect.left - previewRect.left) * scale;
-      const badgeY = (badgeRect.top - previewRect.top) * scale;
-      const badgeW = badgeRect.width * scale;
-      const badgeH = badgeRect.height * scale;
-      ctx.drawImage(badgeImg, badgeX, badgeY, badgeW, badgeH);
+      const baseW = badgeCard.offsetWidth;
+      const baseH = badgeCard.offsetHeight;
+      const centerX = (badgePos.x + baseW / 2) * scale;
+      const centerY = (badgePos.y + baseH / 2) * scale;
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.rotate((badgeRotation * Math.PI) / 180);
+      ctx.scale(badgeScale, badgeScale);
+      ctx.drawImage(
+        badgeImg,
+        (-baseW / 2) * scale,
+        (-baseH / 2) * scale,
+        baseW * scale,
+        baseH * scale
+      );
+      ctx.restore();
 
       const blob = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob((result) => (result ? resolve(result) : reject(new Error("Failed to render image."))), "image/png");
@@ -2935,7 +2947,7 @@ export default function KcalsPage() {
               onPointerUp={handleShareBadgePointerEnd}
               onPointerCancel={handleShareBadgePointerEnd}
             >
-              <div className="kcals-weekly-modal kcals-weekly-card">
+              <div className="kcals-weekly-modal kcals-weekly-card" ref={shareBadgeCardRef}>
                 {renderWeeklyCardContent()}
               </div>
             </div>
