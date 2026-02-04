@@ -1027,19 +1027,32 @@ export default function KcalsPage() {
         ctx.fillRect(0, 0, width, height);
       }
 
+      const baseRect = badgeCard.getBoundingClientRect();
+      const baseW = baseRect.width;
+      const baseH = baseRect.height;
+      const prevWidth = badgeCard.style.width;
+      const prevMaxWidth = badgeCard.style.maxWidth;
+      const prevHeight = badgeCard.style.height;
+      badgeCard.style.width = `${baseW}px`;
+      badgeCard.style.maxWidth = `${baseW}px`;
+      badgeCard.style.height = `${baseH}px`;
+
       const { toPng } = await import("html-to-image");
       const badgeDataUrl = await toPng(badgeCard, {
         cacheBust: true,
         pixelRatio: scale,
       });
+      badgeCard.style.width = prevWidth;
+      badgeCard.style.maxWidth = prevMaxWidth;
+      badgeCard.style.height = prevHeight;
       const badgeImg = await new Promise<HTMLImageElement>((resolve, reject) => {
         const image = new Image();
         image.onload = () => resolve(image);
         image.onerror = () => reject(new Error("Failed to render badge."));
         image.src = badgeDataUrl;
       });
-      const baseW = badgeCard.offsetWidth;
-      const baseH = badgeCard.offsetHeight;
+      const baseW = baseRect.width;
+      const baseH = baseRect.height;
       const centerX = (badgePos.x + baseW / 2) * scale;
       const centerY = (badgePos.y + baseH / 2) * scale;
       ctx.save();
