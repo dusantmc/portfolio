@@ -1768,6 +1768,14 @@
   justify-content: center;
 }
 
+.kcals-share-export {
+  position: fixed;
+  left: -9999px;
+  top: -9999px;
+  pointer-events: none;
+  opacity: 0;
+}
+
 .kcals-share-canvas {
   position: absolute;
   inset: 0;

@@ -751,6 +751,7 @@ export default function KcalsPage() {
   const sharePreviewRef = useRef<HTMLDivElement | null>(null);
   const shareBadgeRef = useRef<HTMLDivElement | null>(null);
   const shareBadgeCardRef = useRef<HTMLDivElement | null>(null);
+  const shareBadgeExportRef = useRef<HTMLDivElement | null>(null);
   const shareGalleryInputRef = useRef<HTMLInputElement | null>(null);
   const badgeDragRef = useRef<{
     pointerId: number | null;
@@ -985,7 +986,8 @@ export default function KcalsPage() {
       const preview = sharePreviewRef.current;
       const badge = shareBadgeRef.current;
       const badgeCard = shareBadgeCardRef.current;
-      if (!badge || !badgeCard) throw new Error("Badge missing.");
+      const badgeExport = shareBadgeExportRef.current;
+      if (!badge || !badgeCard || !badgeExport) throw new Error("Badge missing.");
       const previewRect = preview.getBoundingClientRect();
       const scale = 3;
       const width = Math.max(1, Math.round(previewRect.width * scale));
@@ -1027,32 +1029,20 @@ export default function KcalsPage() {
         ctx.fillRect(0, 0, width, height);
       }
 
-      const baseRect = badgeCard.getBoundingClientRect();
-      const baseW = baseRect.width;
-      const baseH = baseRect.height;
-      const prevWidth = badgeCard.style.width;
-      const prevMaxWidth = badgeCard.style.maxWidth;
-      const prevHeight = badgeCard.style.height;
-      badgeCard.style.width = `${baseW}px`;
-      badgeCard.style.maxWidth = `${baseW}px`;
-      badgeCard.style.height = `${baseH}px`;
+      const baseW = badgeExport.offsetWidth;
+      const baseH = badgeExport.offsetHeight;
 
       const { toPng } = await import("html-to-image");
-      const badgeDataUrl = await toPng(badgeCard, {
+      const badgeDataUrl = await toPng(badgeExport, {
         cacheBust: true,
         pixelRatio: scale,
       });
-      badgeCard.style.width = prevWidth;
-      badgeCard.style.maxWidth = prevMaxWidth;
-      badgeCard.style.height = prevHeight;
       const badgeImg = await new Promise<HTMLImageElement>((resolve, reject) => {
         const image = new Image();
         image.onload = () => resolve(image);
         image.onerror = () => reject(new Error("Failed to render badge."));
         image.src = badgeDataUrl;
       });
-      const baseW = baseRect.width;
-      const baseH = baseRect.height;
       const centerX = (badgePos.x + baseW / 2) * scale;
       const centerY = (badgePos.y + baseH / 2) * scale;
       ctx.save();
@@ -2932,6 +2922,11 @@ export default function KcalsPage() {
 
       {showShareModal && (
         <div className="kcals-share-screen">
+          <div className="kcals-share-export">
+            <div className="kcals-weekly-modal kcals-weekly-card" ref={shareBadgeExportRef}>
+              {renderWeeklyCardContent()}
+            </div>
+          </div>
           <div
             className="kcals-share-canvas"
             ref={sharePreviewRef}
