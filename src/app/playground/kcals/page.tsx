@@ -728,17 +728,17 @@ export default function KcalsPage() {
     day: "numeric",
   }).format(displayDate);
   const profileInitial = user?.email?.trim()?.[0]?.toUpperCase() ?? "U";
+
+  const [streak, setStreak] = useState(0);
+  const [weeklyBurn, setWeeklyBurn] = useState(0);
+  const [showWeeklyModal, setShowWeeklyModal] = useState(false);
+  const [weeklyBreakdown, setWeeklyBreakdown] = useState<WeeklyEntry[]>([]);
   const weeklyVisibleEntries = weeklyBreakdown.filter(
     (e) => calorieGoal - e.remaining >= 800
   );
   const weeklyHasData = weeklyVisibleEntries.length > 0;
   const weeklyIsOnTrack = weeklyBurn >= 0;
   const weeklyAbsTotal = Math.abs(weeklyBurn);
-
-  const [streak, setStreak] = useState(0);
-  const [weeklyBurn, setWeeklyBurn] = useState(0);
-  const [showWeeklyModal, setShowWeeklyModal] = useState(false);
-  const [weeklyBreakdown, setWeeklyBreakdown] = useState<WeeklyEntry[]>([]);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareBgType, setShareBgType] = useState<"gradient" | "image">("gradient");
   const [shareImage, setShareImage] = useState<string | null>(null);
