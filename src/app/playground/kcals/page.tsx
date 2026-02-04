@@ -2462,7 +2462,7 @@ export default function KcalsPage() {
                     {authStatus === "sending" ? "Sending..." : "Send code"}
                   </button>
                   {authStatus === "sent" && (
-                    <div className="kcals-auth-hint">Check your email for the 6-digit code.</div>
+                    <div className="kcals-auth-hint">Check your email for the 8-digit code.</div>
                   )}
                 </>
               ) : (
@@ -2490,7 +2490,7 @@ export default function KcalsPage() {
                     autoComplete="one-time-code"
                     value={authOtp}
                     onChange={(e) => {
-                      const next = e.target.value.replace(/\D/g, "").slice(0, 6);
+                      const next = e.target.value.replace(/\D/g, "").slice(0, 8);
                       setAuthOtp(next);
                     }}
                     placeholder="Enter code"
@@ -2500,7 +2500,7 @@ export default function KcalsPage() {
                       }
                     }}
                   />
-                  <div className="kcals-auth-hint">Enter the 6-digit code from your email.</div>
+                  <div className="kcals-auth-hint">Enter the 8-digit code from your email.</div>
                   <button
                     className="kcals-modal-submit"
                     type="button"
