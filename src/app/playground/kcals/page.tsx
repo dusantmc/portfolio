@@ -981,14 +981,72 @@ export default function KcalsPage() {
     setShareStatus("rendering");
     setShareError(null);
     try {
-      const { toJpeg } = await import("html-to-image");
-      const dataUrl = await toJpeg(sharePreviewRef.current, {
+      const preview = sharePreviewRef.current;
+      const badge = shareBadgeRef.current;
+      if (!badge) throw new Error("Badge missing.");
+      const previewRect = preview.getBoundingClientRect();
+      const badgeRect = badge.getBoundingClientRect();
+      const scale = 3;
+      const width = Math.max(1, Math.round(previewRect.width * scale));
+      const height = Math.max(1, Math.round(previewRect.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas not supported.");
+
+      if (shareBgType === "image" && shareImage) {
+        const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = () => reject(new Error("Failed to load image."));
+          image.src = shareImage;
+        });
+        const imgRatio = img.width / img.height;
+        const canvasRatio = width / height;
+        let drawW = width;
+        let drawH = height;
+        let dx = 0;
+        let dy = 0;
+        if (imgRatio > canvasRatio) {
+          drawH = height;
+          drawW = height * imgRatio;
+          dx = (width - drawW) / 2;
+        } else {
+          drawW = width;
+          drawH = width / imgRatio;
+          dy = (height - drawH) / 2;
+        }
+        ctx.drawImage(img, dx, dy, drawW, drawH);
+      } else {
+        const gradient = ctx.createLinearGradient(0, 0, width, height);
+        gradient.addColorStop(0, "#007BFF");
+        gradient.addColorStop(1, "#209E9C");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+      }
+
+      const { toPng } = await import("html-to-image");
+      const badgeDataUrl = await toPng(badge, {
         cacheBust: true,
-        pixelRatio: 2,
-        quality: 0.95,
+        pixelRatio: scale,
       });
-      const blob = dataUrlToBlob(dataUrl);
-      const file = new File([blob], "kcals-share.jpg", { type: "image/jpeg" });
+      const badgeImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error("Failed to render badge."));
+        image.src = badgeDataUrl;
+      });
+      const badgeX = (badgeRect.left - previewRect.left) * scale;
+      const badgeY = (badgeRect.top - previewRect.top) * scale;
+      const badgeW = badgeRect.width * scale;
+      const badgeH = badgeRect.height * scale;
+      ctx.drawImage(badgeImg, badgeX, badgeY, badgeW, badgeH);
+
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((result) => (result ? resolve(result) : reject(new Error("Failed to render image."))), "image/png");
+      });
+      const file = new File([blob], "kcals-share.png", { type: "image/png" });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
@@ -999,7 +1057,7 @@ export default function KcalsPage() {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = "kcals-share.jpg";
+        link.download = "kcals-share.png";
         document.body.appendChild(link);
         link.click();
         link.remove();
@@ -2888,7 +2946,18 @@ export default function KcalsPage() {
               type="button"
               onClick={() => setShowShareModal(false)}
             >
-              ✕
+              <svg
+                className="kcals-share-close-icon"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+              >
+                <path d="M7.00006 6.99994L17.5 16.9999" stroke="#191815" strokeWidth="2" strokeLinecap="round" />
+                <path d="M16.9999 7L6.99994 17" stroke="#191815" strokeWidth="2" strokeLinecap="round" />
+              </svg>
             </button>
             <button
               className="kcals-share-topbtn kcals-share-topbtn--primary"

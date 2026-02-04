@@ -1816,6 +1816,12 @@
   justify-content: center;
 }
 
+.kcals-share-close-icon {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
 .kcals-share-topbtn--primary {
   padding: 0 18px;
 }
