@@ -742,12 +742,14 @@ export default function KcalsPage() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareBgType, setShareBgType] = useState<"gradient" | "image">("gradient");
   const [shareImage, setShareImage] = useState<string | null>(null);
+  const [shareImageLoaded, setShareImageLoaded] = useState(false);
   const [shareStatus, setShareStatus] = useState<"idle" | "rendering" | "error">("idle");
   const [shareError, setShareError] = useState<string | null>(null);
   const [badgePos, setBadgePos] = useState({ x: 0, y: 0 });
+  const [badgeScale, setBadgeScale] = useState(1);
+  const [badgeRotation, setBadgeRotation] = useState(0);
   const sharePreviewRef = useRef<HTMLDivElement | null>(null);
   const shareBadgeRef = useRef<HTMLDivElement | null>(null);
-  const shareCameraInputRef = useRef<HTMLInputElement | null>(null);
   const shareGalleryInputRef = useRef<HTMLInputElement | null>(null);
   const badgeDragRef = useRef<{
     pointerId: number | null;
@@ -762,6 +764,13 @@ export default function KcalsPage() {
     originX: 0,
     originY: 0,
   });
+  const badgePointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const badgeGestureRef = useRef<{
+    startDistance: number;
+    startAngle: number;
+    startScale: number;
+    startRotation: number;
+  } | null>(null);
   const badgeMovedRef = useRef(false);
 
   useEffect(() => {
@@ -829,25 +838,25 @@ export default function KcalsPage() {
 
   const handleOpenShare = () => {
     badgeMovedRef.current = false;
+    badgePointersRef.current.clear();
+    badgeGestureRef.current = null;
+    badgeDragRef.current.pointerId = null;
     setShareError(null);
     setShareStatus("idle");
+    setBadgeScale(1);
+    setBadgeRotation(0);
     setShowShareModal(true);
     setShowWeeklyModal(false);
   };
 
   const handleShareFile = (file: File) => {
+    setShareImageLoaded(false);
     const reader = new FileReader();
     reader.onload = () => {
       setShareImage(reader.result as string);
       setShareBgType("image");
     };
     reader.readAsDataURL(file);
-  };
-
-  const handleShareCameraChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) handleShareFile(file);
-    e.target.value = "";
   };
 
   const handleShareGalleryChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -890,19 +899,50 @@ export default function KcalsPage() {
     const badge = shareBadgeRef.current;
     if (!preview || !badge) return;
     badgeMovedRef.current = true;
-    badgeDragRef.current.pointerId = e.pointerId;
-    badgeDragRef.current.startX = e.clientX;
-    badgeDragRef.current.startY = e.clientY;
-    badgeDragRef.current.originX = badgePos.x;
-    badgeDragRef.current.originY = badgePos.y;
+    badgePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (badgePointersRef.current.size === 1) {
+      badgeDragRef.current.pointerId = e.pointerId;
+      badgeDragRef.current.startX = e.clientX;
+      badgeDragRef.current.startY = e.clientY;
+      badgeDragRef.current.originX = badgePos.x;
+      badgeDragRef.current.originY = badgePos.y;
+    } else if (badgePointersRef.current.size === 2) {
+      const points = Array.from(badgePointersRef.current.values());
+      const dx = points[1].x - points[0].x;
+      const dy = points[1].y - points[0].y;
+      badgeGestureRef.current = {
+        startDistance: Math.hypot(dx, dy),
+        startAngle: Math.atan2(dy, dx),
+        startScale: badgeScale,
+        startRotation: badgeRotation,
+      };
+      badgeDragRef.current.pointerId = null;
+    }
     e.currentTarget.setPointerCapture(e.pointerId);
   };
 
   const handleShareBadgePointerMove = (e: PointerEvent<HTMLDivElement>) => {
-    if (badgeDragRef.current.pointerId !== e.pointerId) return;
+    if (!badgePointersRef.current.has(e.pointerId)) return;
+    badgePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     const preview = sharePreviewRef.current;
     const badge = shareBadgeRef.current;
     if (!preview || !badge) return;
+
+    if (badgePointersRef.current.size >= 2 && badgeGestureRef.current) {
+      const points = Array.from(badgePointersRef.current.values());
+      const dx = points[1].x - points[0].x;
+      const dy = points[1].y - points[0].y;
+      const distance = Math.hypot(dx, dy);
+      const angle = Math.atan2(dy, dx);
+      const scaleRaw = (badgeGestureRef.current.startScale * distance) / badgeGestureRef.current.startDistance;
+      const nextScale = Math.min(1.6, Math.max(0.6, scaleRaw));
+      const nextRotation = badgeGestureRef.current.startRotation + (angle - badgeGestureRef.current.startAngle) * (180 / Math.PI);
+      setBadgeScale(nextScale);
+      setBadgeRotation(nextRotation);
+      return;
+    }
+
+    if (badgeDragRef.current.pointerId !== e.pointerId) return;
     const dx = e.clientX - badgeDragRef.current.startX;
     const dy = e.clientY - badgeDragRef.current.startY;
     const previewRect = preview.getBoundingClientRect();
@@ -915,8 +955,15 @@ export default function KcalsPage() {
   };
 
   const handleShareBadgePointerEnd = (e: PointerEvent<HTMLDivElement>) => {
-    if (badgeDragRef.current.pointerId !== e.pointerId) return;
-    badgeDragRef.current.pointerId = null;
+    if (badgePointersRef.current.has(e.pointerId)) {
+      badgePointersRef.current.delete(e.pointerId);
+    }
+    if (badgePointersRef.current.size < 2) {
+      badgeGestureRef.current = null;
+    }
+    if (badgeDragRef.current.pointerId === e.pointerId) {
+      badgeDragRef.current.pointerId = null;
+    }
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch {
@@ -926,6 +973,11 @@ export default function KcalsPage() {
 
   const handleShareNow = async () => {
     if (!sharePreviewRef.current) return;
+    if (shareBgType === "image" && shareImage && !shareImageLoaded) {
+      setShareStatus("error");
+      setShareError("Image is still loading. Try again.");
+      return;
+    }
     setShareStatus("rendering");
     setShareError(null);
     try {
@@ -2794,24 +2846,31 @@ export default function KcalsPage() {
         </>
       </BottomSheet>
 
-      {/* Share Builder Modal */}
-      <BottomSheet open={showShareModal} onClose={() => setShowShareModal(false)}>
-        <div className="kcals-modal-handle" />
-        <div className="kcals-share-modal">
-          <div className="kcals-share-title">Share your progress</div>
+      {showShareModal && (
+        <div className="kcals-share-screen">
           <div
-            className="kcals-share-preview"
+            className="kcals-share-canvas"
             ref={sharePreviewRef}
             style={{
-              backgroundImage: shareBgType === "image" && shareImage
-                ? `url(${shareImage})`
-                : "linear-gradient(135deg, #007BFF, #209E9C)",
+              backgroundImage: "linear-gradient(135deg, #007BFF, #209E9C)",
             }}
           >
+            {shareBgType === "image" && shareImage && (
+              <img
+                className="kcals-share-photo"
+                src={shareImage}
+                alt=""
+                onLoad={() => setShareImageLoaded(true)}
+              />
+            )}
             <div
               className="kcals-share-badge"
               ref={shareBadgeRef}
-              style={{ left: badgePos.x, top: badgePos.y }}
+              style={{
+                left: badgePos.x,
+                top: badgePos.y,
+                transform: `scale(${badgeScale}) rotate(${badgeRotation}deg)`,
+              }}
               onPointerDown={handleShareBadgePointerDown}
               onPointerMove={handleShareBadgePointerMove}
               onPointerUp={handleShareBadgePointerEnd}
@@ -2822,46 +2881,40 @@ export default function KcalsPage() {
               </div>
             </div>
           </div>
-          <div className="kcals-share-controls">
+          <div className="kcals-share-topbar" data-share-ui>
             <button
-              className="kcals-share-btn"
+              className="kcals-share-topbtn"
               type="button"
-              onClick={() => shareCameraInputRef.current?.click()}
+              onClick={() => setShowShareModal(false)}
             >
-              Camera
+              ✕
             </button>
             <button
-              className="kcals-share-btn"
+              className="kcals-share-topbtn kcals-share-topbtn--primary"
+              type="button"
+              onClick={handleShareNow}
+              disabled={shareStatus === "rendering"}
+            >
+              {shareStatus === "rendering" ? "Preparing..." : "Share"}
+            </button>
+          </div>
+          <div className="kcals-share-bottom" data-share-ui>
+            <button
+              className={`kcals-share-pill${shareBgType === "image" ? " is-active" : ""}`}
               type="button"
               onClick={() => shareGalleryInputRef.current?.click()}
             >
-              Gallery
+              Image
             </button>
             <button
-              className={`kcals-share-btn${shareBgType === "gradient" ? " is-active" : ""}`}
+              className={`kcals-share-pill${shareBgType === "gradient" ? " is-active" : ""}`}
               type="button"
               onClick={() => setShareBgType("gradient")}
             >
-              Gradient
+              Solid
             </button>
           </div>
-          <button
-            className="kcals-share-cta"
-            type="button"
-            onClick={handleShareNow}
-            disabled={shareStatus === "rendering"}
-          >
-            {shareStatus === "rendering" ? "Preparing..." : "Share"}
-          </button>
           {shareError && <div className="kcals-share-error">{shareError}</div>}
-          <input
-            ref={shareCameraInputRef}
-            type="file"
-            accept="image/*"
-            capture="user"
-            className="kcals-share-input"
-            onChange={handleShareCameraChange}
-          />
           <input
             ref={shareGalleryInputRef}
             type="file"
@@ -2870,7 +2923,7 @@ export default function KcalsPage() {
             onChange={handleShareGalleryChange}
           />
         </div>
-      </BottomSheet>
+      )}
     </>
   );
 }

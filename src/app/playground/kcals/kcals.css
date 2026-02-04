@@ -1758,79 +1758,104 @@
    Share Builder
    =========================== */
 
-.kcals-share-modal {
+.kcals-share-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: #000;
   display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding-bottom: 12px;
+  align-items: stretch;
+  justify-content: center;
 }
 
-.kcals-share-title {
-  font-size: 16px;
-  font-weight: 700;
-  text-align: center;
-}
-
-.kcals-share-preview {
-  width: 100%;
-  max-width: 360px;
-  aspect-ratio: 9 / 16;
-  border-radius: 24px;
-  overflow: hidden;
-  margin: 0 auto;
-  position: relative;
+.kcals-share-canvas {
+  position: absolute;
+  inset: 0;
   background-size: cover;
   background-position: center;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.16);
+}
+
+.kcals-share-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .kcals-share-badge {
   position: absolute;
   touch-action: none;
+  transform-origin: center;
+  user-select: none;
 }
 
-.kcals-share-controls {
+.kcals-share-topbar {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top));
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 2;
+}
+
+.kcals-share-topbtn {
+  height: 40px;
+  min-width: 40px;
+  padding: 0 14px;
+  border-radius: 20px;
+  border: none;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kcals-share-topbtn--primary {
+  padding: 0 18px;
+}
+
+.kcals-share-bottom {
+  position: absolute;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  left: 0;
+  right: 0;
   display: flex;
   justify-content: center;
-  gap: 10px;
+  gap: 12px;
+  z-index: 2;
 }
 
-.kcals-share-btn {
+.kcals-share-pill {
   height: 36px;
-  padding: 0 12px;
-  border-radius: 12px;
-  border: 1px solid var(--border-8);
-  background: #fff;
-  font-size: 12px;
+  padding: 0 16px;
+  border-radius: 18px;
+  border: none;
+  background: rgba(255, 255, 255, 0.7);
+  color: #0d2a2d;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
 }
 
-.kcals-share-btn.is-active {
-  border-color: var(--blue);
-  color: var(--blue);
-}
-
-.kcals-share-cta {
-  height: 52px;
-  border-radius: 16px;
-  border: none;
-  background: var(--blue);
-  color: #fff;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.kcals-share-cta:disabled {
-  opacity: 0.6;
-  cursor: default;
+.kcals-share-pill.is-active {
+  background: #fff;
 }
 
 .kcals-share-error {
-  font-size: 12px;
-  color: var(--red);
+  position: absolute;
+  bottom: max(76px, calc(env(safe-area-inset-bottom) + 52px));
+  left: 0;
+  right: 0;
   text-align: center;
+  font-size: 12px;
+  color: #fff;
+  z-index: 2;
 }
 
 .kcals-share-input {
