@@ -5,6 +5,7 @@ export interface FoodItem {
   kcal: number | null;
   loading?: boolean;
   items?: FoodItem[]; // present = this is a group
+  portionPercent?: number; // group-only: portion of total calories applied
   imageId?: string;
   image?: string; // legacy base64 data URL for custom food avatars (migrate to IndexedDB)
   source?: "usda" | "manual";
@@ -17,9 +18,16 @@ export function isGroup(item: FoodItem): boolean {
   return Array.isArray(item.items) && item.items.length > 0;
 }
 
-export function groupKcal(item: FoodItem): number {
+export function groupKcalRaw(item: FoodItem): number {
   if (!item.items) return item.kcal ?? 0;
   return item.items.reduce((sum, i) => sum + (i.kcal ?? 0), 0);
+}
+
+export function groupKcal(item: FoodItem): number {
+  const raw = groupKcalRaw(item);
+  if (!item.items) return raw;
+  const percent = item.portionPercent ?? 100;
+  return Math.round((raw * percent) / 100);
 }
 
 export interface CustomFood {

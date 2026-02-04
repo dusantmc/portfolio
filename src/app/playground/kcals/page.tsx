@@ -9,6 +9,7 @@ import {
   type WeeklyEntry,
   isGroup,
   groupKcal,
+  groupKcalRaw,
   loadFoodList,
   saveFoodList,
   loadCustomFoods,
@@ -250,6 +251,19 @@ export default function KcalsPage() {
     active: boolean;
     timer: ReturnType<typeof setTimeout> | null;
   } | null>(null);
+
+  const [groupView, setGroupView] = useState<"list" | "portion">("list");
+  const [portionTab, setPortionTab] = useState(0);
+  const [portionValue, setPortionValue] = useState(100);
+  const [portionCtaPressed, setPortionCtaPressed] = useState(false);
+  const [portionTabPressed, setPortionTabPressed] = useState<number | null>(null);
+  const portionSliderRef = useRef<HTMLDivElement | null>(null);
+  const portionDraggingRef = useRef(false);
+  const portionRangeRef = useRef<HTMLInputElement | null>(null);
+  const portionTooltipRef = useRef<HTMLDivElement | null>(null);
+  const [portionTooltipX, setPortionTooltipX] = useState<number | null>(null);
+  const portionSnapPoints = [10, 25, 33, 50, 80, 100];
+  const PORTION_SNAP_THRESHOLD = 2;
   const itemRefsMap = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Group modal state
@@ -1237,13 +1251,13 @@ export default function KcalsPage() {
       // Adjust target index after removal
       const adjTargetIdx = without.findIndex((f) => f.id === targetId);
 
-      if (isGroup(target)) {
-        // Add source to existing group
-        const updatedGroup: FoodItem = {
-          ...target,
-          items: [...(target.items ?? []), ...(isGroup(source) ? source.items! : [source])],
-        };
-        updatedGroup.kcal = groupKcal(updatedGroup);
+        if (isGroup(target)) {
+          // Add source to existing group
+          const updatedGroup: FoodItem = {
+            ...target,
+            items: [...(target.items ?? []), ...(isGroup(source) ? source.items! : [source])],
+          };
+          updatedGroup.kcal = groupKcal(updatedGroup);
         const result = [...without];
         result[adjTargetIdx] = updatedGroup;
         // Open group modal
@@ -1252,16 +1266,17 @@ export default function KcalsPage() {
           setGroupModal(updatedGroup);
         }, 50);
         return result;
-      } else {
-        // Create new group
-        const sourceItems = isGroup(source) ? source.items! : [source];
-        const newGroup: FoodItem = {
-          id: Date.now().toString(),
-          emoji: target.emoji,
-          name: "New Group",
-          kcal: (target.kcal ?? 0) + sourceItems.reduce((s, i) => s + (i.kcal ?? 0), 0),
-          items: [target, ...sourceItems],
-        };
+        } else {
+          // Create new group
+          const sourceItems = isGroup(source) ? source.items! : [source];
+          const newGroup: FoodItem = {
+            id: Date.now().toString(),
+            emoji: target.emoji,
+            name: "New Group",
+            kcal: (target.kcal ?? 0) + sourceItems.reduce((s, i) => s + (i.kcal ?? 0), 0),
+            items: [target, ...sourceItems],
+            portionPercent: 100,
+          };
         const result = [...without];
         result[adjTargetIdx] = newGroup;
         // Open group modal
@@ -1281,7 +1296,15 @@ export default function KcalsPage() {
   const openGroupModal = (group: FoodItem) => {
     setGroupName(group.name);
     setGroupModal(group);
+    setPortionValue(group.portionPercent ?? 100);
   };
+
+  useEffect(() => {
+    if (groupModal) {
+      setGroupView("list");
+      setPortionValue(groupModal.portionPercent ?? 100);
+    }
+  }, [groupModal?.id]);
 
   const handleSaveGroupName = (name: string) => {
     if (!groupModal) return;
@@ -1348,6 +1371,76 @@ export default function KcalsPage() {
     setGroupModal(null);
   };
 
+  const handleUpdateGroupPortion = () => {
+    if (!groupModal) return;
+    const percent = portionValue;
+    updateFoods((prev) =>
+      prev.map((f) =>
+        f.id === groupModal.id
+          ? { ...f, portionPercent: percent }
+          : f
+      )
+    );
+    setGroupModal((g) => (g ? { ...g, portionPercent: percent } : g));
+    setGroupView("list");
+  };
+
+  const getPortionLabel = (value: number) => {
+    if (value === 25) return "1/4";
+    if (value === 33) return "1/3";
+    if (value === 50) return "1/2";
+    if (value === 100) return "All";
+    return `${value}%`;
+  };
+
+  const getPortionSpriteIndex = (value: number) => {
+    if (value < 20) return 5;
+    if (value < 40) return 4;
+    if (value < 60) return 3;
+    if (value < 89) return 2;
+    return 1;
+  };
+
+  const updatePortionFromPointer = (clientX: number) => {
+    const el = portionSliderRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = Math.min(Math.max(clientX - rect.left, 0), rect.width);
+    const nextValue = Math.round((x / rect.width) * 100);
+    const nearest = portionSnapPoints.reduce((best, point) =>
+      Math.abs(point - nextValue) < Math.abs(best - nextValue) ? point : best
+    , portionSnapPoints[0]);
+    const snapped = Math.abs(nearest - nextValue) <= PORTION_SNAP_THRESHOLD ? nearest : nextValue;
+    setPortionValue(snapped);
+  };
+
+  const updatePortionTooltipPosition = useCallback(() => {
+    const sliderEl = portionSliderRef.current;
+    const rangeEl = portionRangeRef.current;
+    const tooltipEl = portionTooltipRef.current;
+    if (!sliderEl || !rangeEl || !tooltipEl) return;
+    const sliderRect = sliderEl.getBoundingClientRect();
+    const rangeRect = rangeEl.getBoundingClientRect();
+    const tooltipRect = tooltipEl.getBoundingClientRect();
+    const centerX = rangeRect.left + (rangeRect.width * (portionValue / 100));
+    let left = centerX - sliderRect.left;
+    const min = tooltipRect.width / 2;
+    const max = sliderRect.width - tooltipRect.width / 2;
+    left = Math.min(Math.max(left, min), max);
+    setPortionTooltipX((prev) => (prev != null && Math.abs(prev - left) < 0.5 ? prev : left));
+  }, [portionValue]);
+
+  useEffect(() => {
+    if (groupView !== "portion") return;
+    const raf = requestAnimationFrame(updatePortionTooltipPosition);
+    const handleResize = () => updatePortionTooltipPosition();
+    window.addEventListener("resize", handleResize);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [groupView, portionValue, updatePortionTooltipPosition]);
+
   /* ===========================
      Close swipe on tap outside
      =========================== */
@@ -1366,6 +1459,9 @@ export default function KcalsPage() {
   const renderFoodRow = (food: FoodItem) => {
     const group = isGroup(food);
     const kcal = groupKcal(food);
+    const rawGroupKcal = group ? groupKcalRaw(food) : 0;
+    const groupPercent = group ? (food.portionPercent ?? 100) : 100;
+    const showGroupPercent = group && groupPercent !== 100;
     const imageUrl = food.imageId ? imageUrls[food.imageId] : food.image;
 
     return (
@@ -1402,7 +1498,9 @@ export default function KcalsPage() {
               <div className="kcals-food-loading-dots">
                 <span /><span /><span />
               </div>
-            ) : !group && food.kcal == null ? "? kcal" : `+ ${kcal.toLocaleString()}kcal`}
+            ) : !group && food.kcal == null ? "? kcal" : group && showGroupPercent
+              ? `+ ${kcal.toLocaleString()}kcal (${groupPercent}%)`
+              : `+ ${kcal.toLocaleString()}kcal`}
           </div>
         </div>
         <div className="kcals-swipe-actions">
@@ -1765,55 +1863,163 @@ export default function KcalsPage() {
       {/* Group Modal */}
       <BottomSheet open={!!groupModal} onClose={() => setGroupModal(null)} className="kcals-group-modal">
         <div className="kcals-modal-handle" />
-        <button
-          className="kcals-modal-delete"
-          onClick={handleDeleteGroup}
-          type="button"
-        >
-          <TrashIcon />
-        </button>
-        <div className="kcals-group-emoji">
-          {groupModal?.emoji}
-        </div>
-        <input
-          className="kcals-group-name-input"
-          type="text"
-          value={groupName}
-          onChange={(e) => handleSaveGroupName(e.target.value)}
-          placeholder="Group name"
-        />
-        <div className="kcals-group-header">
-          <span>Group items ({groupModal?.items?.length ?? 0})</span>
-          <span>+{groupModal ? groupKcal(groupModal).toLocaleString() : 0}Kcal</span>
-        </div>
-        <div className="kcals-group-list">
-          {groupModal?.items?.map((item) => (
-            <div key={item.id} className="kcals-group-list-item">
-              <div className="kcals-food-emoji">
-                {(item.imageId ? imageUrls[item.imageId] : item.image) ? (
-                  <img
-                    src={item.imageId ? imageUrls[item.imageId] : item.image}
-                    alt=""
-                    className="kcals-food-image"
-                  />
-                ) : (
-                  item.emoji
-                )}
-              </div>
-              <div className="kcals-food-name">{item.name}</div>
-              <div className="kcals-food-kcal">
-                + {(item.kcal ?? 0).toLocaleString()}kcal
-              </div>
-              <button
-                className="kcals-group-remove-btn"
-                onClick={() => handleRemoveFromGroup(item.id)}
-                type="button"
-              >
-                &times;
+        {groupView === "list" ? (
+          <>
+            <div className="kcals-group-emoji">
+              {groupModal?.emoji}
+            </div>
+            <input
+              className="kcals-group-name-input"
+              type="text"
+              value={groupName}
+              onChange={(e) => handleSaveGroupName(e.target.value)}
+              placeholder="Group name"
+            />
+            <div className="kcals-group-header">
+              <span className="kcals-group-header-title">Group items ({groupModal?.items?.length ?? 0})</span>
+              <span className="kcals-group-header-total">
+                +{groupModal ? groupKcal(groupModal).toLocaleString() : 0}kcal
+                {groupModal && (groupModal.portionPercent ?? 100) !== 100
+                  ? ` (of ${groupKcalRaw(groupModal).toLocaleString()}kcal)`
+                  : ""}
+              </span>
+              <button className="kcals-group-header-link" type="button" onClick={() => setGroupView("portion")}>
+                {(groupModal?.portionPercent ?? 100).toString()}%
               </button>
             </div>
-          ))}
-        </div>
+            <div className="kcals-group-list">
+              {groupModal?.items?.map((item) => (
+                <div key={item.id} className="kcals-group-list-item">
+                  <div className="kcals-food-emoji">
+                    {(item.imageId ? imageUrls[item.imageId] : item.image) ? (
+                      <img
+                        src={item.imageId ? imageUrls[item.imageId] : item.image}
+                        alt=""
+                        className="kcals-food-image"
+                      />
+                    ) : (
+                      item.emoji
+                    )}
+                  </div>
+                  <div className="kcals-food-name">{item.name}</div>
+                  <div className="kcals-food-kcal">
+                    + {(item.kcal ?? 0).toLocaleString()}kcal
+                  </div>
+                  <button
+                    className="kcals-group-remove-btn"
+                    onClick={() => handleRemoveFromGroup(item.id)}
+                    type="button"
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="kcals-portion-view">
+            <div className="kcals-portion-header">
+              <button
+                className="kcals-portion-back"
+                type="button"
+                onClick={() => setGroupView("list")}
+                aria-label="Back"
+              >
+                <img src="/kcals/assets/back.svg" alt="" />
+              </button>
+              <div className="kcals-portion-title">How much did you eat?</div>
+              <div className="kcals-portion-spacer" />
+            </div>
+            <div className="kcals-portion-hero">
+              <div
+                className="kcals-portion-hero-image"
+                aria-hidden="true"
+                style={{
+                  ["--sprite-x" as never]: `${-(getPortionSpriteIndex(portionValue) - 1) * 224}px`,
+                }}
+              />
+            </div>
+            <div className="kcals-portion-tabs">
+              {[
+                "/kcals/assets/plate.png",
+                "/kcals/assets/pot.png",
+                "/kcals/assets/bakeware.png",
+                "/kcals/assets/piece.png",
+              ].map((src, index) => (
+                <button
+                  key={src}
+                  className={`kcals-portion-tab${portionTab === index ? " is-active" : ""}${portionTabPressed === index ? " is-pressed" : ""}`}
+                  type="button"
+                  onClick={() => setPortionTab(index)}
+                  onPointerDown={() => setPortionTabPressed(index)}
+                  onPointerUp={() => setPortionTabPressed(null)}
+                  onPointerCancel={() => setPortionTabPressed(null)}
+                  onPointerLeave={() => setPortionTabPressed(null)}
+                >
+                  <img src={src} alt="" />
+                </button>
+              ))}
+            </div>
+            <div
+              className="kcals-portion-slider"
+              ref={portionSliderRef}
+              style={{ ["--portion" as never]: `${portionValue}%` }}
+              onPointerDown={(e) => {
+                portionDraggingRef.current = true;
+                updatePortionFromPointer(e.clientX);
+                e.currentTarget.setPointerCapture(e.pointerId);
+                e.preventDefault();
+              }}
+              onPointerMove={(e) => {
+                if (!portionDraggingRef.current) return;
+                updatePortionFromPointer(e.clientX);
+              }}
+              onPointerUp={(e) => {
+                portionDraggingRef.current = false;
+                e.currentTarget.releasePointerCapture(e.pointerId);
+              }}
+              onPointerCancel={(e) => {
+                portionDraggingRef.current = false;
+                e.currentTarget.releasePointerCapture(e.pointerId);
+              }}
+            >
+              <div
+                className="kcals-portion-tooltip"
+                ref={portionTooltipRef}
+                style={{ left: portionTooltipX != null ? `${portionTooltipX}px` : undefined }}
+              >
+                {getPortionLabel(portionValue)}
+              </div>
+              <input
+                className="kcals-portion-range"
+                ref={portionRangeRef}
+                type="range"
+                min={0}
+                max={100}
+                value={portionValue}
+                onChange={(e) => {
+                  const raw = Number(e.target.value);
+                  const nearest = portionSnapPoints.reduce((best, point) =>
+                    Math.abs(point - raw) < Math.abs(best - raw) ? point : best
+                  , portionSnapPoints[0]);
+                  const snapped = Math.abs(nearest - raw) <= PORTION_SNAP_THRESHOLD ? nearest : raw;
+                  setPortionValue(snapped);
+                }}
+              />
+            </div>
+            <button
+              className={`kcals-portion-cta${portionCtaPressed ? " is-pressed" : ""}`}
+              type="button"
+              onPointerDown={() => setPortionCtaPressed(true)}
+              onPointerUp={() => setPortionCtaPressed(false)}
+              onPointerCancel={() => setPortionCtaPressed(false)}
+              onPointerLeave={() => setPortionCtaPressed(false)}
+              onClick={handleUpdateGroupPortion}
+            >
+              Update
+            </button>
+          </div>
+        )}
       </BottomSheet>
 
       {/* Weekly Breakdown Modal */}
