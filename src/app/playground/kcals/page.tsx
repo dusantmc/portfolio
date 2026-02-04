@@ -981,13 +981,14 @@ export default function KcalsPage() {
     setShareStatus("rendering");
     setShareError(null);
     try {
-      const { toBlob } = await import("html-to-image");
-      const blob = await toBlob(sharePreviewRef.current, {
+      const { toJpeg } = await import("html-to-image");
+      const dataUrl = await toJpeg(sharePreviewRef.current, {
         cacheBust: true,
         pixelRatio: 2,
+        quality: 0.95,
       });
-      if (!blob) throw new Error("Failed to render image.");
-      const file = new File([blob], "kcals-share.png", { type: "image/png" });
+      const blob = dataUrlToBlob(dataUrl);
+      const file = new File([blob], "kcals-share.jpg", { type: "image/jpeg" });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
@@ -998,7 +999,7 @@ export default function KcalsPage() {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = "kcals-share.png";
+        link.download = "kcals-share.jpg";
         document.body.appendChild(link);
         link.click();
         link.remove();
