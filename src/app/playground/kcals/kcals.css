@@ -187,6 +187,10 @@
   font-weight: 600;
 }
 
+.kcals-topbar-compact-remaining.is-negative {
+  color: var(--red);
+}
+
 /* ===========================
    Calorie Display
    =========================== */
@@ -237,6 +241,10 @@
 .kcals-calorie-remaining strong {
   font-weight: 700;
   color: var(--green);
+}
+
+.kcals-calorie-remaining.is-negative strong {
+  color: var(--red);
 }
 
 .kcals-calorie-remaining span {
@@ -785,6 +793,11 @@
   cursor: pointer;
 }
 
+.kcals-modal-submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 /* ===========================
    Auth Modal
    =========================== */
@@ -815,6 +828,13 @@
   color: var(--black-50);
 }
 
+.kcals-auth-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .kcals-auth-email {
   font-size: 15px;
   font-weight: 600;
@@ -830,6 +850,16 @@
   font-size: 12px;
   color: var(--red);
   text-align: center;
+}
+
+.kcals-auth-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .kcals-auth-secondary {
@@ -1060,6 +1090,7 @@
 
 .kcals-group-modal {
   padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  max-height: calc(100% - 24px);
 }
 
 .kcals-group-emoji {

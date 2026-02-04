@@ -175,8 +175,10 @@ export default function KcalsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authEmail, setAuthEmail] = useState("");
-  const [authStatus, setAuthStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [authStatus, setAuthStatus] = useState<"idle" | "sending" | "sent" | "verifying" | "error">("idle");
+  const [authStep, setAuthStep] = useState<"email" | "code">("email");
   const [authError, setAuthError] = useState<string | null>(null);
+  const [authOtp, setAuthOtp] = useState("");
   const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "error" | "ok">("idle");
   const [syncError, setSyncError] = useState<string | null>(null);
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
@@ -462,6 +464,8 @@ export default function KcalsPage() {
     if (!showAuthModal) return;
     setAuthStatus("idle");
     setAuthError(null);
+    setAuthOtp("");
+    setAuthStep("email");
   }, [showAuthModal]);
 
   const updateViewportVars = useCallback(() => {
@@ -707,6 +711,8 @@ export default function KcalsPage() {
 
   const totalKcal = foods.reduce((sum, f) => sum + groupKcal(f), 0);
   const remaining = calorieGoal - totalKcal;
+  const remainingPrefix = remaining >= 0 ? "+" : "";
+  const remainingIsNegative = remaining < 0;
   const todayLabel = new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
@@ -787,14 +793,38 @@ export default function KcalsPage() {
     const redirectTo = typeof window !== "undefined" ? window.location.origin + window.location.pathname : undefined;
     const { error } = await supabase.auth.signInWithOtp({
       email: authEmail.trim(),
-      options: redirectTo ? { emailRedirectTo: redirectTo } : undefined,
+      options: redirectTo ? { emailRedirectTo: redirectTo, shouldCreateUser: true } : { shouldCreateUser: true },
     });
     if (error) {
       setAuthStatus("error");
       setAuthError(error.message);
       return;
     }
+    setAuthStep("code");
     setAuthStatus("sent");
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!supabase) return;
+    const token = authOtp.trim();
+    if (!token) {
+      setAuthError("Enter the code from your email.");
+      return;
+    }
+    setAuthStatus("verifying");
+    setAuthError(null);
+    const { error } = await supabase.auth.verifyOtp({
+      email: authEmail.trim(),
+      token,
+      type: "email",
+    });
+    if (error) {
+      setAuthStatus("error");
+      setAuthError(error.message);
+      return;
+    }
+    setAuthStatus("idle");
+    setAuthOtp("");
   };
 
   const handleSignOut = async () => {
@@ -1840,7 +1870,10 @@ export default function KcalsPage() {
             </div>
             <div className="kcals-topbar-compact">
               <span className="kcals-topbar-compact-value">{totalKcal} kcal</span>
-              <span className="kcals-topbar-compact-remaining">+{remaining.toLocaleString()} remaining</span>
+              <span className={`kcals-topbar-compact-remaining${remainingIsNegative ? " is-negative" : ""}`}>
+                {remainingPrefix}
+                {remaining.toLocaleString()} remaining
+              </span>
             </div>
           </div>
 
@@ -1861,8 +1894,11 @@ export default function KcalsPage() {
               <span className="kcals-calorie-value">{totalKcal}</span>
               <span className="kcals-calorie-unit">kcal</span>
             </div>
-            <p className="kcals-calorie-remaining">
-              <strong>+{remaining.toLocaleString()}kcal</strong>
+            <p className={`kcals-calorie-remaining${remainingIsNegative ? " is-negative" : ""}`}>
+              <strong>
+                {remainingPrefix}
+                {remaining.toLocaleString()}kcal
+              </strong>
               <span> remaining</span>
             </p>
           </div>
@@ -2403,23 +2439,84 @@ export default function KcalsPage() {
             </>
           ) : (
             <>
-              <input
-                className="kcals-modal-input"
-                type="email"
-                value={authEmail}
-                onChange={(e) => setAuthEmail(e.target.value)}
-                placeholder="Email address"
-              />
-              <button
-                className="kcals-modal-submit"
-                type="button"
-                onClick={handleSendMagicLink}
-                disabled={authStatus === "sending"}
-              >
-                {authStatus === "sending" ? "Sending..." : "Send magic link"}
-              </button>
-              {authStatus === "sent" && (
-                <div className="kcals-auth-hint">Check your email for the sign-in link.</div>
+              {authStep === "email" ? (
+                <>
+                  <input
+                    className="kcals-modal-input"
+                    type="email"
+                    value={authEmail}
+                    onChange={(e) => setAuthEmail(e.target.value)}
+                    placeholder="Email address"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleSendMagicLink();
+                      }
+                    }}
+                  />
+                  <button
+                    className="kcals-modal-submit"
+                    type="button"
+                    onClick={handleSendMagicLink}
+                    disabled={authStatus === "sending"}
+                  >
+                    {authStatus === "sending" ? "Sending..." : "Send code"}
+                  </button>
+                  {authStatus === "sent" && (
+                    <div className="kcals-auth-hint">Check your email for the 6-digit code.</div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="kcals-auth-inline">
+                    <span className="kcals-auth-row">Code sent to</span>
+                    <button
+                      className="kcals-auth-link"
+                      type="button"
+                      onClick={() => {
+                        setAuthStep("email");
+                        setAuthStatus("idle");
+                        setAuthError(null);
+                        setAuthOtp("");
+                      }}
+                    >
+                      Change
+                    </button>
+                  </div>
+                  <div className="kcals-auth-email">{authEmail}</div>
+                  <input
+                    className="kcals-modal-input"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    value={authOtp}
+                    onChange={(e) => {
+                      const next = e.target.value.replace(/\D/g, "").slice(0, 6);
+                      setAuthOtp(next);
+                    }}
+                    placeholder="Enter code"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleVerifyOtp();
+                      }
+                    }}
+                  />
+                  <div className="kcals-auth-hint">Enter the 6-digit code from your email.</div>
+                  <button
+                    className="kcals-modal-submit"
+                    type="button"
+                    onClick={handleVerifyOtp}
+                    disabled={authStatus === "verifying"}
+                  >
+                    {authStatus === "verifying" ? "Verifying..." : "Verify code"}
+                  </button>
+                  <button
+                    className="kcals-auth-link"
+                    type="button"
+                    onClick={handleSendMagicLink}
+                  >
+                    Resend code
+                  </button>
+                </>
               )}
               {authError && <div className="kcals-auth-error">{authError}</div>}
             </>
