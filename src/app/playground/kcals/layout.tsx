@@ -6,6 +6,13 @@ export const metadata: Metadata = {
   title: "Kcals",
   description: "Simple calorie tracker",
   manifest: "/kcals/manifest.json",
+  icons: {
+    icon: [
+      { url: "/kcals/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/kcals/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/kcals/apple-touch-icon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
