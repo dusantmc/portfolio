@@ -191,6 +191,32 @@
   color: var(--red);
 }
 
+.kcals-avatar-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.kcals-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--border-8);
+  color: var(--black-100);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 15px;
+}
+
 /* ===========================
    Calorie Display
    =========================== */
@@ -884,6 +910,63 @@
   padding-bottom: 8px;
 }
 
+.kcals-settings-select {
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border-8);
+  background: var(--white);
+  color: var(--black-100);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 10px;
+}
+
+.kcals-settings-select:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+/* ===========================
+   Profile Modal
+   =========================== */
+
+.kcals-profile-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px 4px;
+}
+
+.kcals-profile-avatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--border-8);
+  color: var(--black-100);
+  font-size: 28px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kcals-profile-email {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--black-100);
+  text-align: center;
+}
+
+.kcals-profile-link {
+  background: none;
+  border: none;
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .kcals-settings-title {
   font-size: 15px;
   font-weight: 600;
@@ -1090,7 +1173,7 @@
 
 .kcals-group-modal {
   padding-bottom: calc(20px + env(safe-area-inset-bottom));
-  max-height: calc(100% - 24px);
+  max-height: calc(100% - 40px);
 }
 
 .kcals-group-emoji {

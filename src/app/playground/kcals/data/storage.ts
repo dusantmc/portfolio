@@ -192,6 +192,7 @@ export async function deleteCustomFoodImage(id: string): Promise<void> {
    =========================== */
 
 const DAILY_LOG_KEY = "kcals-daily-log";
+const DAY_START_HOUR_KEY = "kcals-day-start-hour";
 
 export interface DailyEntry {
   remaining: number;
@@ -200,6 +201,39 @@ export interface DailyEntry {
 
 export function formatDateKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function clampHour(hour: number): number {
+  if (Number.isNaN(hour)) return 0;
+  return Math.min(23, Math.max(0, Math.round(hour)));
+}
+
+export function getDayStartHour(): number {
+  if (typeof window === "undefined") return 0;
+  const raw = localStorage.getItem(DAY_START_HOUR_KEY);
+  if (!raw) return 0;
+  return clampHour(Number(raw));
+}
+
+export function setDayStartHour(hour: number): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(DAY_START_HOUR_KEY, String(clampHour(hour)));
+}
+
+function getEffectiveDate(date: Date, startHour = getDayStartHour()): Date {
+  const d = new Date(date);
+  if (d.getHours() < startHour) {
+    d.setDate(d.getDate() - 1);
+  }
+  return d;
+}
+
+export function getDayKey(date: Date): string {
+  return formatDateKey(getEffectiveDate(date));
+}
+
+export function getDisplayDate(date: Date): Date {
+  return getEffectiveDate(date);
 }
 
 function loadDailyLog(): Record<string, DailyEntry> {
@@ -221,7 +255,7 @@ export function saveDailyLogRaw(data: Record<string, DailyEntry>): void {
 
 export function saveDailyEntry(remaining: number, logged: boolean): void {
   const log = loadDailyLog();
-  log[formatDateKey(new Date())] = { remaining, logged };
+  log[getDayKey(new Date())] = { remaining, logged };
   // Keep only last 30 days
   const keys = Object.keys(log).sort();
   if (keys.length > 30) {
@@ -238,12 +272,12 @@ export function getStreak(): number {
   const d = new Date();
 
   // If today has no entry yet, start from yesterday
-  if (!log[formatDateKey(d)]?.logged) {
+  if (!log[getDayKey(d)]?.logged) {
     d.setDate(d.getDate() - 1);
   }
 
   while (true) {
-    const entry = log[formatDateKey(d)];
+    const entry = log[getDayKey(d)];
     if (entry?.logged) {
       streak++;
       d.setDate(d.getDate() - 1);
@@ -259,7 +293,7 @@ export function getWeeklyRemaining(): number {
   let total = 0;
   const d = new Date();
   for (let i = 0; i < 7; i++) {
-    const entry = log[formatDateKey(d)];
+    const entry = log[getDayKey(d)];
     if (entry) total += entry.remaining;
     d.setDate(d.getDate() - 1);
   }
@@ -276,7 +310,7 @@ export function getWeeklyBreakdown(): WeeklyEntry[] {
   const entries: WeeklyEntry[] = [];
   const d = new Date();
   for (let i = 0; i < 7; i++) {
-    const dateKey = formatDateKey(d);
+    const dateKey = getDayKey(d);
     const entry = log[dateKey];
     if (entry?.logged) {
       entries.push({ dateKey, remaining: entry.remaining });

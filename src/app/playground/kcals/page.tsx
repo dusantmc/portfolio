@@ -25,7 +25,10 @@ import {
   saveDailyEntry,
   loadDailyLogRaw,
   saveDailyLogRaw,
-  formatDateKey,
+  getDayKey,
+  getDayStartHour,
+  setDayStartHour,
+  getDisplayDate,
   getStreak,
   getWeeklyBreakdown,
 } from "./data/storage";
@@ -183,9 +186,11 @@ export default function KcalsPage() {
   const [syncError, setSyncError] = useState<string | null>(null);
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
   const [showGoalModal, setShowGoalModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [calorieGoal, setCalorieGoal] = useState(DEFAULT_CALORIE_GOAL);
   const [calorieGoalInput, setCalorieGoalInput] = useState(DEFAULT_CALORIE_GOAL.toString());
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(false);
+  const [dayStartHour, setDayStartHourState] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [editingFood, setEditingFood] = useState<CustomFood | null>(null);
   const [modalName, setModalName] = useState("");
@@ -444,7 +449,7 @@ export default function KcalsPage() {
 
   useEffect(() => {
     if (!supabase || !user || !autoSyncEnabled) return;
-    const todayKey = formatDateKey(new Date());
+    const todayKey = getDayKey(new Date());
     const log = loadDailyLogRaw();
     const entry = log[todayKey];
     const lastAuto = typeof window !== "undefined" ? localStorage.getItem(AUTO_SYNC_DATE_KEY) : null;
@@ -454,7 +459,7 @@ export default function KcalsPage() {
         localStorage.setItem(AUTO_SYNC_DATE_KEY, todayKey);
       }
     }
-  }, [user, autoSyncEnabled, foods, syncFromSupabase]);
+  }, [user, autoSyncEnabled, foods, syncFromSupabase, dayStartHour]);
 
   useEffect(() => {
     if (user) setShowAuthModal(false);
@@ -467,6 +472,10 @@ export default function KcalsPage() {
     setAuthOtp("");
     setAuthStep("email");
   }, [showAuthModal]);
+
+  useEffect(() => {
+    setDayStartHourState(getDayStartHour());
+  }, []);
 
   const updateViewportVars = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -713,10 +722,12 @@ export default function KcalsPage() {
   const remaining = calorieGoal - totalKcal;
   const remainingPrefix = remaining >= 0 ? "+" : "";
   const remainingIsNegative = remaining < 0;
+  const displayDate = getDisplayDate(new Date());
   const todayLabel = new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
-  }).format(new Date());
+  }).format(displayDate);
+  const profileInitial = user?.email?.trim()?.[0]?.toUpperCase() ?? "U";
 
   const [streak, setStreak] = useState(0);
   const [weeklyBurn, setWeeklyBurn] = useState(0);
@@ -733,7 +744,7 @@ export default function KcalsPage() {
       (e) => calorieGoal - e.remaining >= 800
     );
     setWeeklyBurn(qualifying.reduce((sum, e) => sum + e.remaining, 0));
-  }, [foods, remaining, calorieGoal]);
+  }, [foods, remaining, calorieGoal, dayStartHour]);
 
   /* ===========================
      Input focus handlers
@@ -772,7 +783,6 @@ export default function KcalsPage() {
   };
 
   const toggleAutoSync = () => {
-    if (!user) return;
     setAutoSyncEnabled((prev) => {
       const next = !prev;
       if (typeof window !== "undefined") {
@@ -780,6 +790,11 @@ export default function KcalsPage() {
       }
       return next;
     });
+  };
+
+  const handleDayStartHourChange = (value: number) => {
+    setDayStartHourState(value);
+    setDayStartHour(value);
   };
 
   const handleSendMagicLink = async () => {
@@ -831,6 +846,7 @@ export default function KcalsPage() {
     if (!supabase) return;
     await supabase.auth.signOut();
     setUser(null);
+    setShowProfileModal(false);
   };
 
   const handleSyncNow = async () => {
@@ -1852,20 +1868,24 @@ export default function KcalsPage() {
                 {weeklyBreakdown.some((e) => calorieGoal - e.remaining >= 800) ? formatCompact(weeklyBurn) : "0"}
               </button>
               {supabase && (
-                <button
-                  className="kcals-chip kcals-chip-btn"
-                  type="button"
-                  onClick={user ? handleSyncNow : () => setShowAuthModal(true)}
-                >
-                  <span className="kcals-chip-icon">{user ? "\u2601\uFE0F" : "\u{1F512}"}</span>
-                  {user
-                    ? syncStatus === "syncing"
-                      ? "Syncing"
-                      : syncStatus === "ok"
-                        ? "Synced"
-                        : "Sync"
-                    : "Sign in"}
-                </button>
+                user ? (
+                  <button
+                    className="kcals-avatar-btn"
+                    type="button"
+                    onClick={() => setShowProfileModal(true)}
+                  >
+                    <span className="kcals-avatar">{profileInitial}</span>
+                  </button>
+                ) : (
+                  <button
+                    className="kcals-chip kcals-chip-btn"
+                    type="button"
+                    onClick={() => setShowAuthModal(true)}
+                  >
+                    <span className="kcals-chip-icon">{"\u{1F512}"}</span>
+                    Sign in
+                  </button>
+                )
               )}
             </div>
             <div className="kcals-topbar-compact">
@@ -2393,14 +2413,27 @@ export default function KcalsPage() {
           <div className="kcals-settings-row">
             <span>Sync automatically</span>
             <button
-              className={`kcals-toggle${autoSyncEnabled ? " is-on" : ""}${!user ? " is-disabled" : ""}`}
+              className={`kcals-toggle${autoSyncEnabled ? " is-on" : ""}`}
               type="button"
               onClick={toggleAutoSync}
-              disabled={!user}
               aria-pressed={autoSyncEnabled}
             >
               <span className="kcals-toggle-thumb" />
             </button>
+          </div>
+          <div className="kcals-settings-row">
+            <span>Day resets at</span>
+            <select
+              className="kcals-settings-select"
+              value={dayStartHour}
+              onChange={(e) => handleDayStartHourChange(Number(e.target.value))}
+            >
+              {Array.from({ length: 24 }, (_, i) => (
+                <option key={i} value={i}>
+                  {String(i).padStart(2, "0")}:00
+                </option>
+              ))}
+            </select>
           </div>
           <div className="kcals-settings-note">
             Auto sync runs every morning when your daily log is empty.
@@ -2414,6 +2447,17 @@ export default function KcalsPage() {
             </button>
           </div>
           {syncError && <div className="kcals-settings-error">{syncError}</div>}
+        </div>
+      </BottomSheet>
+
+      {/* Profile Modal */}
+      <BottomSheet open={showProfileModal} onClose={() => setShowProfileModal(false)} variant="center">
+        <div className="kcals-profile-modal">
+          <div className="kcals-profile-avatar">{profileInitial}</div>
+          <div className="kcals-profile-email">{user?.email ?? "Account"}</div>
+          <button className="kcals-profile-link" type="button" onClick={handleSignOut}>
+            Log out
+          </button>
         </div>
       </BottomSheet>
 
