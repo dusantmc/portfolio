@@ -1326,32 +1326,32 @@
 }
 
 .kcals-portion-hero-image.is-entering {
-  animation: kcals-hero-in 0.25s ease-out both;
+  animation: kcals-hero-in 0.2s ease-out both;
 }
 
 .kcals-portion-hero-image.is-exiting {
-  animation: kcals-hero-out 0.25s ease-in both;
+  animation: kcals-hero-out 0.2s ease-in both;
 }
 
 @keyframes kcals-hero-in {
   from {
     opacity: 0;
-    transform: translate(-50%, -50%) translateX(14px);
+    transform: translate(-50%, -50%) scale(0.8);
   }
   to {
     opacity: 1;
-    transform: translate(-50%, -50%) translateX(0);
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 
 @keyframes kcals-hero-out {
   from {
     opacity: 1;
-    transform: translate(-50%, -50%) translateX(0);
+    transform: translate(-50%, -50%) scale(1);
   }
   to {
     opacity: 0;
-    transform: translate(-50%, -50%) translateX(-14px);
+    transform: translate(-50%, -50%) scale(0.8);
   }
 }
 
@@ -1426,17 +1426,7 @@
 .kcals-portion-range {
   width: 100%;
   height: 32px;
-  background: linear-gradient(
-    90deg,
-    var(--blue) 0%,
-    var(--blue) var(--portion, 100%),
-    var(--border-16, rgba(25, 24, 21, 0.16)) var(--portion, 100%),
-    var(--border-16, rgba(25, 24, 21, 0.16)) 100%
-  );
-  background-size: 100% 8px;
-  background-repeat: no-repeat;
-  background-position: center;
-  border-radius: 999px;
+  background: transparent;
   -webkit-appearance: none;
   appearance: none;
 }
@@ -1444,7 +1434,13 @@
 .kcals-portion-range::-webkit-slider-runnable-track {
   height: 8px;
   border-radius: 999px;
-  background: transparent;
+  background: linear-gradient(
+    90deg,
+    var(--blue) 0%,
+    var(--blue) var(--portion, 100%),
+    var(--border-16, rgba(25, 24, 21, 0.16)) var(--portion, 100%),
+    var(--border-16, rgba(25, 24, 21, 0.16)) 100%
+  );
 }
 
 .kcals-portion-range::-webkit-slider-thumb {
