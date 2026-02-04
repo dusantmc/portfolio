@@ -1733,6 +1733,110 @@
   font-weight: 700;
 }
 
+.kcals-weekly-share {
+  margin-top: 16px;
+  width: 100%;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid var(--border-8);
+  background: #f7f7f7;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.kcals-weekly-card {
+  width: 280px;
+  max-width: 90%;
+  animation: none;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
+  border-radius: 28px;
+  padding: 24px 18px 18px;
+}
+
+/* ===========================
+   Share Builder
+   =========================== */
+
+.kcals-share-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 12px;
+}
+
+.kcals-share-title {
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.kcals-share-preview {
+  width: 100%;
+  max-width: 360px;
+  aspect-ratio: 9 / 16;
+  border-radius: 24px;
+  overflow: hidden;
+  margin: 0 auto;
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.16);
+}
+
+.kcals-share-badge {
+  position: absolute;
+  touch-action: none;
+}
+
+.kcals-share-controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.kcals-share-btn {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-8);
+  background: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.kcals-share-btn.is-active {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.kcals-share-cta {
+  height: 52px;
+  border-radius: 16px;
+  border: none;
+  background: var(--blue);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.kcals-share-cta:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.kcals-share-error {
+  font-size: 12px;
+  color: var(--red);
+  text-align: center;
+}
+
+.kcals-share-input {
+  display: none;
+}
+
 /* ===========================
    Utilities
    =========================== */

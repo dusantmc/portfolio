@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, type ChangeEvent, type PointerEvent } from "react";
 import type { User } from "@supabase/supabase-js";
 import { SmokeRing } from "@paper-design/shaders-react";
 import {
@@ -728,11 +728,41 @@ export default function KcalsPage() {
     day: "numeric",
   }).format(displayDate);
   const profileInitial = user?.email?.trim()?.[0]?.toUpperCase() ?? "U";
+  const weeklyVisibleEntries = weeklyBreakdown.filter(
+    (e) => calorieGoal - e.remaining >= 800
+  );
+  const weeklyHasData = weeklyVisibleEntries.length > 0;
+  const weeklyIsOnTrack = weeklyBurn >= 0;
+  const weeklyAbsTotal = Math.abs(weeklyBurn);
 
   const [streak, setStreak] = useState(0);
   const [weeklyBurn, setWeeklyBurn] = useState(0);
   const [showWeeklyModal, setShowWeeklyModal] = useState(false);
   const [weeklyBreakdown, setWeeklyBreakdown] = useState<WeeklyEntry[]>([]);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareBgType, setShareBgType] = useState<"gradient" | "image">("gradient");
+  const [shareImage, setShareImage] = useState<string | null>(null);
+  const [shareStatus, setShareStatus] = useState<"idle" | "rendering" | "error">("idle");
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [badgePos, setBadgePos] = useState({ x: 0, y: 0 });
+  const sharePreviewRef = useRef<HTMLDivElement | null>(null);
+  const shareBadgeRef = useRef<HTMLDivElement | null>(null);
+  const shareCameraInputRef = useRef<HTMLInputElement | null>(null);
+  const shareGalleryInputRef = useRef<HTMLInputElement | null>(null);
+  const badgeDragRef = useRef<{
+    pointerId: number | null;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+  }>({
+    pointerId: null,
+    startX: 0,
+    startY: 0,
+    originX: 0,
+    originY: 0,
+  });
+  const badgeMovedRef = useRef(false);
 
   useEffect(() => {
     const hasFood = foods.some((f) => !f.loading && f.kcal != null);
@@ -795,6 +825,139 @@ export default function KcalsPage() {
   const handleDayStartHourChange = (value: number) => {
     setDayStartHourState(value);
     setDayStartHour(value);
+  };
+
+  const handleOpenShare = () => {
+    badgeMovedRef.current = false;
+    setShareError(null);
+    setShareStatus("idle");
+    setShowShareModal(true);
+    setShowWeeklyModal(false);
+  };
+
+  const handleShareFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      setShareImage(reader.result as string);
+      setShareBgType("image");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleShareCameraChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleShareFile(file);
+    e.target.value = "";
+  };
+
+  const handleShareGalleryChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleShareFile(file);
+    e.target.value = "";
+  };
+
+  const centerBadge = useCallback(() => {
+    const preview = sharePreviewRef.current;
+    const badge = shareBadgeRef.current;
+    if (!preview || !badge) return;
+    const pw = preview.clientWidth;
+    const ph = preview.clientHeight;
+    const bw = badge.clientWidth;
+    const bh = badge.clientHeight;
+    setBadgePos({
+      x: Math.max(0, (pw - bw) / 2),
+      y: Math.max(0, (ph - bh) / 2),
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!showShareModal) return;
+    const raf = requestAnimationFrame(() => {
+      if (!badgeMovedRef.current) centerBadge();
+    });
+    const handleResize = () => {
+      if (!badgeMovedRef.current) centerBadge();
+    };
+    window.addEventListener("resize", handleResize);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [showShareModal, shareBgType, shareImage, centerBadge]);
+
+  const handleShareBadgePointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    const preview = sharePreviewRef.current;
+    const badge = shareBadgeRef.current;
+    if (!preview || !badge) return;
+    badgeMovedRef.current = true;
+    badgeDragRef.current.pointerId = e.pointerId;
+    badgeDragRef.current.startX = e.clientX;
+    badgeDragRef.current.startY = e.clientY;
+    badgeDragRef.current.originX = badgePos.x;
+    badgeDragRef.current.originY = badgePos.y;
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handleShareBadgePointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    if (badgeDragRef.current.pointerId !== e.pointerId) return;
+    const preview = sharePreviewRef.current;
+    const badge = shareBadgeRef.current;
+    if (!preview || !badge) return;
+    const dx = e.clientX - badgeDragRef.current.startX;
+    const dy = e.clientY - badgeDragRef.current.startY;
+    const previewRect = preview.getBoundingClientRect();
+    const badgeRect = badge.getBoundingClientRect();
+    const maxX = Math.max(0, previewRect.width - badgeRect.width);
+    const maxY = Math.max(0, previewRect.height - badgeRect.height);
+    const nextX = Math.min(Math.max(0, badgeDragRef.current.originX + dx), maxX);
+    const nextY = Math.min(Math.max(0, badgeDragRef.current.originY + dy), maxY);
+    setBadgePos({ x: nextX, y: nextY });
+  };
+
+  const handleShareBadgePointerEnd = (e: PointerEvent<HTMLDivElement>) => {
+    if (badgeDragRef.current.pointerId !== e.pointerId) return;
+    badgeDragRef.current.pointerId = null;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleShareNow = async () => {
+    if (!sharePreviewRef.current) return;
+    setShareStatus("rendering");
+    setShareError(null);
+    try {
+      const { toBlob } = await import("html-to-image");
+      const blob = await toBlob(sharePreviewRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+      });
+      if (!blob) throw new Error("Failed to render image.");
+      const file = new File([blob], "kcals-share.png", { type: "image/png" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: "Kcals",
+          text: "You're on track!",
+        });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "kcals-share.png";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      }
+      setShareStatus("idle");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Share failed.";
+      setShareStatus("error");
+      setShareError(message);
+    }
   };
 
   const handleSendMagicLink = async () => {
@@ -1827,6 +1990,57 @@ export default function KcalsPage() {
     );
   };
 
+  const renderWeeklyCardContent = () => {
+    if (!weeklyHasData) {
+      return (
+        <>
+          <div className="kcals-weekly-emoji">{"\u26C5"}</div>
+          <div className="kcals-weekly-title">Keep logging</div>
+          <div className="kcals-weekly-subtitle">
+            You will see the breakdown once you start logging in calories
+          </div>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <div className="kcals-weekly-emoji">
+          {weeklyIsOnTrack ? "\u{1F525}" : "\u{1F437}"}
+        </div>
+        <div className="kcals-weekly-title">
+          {weeklyIsOnTrack ? "You're on track!" : "Watch out!"}
+        </div>
+        <div className="kcals-weekly-list">
+          {weeklyVisibleEntries.map((entry) => {
+            const under = entry.remaining >= 0;
+            const abs = Math.abs(entry.remaining);
+            const d = new Date(entry.dateKey + "T00:00:00");
+            const label = new Intl.DateTimeFormat("en-US", {
+              month: "short",
+              day: "numeric",
+            }).format(d);
+            return (
+              <div key={entry.dateKey} className="kcals-weekly-row">
+                <div className="kcals-weekly-date">
+                  <span>{under ? "\u{1F525}" : "\u{1F437}"}</span>
+                  {label}
+                </div>
+                <div className={`kcals-weekly-value ${under ? "kcals-weekly-under" : "kcals-weekly-over"}`}>
+                  {under ? `- ${abs.toLocaleString()} kcal` : `+ ${abs.toLocaleString()} kcal`}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="kcals-weekly-summary">
+          Over the last 7 days you ate<br />
+          <strong>{weeklyAbsTotal.toLocaleString()} kcal</strong> {weeklyIsOnTrack ? "less" : "over"} than the limit
+        </div>
+      </>
+    );
+  };
+
   return (
     <>
     <div className={`kcals-content${inputFocused ? " is-focused" : ""}`} onClick={handleContentClick} ref={contentRef}>
@@ -2570,58 +2784,92 @@ export default function KcalsPage() {
 
       {/* Weekly Breakdown Modal */}
       <BottomSheet open={showWeeklyModal} onClose={() => setShowWeeklyModal(false)} variant="center">
-        {(() => {
-          const visibleEntries = weeklyBreakdown.filter(
-            (e) => calorieGoal - e.remaining >= 800
-          );
-          const hasData = visibleEntries.length > 0;
-          const isOnTrack = weeklyBurn >= 0;
-          const absTotal = Math.abs(weeklyBurn);
-          return !hasData ? (
-            <>
-              <div className="kcals-weekly-emoji">{"\u26C5"}</div>
-              <div className="kcals-weekly-title">Keep logging</div>
-              <div className="kcals-weekly-subtitle">
-                You will see the breakdown once you start logging in calories
+        <>
+          {renderWeeklyCardContent()}
+          {weeklyHasData && (
+            <button className="kcals-weekly-share" type="button" onClick={handleOpenShare}>
+              Share
+            </button>
+          )}
+        </>
+      </BottomSheet>
+
+      {/* Share Builder Modal */}
+      <BottomSheet open={showShareModal} onClose={() => setShowShareModal(false)}>
+        <div className="kcals-modal-handle" />
+        <div className="kcals-share-modal">
+          <div className="kcals-share-title">Share your progress</div>
+          <div
+            className="kcals-share-preview"
+            ref={sharePreviewRef}
+            style={{
+              backgroundImage: shareBgType === "image" && shareImage
+                ? `url(${shareImage})`
+                : "linear-gradient(135deg, #007BFF, #209E9C)",
+            }}
+          >
+            <div
+              className="kcals-share-badge"
+              ref={shareBadgeRef}
+              style={{ left: badgePos.x, top: badgePos.y }}
+              onPointerDown={handleShareBadgePointerDown}
+              onPointerMove={handleShareBadgePointerMove}
+              onPointerUp={handleShareBadgePointerEnd}
+              onPointerCancel={handleShareBadgePointerEnd}
+            >
+              <div className="kcals-weekly-modal kcals-weekly-card">
+                {renderWeeklyCardContent()}
               </div>
-            </>
-          ) : (
-            <>
-              <div className="kcals-weekly-emoji">
-                {isOnTrack ? "\u{1F525}" : "\u{1F437}"}
-              </div>
-              <div className="kcals-weekly-title">
-                {isOnTrack ? "You're on track!" : "Watch out!"}
-              </div>
-              <div className="kcals-weekly-list">
-                {visibleEntries.map((entry) => {
-                  const under = entry.remaining >= 0;
-                  const abs = Math.abs(entry.remaining);
-                  const d = new Date(entry.dateKey + "T00:00:00");
-                  const label = new Intl.DateTimeFormat("en-US", {
-                    month: "short",
-                    day: "numeric",
-                  }).format(d);
-                  return (
-                    <div key={entry.dateKey} className="kcals-weekly-row">
-                      <div className="kcals-weekly-date">
-                        <span>{under ? "\u{1F525}" : "\u{1F437}"}</span>
-                        {label}
-                      </div>
-                      <div className={`kcals-weekly-value ${under ? "kcals-weekly-under" : "kcals-weekly-over"}`}>
-                        {under ? `- ${abs.toLocaleString()} kcal` : `+ ${abs.toLocaleString()} kcal`}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="kcals-weekly-summary">
-                Over the last 7 days you ate<br />
-                <strong>{absTotal.toLocaleString()} kcal</strong> {isOnTrack ? "less" : "over"} than the limit
-              </div>
-            </>
-          );
-        })()}
+            </div>
+          </div>
+          <div className="kcals-share-controls">
+            <button
+              className="kcals-share-btn"
+              type="button"
+              onClick={() => shareCameraInputRef.current?.click()}
+            >
+              Camera
+            </button>
+            <button
+              className="kcals-share-btn"
+              type="button"
+              onClick={() => shareGalleryInputRef.current?.click()}
+            >
+              Gallery
+            </button>
+            <button
+              className={`kcals-share-btn${shareBgType === "gradient" ? " is-active" : ""}`}
+              type="button"
+              onClick={() => setShareBgType("gradient")}
+            >
+              Gradient
+            </button>
+          </div>
+          <button
+            className="kcals-share-cta"
+            type="button"
+            onClick={handleShareNow}
+            disabled={shareStatus === "rendering"}
+          >
+            {shareStatus === "rendering" ? "Preparing..." : "Share"}
+          </button>
+          {shareError && <div className="kcals-share-error">{shareError}</div>}
+          <input
+            ref={shareCameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="user"
+            className="kcals-share-input"
+            onChange={handleShareCameraChange}
+          />
+          <input
+            ref={shareGalleryInputRef}
+            type="file"
+            accept="image/*"
+            className="kcals-share-input"
+            onChange={handleShareGalleryChange}
+          />
+        </div>
       </BottomSheet>
     </>
   );
