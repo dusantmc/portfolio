@@ -62,6 +62,7 @@ const AVATAR_EMOJI_KEY = "kcals_avatar_emoji";
 const AVATAR_PHOTO_KEY = "kcals_avatar_photo";
 const IMAGE_BUCKET = "kcals-images";
 const IMAGE_FOLDER = "custom-foods";
+const AVATAR_FOLDER = "avatars";
 
 /* ===========================
    SVG Icons
@@ -415,7 +416,7 @@ export default function KcalsPage() {
     setLastSyncAt(value);
   }, []);
 
-  const buildCustomFoodsPayload = useCallback(async () => {
+  const buildCustomFoodsPayload = useCallback(async (onUploadError?: (message: string) => void) => {
     const cache = new Map<string, string>();
     const toStorageUrl = async (imageId: string, imageValue?: string | null) => {
       if (imageValue && !isDataUrl(imageValue)) return imageValue;
@@ -440,6 +441,7 @@ export default function KcalsPage() {
         cacheControl: "3600",
       });
       if (error) {
+        onUploadError?.(error.message);
         const fallback = imageValue ?? null;
         if (fallback) cache.set(imageId, fallback);
         return fallback;
@@ -459,7 +461,7 @@ export default function KcalsPage() {
     );
   }, [customFoods, user, supabase]);
 
-  const buildFoodListPayload = useCallback(async (items: FoodItem[]) => {
+  const buildFoodListPayload = useCallback(async (items: FoodItem[], onUploadError?: (message: string) => void) => {
     const cache = new Map<string, string>();
     const toStorageUrl = async (imageId: string, imageValue?: string | null) => {
       if (imageValue && !isDataUrl(imageValue)) return imageValue;
@@ -484,6 +486,7 @@ export default function KcalsPage() {
         cacheControl: "3600",
       });
       if (error) {
+        onUploadError?.(error.message);
         const fallback = imageValue ?? null;
         if (fallback) cache.set(imageId, fallback);
         return fallback;
@@ -502,18 +505,51 @@ export default function KcalsPage() {
           if (url) nextItem.image = url;
         }
         if (item.items?.length) {
-          nextItem = { ...nextItem, items: await buildFoodListPayload(item.items) };
+          nextItem = { ...nextItem, items: await buildFoodListPayload(item.items, onUploadError) };
         }
         return nextItem;
       })
     );
   }, [user, supabase]);
 
+  const buildAvatarPayload = useCallback(async (onUploadError?: (message: string) => void) => {
+    if (!user) return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: avatarPhoto ?? null };
+    if (avatarMode !== "photo") {
+      return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: null };
+    }
+    if (!avatarPhoto) {
+      return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: null };
+    }
+    if (!isDataUrl(avatarPhoto)) {
+      return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: avatarPhoto };
+    }
+    try {
+      const blob = dataUrlToBlob(avatarPhoto);
+      const ext = blob.type === "image/png" ? "png" : "jpg";
+      const path = `${user.id}/${AVATAR_FOLDER}/avatar.${ext}`;
+      const { error } = await supabase?.storage.from(IMAGE_BUCKET).upload(path, blob, {
+        upsert: true,
+        contentType: blob.type || "image/jpeg",
+        cacheControl: "3600",
+      });
+      if (error) {
+        onUploadError?.(error.message);
+        return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: avatarPhoto };
+      }
+      const { data } = supabase!.storage.from(IMAGE_BUCKET).getPublicUrl(path);
+      return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: data.publicUrl };
+    } catch {
+      onUploadError?.("Avatar upload failed.");
+      return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: avatarPhoto };
+    }
+  }, [user, avatarMode, avatarEmojiDisplay, avatarPhoto, supabase]);
+
   const applyRemoteState = useCallback((row: {
     food_list?: FoodItem[] | null;
     custom_foods?: CustomFood[] | null;
     recent_foods?: RecentFood[] | null;
     daily_log?: Record<string, unknown> | null;
+    profile?: { mode?: "emoji" | "photo"; emoji?: string; photo?: string | null } | null;
     updated_at?: string | null;
   }) => {
     if (row.food_list) {
@@ -530,6 +566,17 @@ export default function KcalsPage() {
     }
     if (row.daily_log && typeof row.daily_log === "object") {
       saveDailyLogRaw(row.daily_log as Record<string, any>);
+    }
+    if (row.profile) {
+      if (row.profile.mode === "emoji" || row.profile.mode === "photo") {
+        setAvatarMode(row.profile.mode);
+      }
+      if (row.profile.emoji != null) {
+        setAvatarEmoji(row.profile.emoji);
+      }
+      if (row.profile.photo !== undefined) {
+        setAvatarPhoto(row.profile.photo);
+      }
     }
     if (row.updated_at) {
       setLastSync(row.updated_at);
@@ -551,14 +598,21 @@ export default function KcalsPage() {
     }
     setSyncStatus("syncing");
     setSyncError(null);
-    const customFoodsPayload = await buildCustomFoodsPayload();
-    const foodListPayload = await buildFoodListPayload(foods);
+    const uploadErrors: string[] = [];
+    const reportUploadError = (message: string) => {
+      if (!message) return;
+      uploadErrors.push(message);
+    };
+    const customFoodsPayload = await buildCustomFoodsPayload(reportUploadError);
+    const foodListPayload = await buildFoodListPayload(foods, reportUploadError);
+    const profilePayload = await buildAvatarPayload(reportUploadError);
     const payload = {
       user_id: user.id,
       food_list: foodListPayload,
       custom_foods: customFoodsPayload,
       recent_foods: recentFoods,
       daily_log: loadDailyLogRaw(),
+      profile: profilePayload,
       updated_at: new Date().toISOString(),
     };
     const { error } = await supabase
@@ -573,13 +627,25 @@ export default function KcalsPage() {
     saveCustomFoods(customFoodsPayload);
     setFoods(foodListPayload);
     saveFoodList(foodListPayload);
+    if (profilePayload.mode) {
+      setAvatarMode(profilePayload.mode);
+    }
+    if (profilePayload.emoji != null) {
+      setAvatarEmoji(profilePayload.emoji);
+    }
+    if (profilePayload.photo !== undefined) {
+      setAvatarPhoto(profilePayload.photo);
+    }
+    if (uploadErrors.length > 0) {
+      setSyncError(`Some images failed to upload. ${uploadErrors[0]}`);
+    }
     setSyncStatus("ok");
     setLastSync(payload.updated_at);
     if (reason === "manual") {
       setTimeout(() => setSyncStatus("idle"), 1200);
     }
     return true;
-  }, [user, foods, recentFoods, setLastSync, isWriteAllowed, buildCustomFoodsPayload, buildFoodListPayload]);
+  }, [user, foods, recentFoods, setLastSync, isWriteAllowed, buildCustomFoodsPayload, buildFoodListPayload, buildAvatarPayload]);
 
   useEffect(() => {
     syncToSupabaseRef.current = syncToSupabase;
@@ -589,7 +655,7 @@ export default function KcalsPage() {
     if (!supabase || !user) return false;
     const { data, error } = await supabase
       .from("kcals_state")
-      .select("food_list, custom_foods, recent_foods, daily_log, updated_at")
+      .select("food_list, custom_foods, recent_foods, daily_log, profile, updated_at")
       .eq("user_id", user.id)
       .maybeSingle();
     if (error && error.code !== "PGRST116") {
