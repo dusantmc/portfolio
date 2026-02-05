@@ -234,6 +234,7 @@ export default function KcalsPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarPhotoInputRef = useRef<HTMLInputElement>(null);
+  const syncToSupabaseRef = useRef<((reason?: "manual" | "auto") => Promise<boolean>) | null>(null);
   const blurTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const pillLongPressRef = useRef<{
@@ -540,13 +541,13 @@ export default function KcalsPage() {
     : false;
 
   const syncToSupabase = useCallback(async (reason: "manual" | "auto" = "manual") => {
-    if (!supabase || !user) return;
+    if (!supabase || !user) return false;
     if (!isWriteAllowed) {
       if (reason === "manual") {
         setSyncStatus("error");
         setSyncError("Uploads are disabled on this host.");
       }
-      return;
+      return false;
     }
     setSyncStatus("syncing");
     setSyncError(null);
@@ -566,7 +567,7 @@ export default function KcalsPage() {
     if (error) {
       setSyncStatus("error");
       setSyncError(error.message);
-      return;
+      return false;
     }
     setCustomFoods(customFoodsPayload);
     saveCustomFoods(customFoodsPayload);
@@ -577,10 +578,15 @@ export default function KcalsPage() {
     if (reason === "manual") {
       setTimeout(() => setSyncStatus("idle"), 1200);
     }
+    return true;
   }, [user, foods, recentFoods, setLastSync, isWriteAllowed, buildCustomFoodsPayload, buildFoodListPayload]);
 
+  useEffect(() => {
+    syncToSupabaseRef.current = syncToSupabase;
+  }, [syncToSupabase]);
+
   const syncFromSupabase = useCallback(async () => {
-    if (!supabase || !user) return;
+    if (!supabase || !user) return false;
     const { data, error } = await supabase
       .from("kcals_state")
       .select("food_list, custom_foods, recent_foods, daily_log, updated_at")
@@ -588,14 +594,15 @@ export default function KcalsPage() {
       .maybeSingle();
     if (error && error.code !== "PGRST116") {
       setSyncError(error.message);
-      return;
+      return false;
     }
     if (data) {
       applyRemoteState(data);
+      return true;
     } else {
-      await syncToSupabase("auto");
+      return (await syncToSupabaseRef.current?.("auto")) ?? false;
     }
-  }, [user, applyRemoteState, syncToSupabase]);
+  }, [user, applyRemoteState]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -610,29 +617,7 @@ export default function KcalsPage() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!supabase || !user) return;
-    syncFromSupabase();
-  }, [user, syncFromSupabase]);
-
-  useEffect(() => {
-    if (!supabase || !user || !autoSyncEnabled) return;
-    const todayKey = getDayKey(new Date());
-    const log = loadDailyLogRaw();
-    const entry = log[todayKey];
-    const lastAuto = typeof window !== "undefined" ? localStorage.getItem(AUTO_SYNC_DATE_KEY) : null;
-    if ((!entry || !entry.logged) && lastAuto !== todayKey) {
-      const hasLocalData = foods.length > 0 || customFoods.length > 0;
-      if (!hasLocalData) {
-        syncFromSupabase();
-      } else if (isWriteAllowed) {
-        syncToSupabase("auto");
-      }
-      if (typeof window !== "undefined") {
-        localStorage.setItem(AUTO_SYNC_DATE_KEY, todayKey);
-      }
-    }
-  }, [user, autoSyncEnabled, foods.length, customFoods.length, syncFromSupabase, syncToSupabase, dayStartHour, isWriteAllowed]);
+  // No automatic sync on sign-in. Sync happens only via manual "Sync now" or auto-sync schedule.
 
   useEffect(() => {
     if (user) setShowAuthModal(false);
@@ -1023,18 +1008,40 @@ export default function KcalsPage() {
     setShowModal(false);
   }, []);
 
+  const runAutoSync = useCallback(async () => {
+    if (!supabase || !user || !autoSyncEnabled) return false;
+    const now = new Date();
+    if (now.getHours() < dayStartHour) return false;
+    const currentKey = getDayKey(now);
+    const lastAuto = typeof window !== "undefined" ? localStorage.getItem(AUTO_SYNC_DATE_KEY) : null;
+    if (lastAuto === currentKey) return false;
+    const ok = isWriteAllowed
+      ? await syncToSupabase("auto")
+      : await syncFromSupabase();
+    if (ok && typeof window !== "undefined") {
+      resetDailyFoods();
+      localStorage.setItem(LAST_DAY_KEY, currentKey);
+      localStorage.setItem(AUTO_SYNC_DATE_KEY, currentKey);
+    }
+    return ok;
+  }, [supabase, user, autoSyncEnabled, dayStartHour, isWriteAllowed, syncToSupabase, syncFromSupabase, resetDailyFoods]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (autoSyncEnabled) return;
     const currentKey = getDayKey(new Date());
     const storedKey = localStorage.getItem(LAST_DAY_KEY);
     if (storedKey && storedKey !== currentKey) {
       resetDailyFoods();
     }
     localStorage.setItem(LAST_DAY_KEY, currentKey);
-  }, [dayStartHour, resetDailyFoods]);
+  }, [dayStartHour, resetDailyFoods, autoSyncEnabled]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (autoSyncEnabled) {
+      runAutoSync();
+    }
     let timer: ReturnType<typeof setTimeout>;
 
     const schedule = () => {
@@ -1046,19 +1053,25 @@ export default function KcalsPage() {
       }
       const delay = next.getTime() - now.getTime();
       timer = setTimeout(() => {
-        const currentKey = getDayKey(new Date());
-        const storedKey = localStorage.getItem(LAST_DAY_KEY);
-        if (storedKey !== currentKey) {
-          resetDailyFoods();
-          localStorage.setItem(LAST_DAY_KEY, currentKey);
-        }
-        schedule();
+        (async () => {
+          if (autoSyncEnabled) {
+            await runAutoSync();
+          } else {
+            const currentKey = getDayKey(new Date());
+            const storedKey = localStorage.getItem(LAST_DAY_KEY);
+            if (storedKey !== currentKey) {
+              resetDailyFoods();
+              localStorage.setItem(LAST_DAY_KEY, currentKey);
+            }
+          }
+          schedule();
+        })();
       }, Math.max(1000, delay + 1000));
     };
 
     schedule();
     return () => clearTimeout(timer);
-  }, [dayStartHour, resetDailyFoods]);
+  }, [dayStartHour, resetDailyFoods, autoSyncEnabled, runAutoSync]);
 
   const handleOpenShare = () => {
     badgeMovedRef.current = false;
