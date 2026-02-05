@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, type ChangeEvent, type PointerEvent } from "react";
-import type { User } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 import { SmokeRing } from "@paper-design/shaders-react";
 import {
   type FoodItem,
@@ -34,7 +34,7 @@ import {
 } from "./data/storage";
 import { parseFoodInput, fetchKcalPer100g, getFoodEmoji } from "./data/usda";
 import { BottomSheet } from "./BottomSheet";
-import { supabase } from "./data/supabase";
+import { supabase, supabaseAnonKey, supabaseUrl } from "./data/supabase";
 
 const DEFAULT_CALORIE_GOAL = 1600;
 const LAST_DAY_KEY = "kcals_last_day_key";
@@ -436,11 +436,26 @@ export default function KcalsPage() {
     }
   };
 
-  const buildCustomFoodsPayload = useCallback(async (onUploadError?: (message: string) => void) => {
+  const getAuthedStorageClient = useCallback(async () => {
+    if (!supabase || !supabaseUrl || !supabaseAnonKey) return supabase;
+    const { data } = await supabase.auth.getSession();
+    const accessToken = data.session?.access_token;
+    if (!accessToken) return supabase;
+    return createClient(supabaseUrl, supabaseAnonKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: { Authorization: `Bearer ${accessToken}` } },
+    });
+  }, []);
+
+  const buildCustomFoodsPayload = useCallback(async (
+    storageClient: SupabaseClient | null,
+    onUploadError?: (message: string) => void
+  ) => {
+    const client = storageClient ?? supabase;
     const cache = new Map<string, string>();
     const toStorageUrl = async (imageId: string, imageValue?: string | null) => {
       if (imageValue && !isDataUrl(imageValue)) return imageValue;
-      if (!supabase || !user) return imageValue ?? null;
+      if (!client || !user) return imageValue ?? null;
       if (cache.has(imageId)) return cache.get(imageId) ?? null;
       let blob: Blob | null = null;
       if (imageValue && isDataUrl(imageValue)) {
@@ -455,7 +470,7 @@ export default function KcalsPage() {
       if (!blob) return imageValue ?? null;
       const ext = blob.type === "image/png" ? "png" : "jpg";
       const path = `${user.id}/${IMAGE_FOLDER}/${imageId}.${ext}`;
-      const { error } = await supabase.storage.from(IMAGE_BUCKET).upload(path, blob, {
+      const { error } = await client.storage.from(IMAGE_BUCKET).upload(path, blob, {
         upsert: true,
         contentType: blob.type || "image/jpeg",
         cacheControl: "3600",
@@ -466,7 +481,7 @@ export default function KcalsPage() {
         if (fallback) cache.set(imageId, fallback);
         return fallback;
       }
-      const { data } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path);
+      const { data } = client.storage.from(IMAGE_BUCKET).getPublicUrl(path);
       const publicUrl = data.publicUrl;
       cache.set(imageId, publicUrl);
       return publicUrl;
@@ -481,11 +496,16 @@ export default function KcalsPage() {
     );
   }, [customFoods, user, supabase]);
 
-  const buildFoodListPayload = useCallback(async (items: FoodItem[], onUploadError?: (message: string) => void) => {
+  const buildFoodListPayload = useCallback(async (
+    items: FoodItem[],
+    storageClient: SupabaseClient | null,
+    onUploadError?: (message: string) => void
+  ) => {
+    const client = storageClient ?? supabase;
     const cache = new Map<string, string>();
     const toStorageUrl = async (imageId: string, imageValue?: string | null) => {
       if (imageValue && !isDataUrl(imageValue)) return imageValue;
-      if (!supabase || !user) return imageValue ?? null;
+      if (!client || !user) return imageValue ?? null;
       if (cache.has(imageId)) return cache.get(imageId) ?? null;
       let blob: Blob | null = null;
       if (imageValue && isDataUrl(imageValue)) {
@@ -500,7 +520,7 @@ export default function KcalsPage() {
       if (!blob) return imageValue ?? null;
       const ext = blob.type === "image/png" ? "png" : "jpg";
       const path = `${user.id}/${IMAGE_FOLDER}/${imageId}.${ext}`;
-      const { error } = await supabase.storage.from(IMAGE_BUCKET).upload(path, blob, {
+      const { error } = await client.storage.from(IMAGE_BUCKET).upload(path, blob, {
         upsert: true,
         contentType: blob.type || "image/jpeg",
         cacheControl: "3600",
@@ -511,7 +531,7 @@ export default function KcalsPage() {
         if (fallback) cache.set(imageId, fallback);
         return fallback;
       }
-      const { data } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path);
+      const { data } = client.storage.from(IMAGE_BUCKET).getPublicUrl(path);
       const publicUrl = data.publicUrl;
       cache.set(imageId, publicUrl);
       return publicUrl;
@@ -525,15 +545,19 @@ export default function KcalsPage() {
           if (url) nextItem.image = url;
         }
         if (item.items?.length) {
-          nextItem = { ...nextItem, items: await buildFoodListPayload(item.items, onUploadError) };
+          nextItem = { ...nextItem, items: await buildFoodListPayload(item.items, storageClient, onUploadError) };
         }
         return nextItem;
       })
     );
   }, [user, supabase]);
 
-  const buildAvatarPayload = useCallback(async (onUploadError?: (message: string) => void) => {
-    if (!user || !supabase) {
+  const buildAvatarPayload = useCallback(async (
+    storageClient: SupabaseClient | null,
+    onUploadError?: (message: string) => void
+  ) => {
+    const client = storageClient ?? supabase;
+    if (!user || !client) {
       return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: avatarPhoto ?? null };
     }
     if (avatarMode !== "photo") {
@@ -549,7 +573,7 @@ export default function KcalsPage() {
       const blob = dataUrlToBlob(avatarPhoto);
       const ext = blob.type === "image/png" ? "png" : "jpg";
       const path = `${user.id}/${AVATAR_FOLDER}/avatar.${ext}`;
-      const { error } = await supabase.storage.from(IMAGE_BUCKET).upload(path, blob, {
+      const { error } = await client.storage.from(IMAGE_BUCKET).upload(path, blob, {
         upsert: true,
         contentType: blob.type || "image/jpeg",
         cacheControl: "3600",
@@ -558,7 +582,7 @@ export default function KcalsPage() {
         onUploadError?.(`Storage upload failed: ${error.message} (path: ${path}, uid: ${user.id})`);
         return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: avatarPhoto };
       }
-      const { data } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path);
+      const { data } = client.storage.from(IMAGE_BUCKET).getPublicUrl(path);
       return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: data.publicUrl };
     } catch {
       onUploadError?.("Avatar upload failed.");
@@ -620,6 +644,7 @@ export default function KcalsPage() {
     }
     const { data: sessionData } = await supabase.auth.getSession();
     const sessionInfo = decodeAuthToken(sessionData.session?.access_token);
+    const storageClient = await getAuthedStorageClient();
     setSyncStatus("syncing");
     setSyncError(null);
     const uploadErrors: string[] = [];
@@ -629,9 +654,9 @@ export default function KcalsPage() {
       const sub = sessionInfo?.sub ?? "none";
       uploadErrors.push(`${message} (role: ${role}, sub: ${sub})`);
     };
-    const customFoodsPayload = await buildCustomFoodsPayload(reportUploadError);
-    const foodListPayload = await buildFoodListPayload(foods, reportUploadError);
-    const profilePayload = await buildAvatarPayload(reportUploadError);
+    const customFoodsPayload = await buildCustomFoodsPayload(storageClient, reportUploadError);
+    const foodListPayload = await buildFoodListPayload(foods, storageClient, reportUploadError);
+    const profilePayload = await buildAvatarPayload(storageClient, reportUploadError);
     const payload = {
       user_id: user.id,
       food_list: foodListPayload,
@@ -671,7 +696,18 @@ export default function KcalsPage() {
       setTimeout(() => setSyncStatus("idle"), 1200);
     }
     return true;
-  }, [user, foods, recentFoods, setLastSync, isWriteAllowed, buildCustomFoodsPayload, buildFoodListPayload, buildAvatarPayload]);
+  }, [
+    user,
+    foods,
+    recentFoods,
+    setLastSync,
+    isWriteAllowed,
+    buildCustomFoodsPayload,
+    buildFoodListPayload,
+    buildAvatarPayload,
+    decodeAuthToken,
+    getAuthedStorageClient,
+  ]);
 
   useEffect(() => {
     syncToSupabaseRef.current = syncToSupabase;
