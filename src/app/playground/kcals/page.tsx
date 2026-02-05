@@ -436,9 +436,6 @@ export default function KcalsPage() {
     }
   };
 
-  const encodeStoragePath = (path: string) =>
-    path.split("/").map((segment) => encodeURIComponent(segment)).join("/");
-
   const uploadToStorage = useCallback(async (path: string, blob: Blob) => {
     if (!supabase || !supabaseUrl || !supabaseAnonKey) {
       return { error: "Supabase client is not configured.", publicUrl: null as string | null };
@@ -448,30 +445,29 @@ export default function KcalsPage() {
     if (!accessToken) {
       return { error: "Missing auth session.", publicUrl: null as string | null };
     }
-    const encodedPath = encodeStoragePath(path);
-    const uploadUrl = `${supabaseUrl}/storage/v1/object/${IMAGE_BUCKET}/${encodedPath}`;
-    const res = await fetch(uploadUrl, {
+    const formData = new FormData();
+    formData.append("path", path);
+    formData.append("contentType", blob.type || "image/jpeg");
+    formData.append("file", blob, "upload");
+    const res = await fetch("/playground/kcals/api/storage/upload", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        apikey: supabaseAnonKey,
-        "Content-Type": blob.type || "image/jpeg",
-        "x-upsert": "true",
       },
-      body: blob,
+      body: formData,
     });
     if (!res.ok) {
       let message = res.statusText;
       try {
         const payload = await res.json();
-        if (payload?.message) message = payload.message;
+        if (payload?.error) message = payload.error;
       } catch {
         // ignore JSON parse errors
       }
       return { error: message, publicUrl: null as string | null };
     }
-    const publicUrl = `${supabaseUrl}/storage/v1/object/public/${IMAGE_BUCKET}/${encodedPath}`;
-    return { error: null as string | null, publicUrl };
+    const payload = await res.json().catch(() => ({}));
+    return { error: null as string | null, publicUrl: payload?.publicUrl ?? null };
   }, [supabase]);
 
   const buildCustomFoodsPayload = useCallback(async (
