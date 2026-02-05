@@ -346,6 +346,10 @@ export default function KcalsPage() {
   const imageUrlsRef = useRef<Record<string, string>>({});
   const hasMigratedImagesRef = useRef(false);
 
+  const profileInitial = user?.email?.trim()?.[0]?.toUpperCase() ?? "U";
+  const avatarEmojiDisplay = avatarEmoji.trim() || profileInitial;
+  const showAvatarPhoto = avatarMode === "photo" && !!avatarPhoto;
+
   useEffect(() => {
     imageUrlsRef.current = imageUrls;
   }, [imageUrls]);
@@ -953,10 +957,6 @@ export default function KcalsPage() {
     month: "short",
     day: "numeric",
   }).format(displayDate);
-  const profileInitial = user?.email?.trim()?.[0]?.toUpperCase() ?? "U";
-  const avatarEmojiDisplay = avatarEmoji.trim() || profileInitial;
-  const showAvatarPhoto = avatarMode === "photo" && !!avatarPhoto;
-
   const [streak, setStreak] = useState(0);
   const [weeklyBurn, setWeeklyBurn] = useState(0);
   const [showWeeklyModal, setShowWeeklyModal] = useState(false);
