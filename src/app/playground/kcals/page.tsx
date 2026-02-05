@@ -713,8 +713,8 @@ export default function KcalsPage() {
     syncToSupabaseRef.current = syncToSupabase;
   }, [syncToSupabase]);
 
-  const syncFromSupabase = useCallback(async () => {
-    if (!supabase || !user) return false;
+  const syncFromSupabase = useCallback(async (): Promise<"data" | "none" | "error"> => {
+    if (!supabase || !user) return "error";
     const { data, error } = await supabase
       .from("kcals_state")
       .select("food_list, custom_foods, recent_foods, daily_log, profile, updated_at")
@@ -722,14 +722,13 @@ export default function KcalsPage() {
       .maybeSingle();
     if (error && error.code !== "PGRST116") {
       setSyncError(error.message);
-      return false;
+      return "error";
     }
     if (data) {
       applyRemoteState(data);
-      return true;
-    } else {
-      return (await syncToSupabaseRef.current?.("auto")) ?? false;
+      return "data";
     }
+    return "none";
   }, [user, applyRemoteState]);
 
   useEffect(() => {
@@ -1141,7 +1140,7 @@ export default function KcalsPage() {
     if (lastAuto === currentKey) return false;
     const ok = isWriteAllowed
       ? await syncToSupabase("auto")
-      : await syncFromSupabase();
+      : (await syncFromSupabase()) === "data";
     if (ok && typeof window !== "undefined") {
       resetDailyFoods();
       localStorage.setItem(LAST_DAY_KEY, currentKey);
@@ -1527,10 +1526,34 @@ export default function KcalsPage() {
       setShowAuthModal(true);
       return;
     }
+    setSyncStatus("syncing");
+    setSyncError(null);
+    const localHasData =
+      foods.length > 0 ||
+      customFoods.length > 0 ||
+      recentFoods.length > 0 ||
+      Object.keys(loadDailyLogRaw() || {}).length > 0;
     if (!isWriteAllowed) {
-      await syncFromSupabase();
+      const result = await syncFromSupabase();
+      setSyncStatus(result === "data" ? "ok" : "error");
+      if (result === "none") {
+        setSyncError("No remote data found for this account.");
+      }
+      setTimeout(() => setSyncStatus("idle"), 1200);
+      return;
+    }
+    const pullResult = await syncFromSupabase();
+    if (pullResult === "data") {
       setSyncStatus("ok");
       setTimeout(() => setSyncStatus("idle"), 1200);
+      return;
+    }
+    if (pullResult === "error") {
+      setSyncStatus("error");
+      return;
+    }
+    if (!localHasData) {
+      await syncToSupabase("manual");
       return;
     }
     await syncToSupabase("manual");
