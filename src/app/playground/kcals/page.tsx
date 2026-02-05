@@ -420,6 +420,22 @@ export default function KcalsPage() {
     setLastSyncAt(value);
   }, []);
 
+  const decodeAuthToken = (token?: string | null) => {
+    if (!token) return null;
+    try {
+      const payload = token.split(".")[1];
+      if (!payload) return null;
+      const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+      const json = JSON.parse(atob(normalized));
+      return {
+        role: typeof json.role === "string" ? json.role : null,
+        sub: typeof json.sub === "string" ? json.sub : null,
+      };
+    } catch {
+      return null;
+    }
+  };
+
   const buildCustomFoodsPayload = useCallback(async (onUploadError?: (message: string) => void) => {
     const cache = new Map<string, string>();
     const toStorageUrl = async (imageId: string, imageValue?: string | null) => {
@@ -602,12 +618,16 @@ export default function KcalsPage() {
       }
       return false;
     }
+    const { data: sessionData } = await supabase.auth.getSession();
+    const sessionInfo = decodeAuthToken(sessionData.session?.access_token);
     setSyncStatus("syncing");
     setSyncError(null);
     const uploadErrors: string[] = [];
     const reportUploadError = (message: string) => {
       if (!message) return;
-      uploadErrors.push(message);
+      const role = sessionInfo?.role ?? "none";
+      const sub = sessionInfo?.sub ?? "none";
+      uploadErrors.push(`${message} (role: ${role}, sub: ${sub})`);
     };
     const customFoodsPayload = await buildCustomFoodsPayload(reportUploadError);
     const foodListPayload = await buildFoodListPayload(foods, reportUploadError);
