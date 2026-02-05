@@ -622,12 +622,17 @@ export default function KcalsPage() {
     const entry = log[todayKey];
     const lastAuto = typeof window !== "undefined" ? localStorage.getItem(AUTO_SYNC_DATE_KEY) : null;
     if ((!entry || !entry.logged) && lastAuto !== todayKey) {
-      syncFromSupabase();
+      const hasLocalData = foods.length > 0 || customFoods.length > 0;
+      if (!hasLocalData) {
+        syncFromSupabase();
+      } else if (isWriteAllowed) {
+        syncToSupabase("auto");
+      }
       if (typeof window !== "undefined") {
         localStorage.setItem(AUTO_SYNC_DATE_KEY, todayKey);
       }
     }
-  }, [user, autoSyncEnabled, foods, syncFromSupabase, dayStartHour]);
+  }, [user, autoSyncEnabled, foods.length, customFoods.length, syncFromSupabase, syncToSupabase, dayStartHour, isWriteAllowed]);
 
   useEffect(() => {
     if (user) setShowAuthModal(false);
