@@ -219,8 +219,9 @@
   justify-content: center;
   font-weight: 700;
   font-size: 18px;
-  line-height: 20px;
+  line-height: 19px;
   overflow: hidden;
+  border: 1px solid red;
 }
 
 .kcals-avatar-inner img {
@@ -968,6 +969,7 @@
   background: none;
   text-align: center;
   font-size: 32px;
+  font-weight: 800;
   line-height: 1;
   color: var(--black-100);
   padding: 0;
