@@ -3219,6 +3219,7 @@ export default function KcalsPage() {
           {renderWeeklyCardContent()}
           {weeklyHasData && (
             <button className="kcals-weekly-share" type="button" onClick={handleOpenShare}>
+              <img src="/kcals/assets/share.svg" alt="" className="kcals-weekly-share-icon" />
               Share
             </button>
           )}
