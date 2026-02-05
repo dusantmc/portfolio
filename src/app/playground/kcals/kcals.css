@@ -1777,9 +1777,9 @@
 }
 
 .kcals-weekly-emoji {
-  font-size: 48px;
+  font-size: 44px;
   line-height: 1;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .kcals-weekly-title {
@@ -1799,8 +1799,9 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-top: 8px;
-  margin-bottom: 20px;
+  margin-top: 16px;
+  margin-bottom: 12px;
+  padding: 0 6px 0 4px;
 }
 
 .kcals-weekly-row {
@@ -1841,11 +1842,11 @@
 }
 
 .kcals-weekly-share {
-  margin-top: 4px;
   width: 100%;
   height: 44px;
   border-radius: 14px;
   background: #ffffff;
+  outline: 1px solid var(--border-16);
   font-size: 14px;
   font-weight: 700;
   color: var(--black-70);
@@ -1855,6 +1856,8 @@
   justify-content: center;
   transition: transform 0.15s ease-out;
   gap: 4px;
+  margin-top: 16px;
+  margin-bottom: 4px;
 }
 
 .kcals-weekly-share-icon {

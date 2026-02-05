@@ -445,7 +445,7 @@ export default function KcalsPage() {
         cacheControl: "3600",
       });
       if (error) {
-        onUploadError?.(error.message);
+        onUploadError?.(`Storage upload failed: ${error.message} (path: ${path}, uid: ${user.id})`);
         const fallback = imageValue ?? null;
         if (fallback) cache.set(imageId, fallback);
         return fallback;
@@ -490,7 +490,7 @@ export default function KcalsPage() {
         cacheControl: "3600",
       });
       if (error) {
-        onUploadError?.(error.message);
+        onUploadError?.(`Storage upload failed: ${error.message} (path: ${path}, uid: ${user.id})`);
         const fallback = imageValue ?? null;
         if (fallback) cache.set(imageId, fallback);
         return fallback;
@@ -539,7 +539,7 @@ export default function KcalsPage() {
         cacheControl: "3600",
       });
       if (error) {
-        onUploadError?.(error.message);
+        onUploadError?.(`Storage upload failed: ${error.message} (path: ${path}, uid: ${user.id})`);
         return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: avatarPhoto };
       }
       const { data } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path);
