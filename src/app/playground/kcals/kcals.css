@@ -1169,6 +1169,11 @@
   padding: 0;
 }
 
+.kcals-settings-link:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .kcals-settings-error {
   font-size: 12px;
   color: var(--red);

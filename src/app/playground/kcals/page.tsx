@@ -1007,6 +1007,9 @@ export default function KcalsPage() {
   const remaining = calorieGoal - totalKcal;
   const remainingPrefix = remaining >= 0 ? "+" : "";
   const remainingIsNegative = remaining < 0;
+  const shaderColors = totalKcal <= calorieGoal
+    ? ["#FF8837", "#FFD537"]
+    : ["#5AB3FF", "#6DFFEF"];
   const displayDate = getDisplayDate(new Date());
   const todayLabel = new Intl.DateTimeFormat("en-US", {
     month: "short",
@@ -2589,7 +2592,7 @@ export default function KcalsPage() {
           offsetX={0}
           offsetY={0.94}
           frame={334878.6819999591}
-          colors={["#FF8837", "#FFD537"]}
+          colors={shaderColors}
           colorBack="#00000000"
           minPixelRatio={1}
           style={{ backgroundColor: "#FEFDFB", width: "100%", height: "100%" }}
@@ -3197,8 +3200,13 @@ export default function KcalsPage() {
             <span className="kcals-settings-last">
               {lastSyncAt ? `Last sync ${new Date(lastSyncAt).toLocaleString()}` : "Never synced"}
             </span>
-            <button className="kcals-settings-link" type="button" onClick={handleSyncNow}>
-              Sync now
+            <button
+              className="kcals-settings-link"
+              type="button"
+              onClick={handleSyncNow}
+              disabled={syncStatus === "syncing"}
+            >
+              {syncStatus === "syncing" ? "Syncing..." : "Sync now"}
             </button>
           </div>
           {syncError && <div className="kcals-settings-error">{syncError}</div>}
@@ -3277,7 +3285,12 @@ export default function KcalsPage() {
             <>
               <div className="kcals-auth-row">Signed in as</div>
               <div className="kcals-auth-email">{user.email ?? "Account"}</div>
-              <button className="kcals-modal-submit" type="button" onClick={handleSyncNow}>
+              <button
+                className="kcals-modal-submit"
+                type="button"
+                onClick={handleSyncNow}
+                disabled={syncStatus === "syncing"}
+              >
                 {syncStatus === "syncing" ? "Syncing..." : "Sync now"}
               </button>
               {syncError && <div className="kcals-auth-error">{syncError}</div>}
