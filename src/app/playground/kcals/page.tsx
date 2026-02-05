@@ -513,7 +513,9 @@ export default function KcalsPage() {
   }, [user, supabase]);
 
   const buildAvatarPayload = useCallback(async (onUploadError?: (message: string) => void) => {
-    if (!user) return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: avatarPhoto ?? null };
+    if (!user || !supabase) {
+      return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: avatarPhoto ?? null };
+    }
     if (avatarMode !== "photo") {
       return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: null };
     }
@@ -527,7 +529,7 @@ export default function KcalsPage() {
       const blob = dataUrlToBlob(avatarPhoto);
       const ext = blob.type === "image/png" ? "png" : "jpg";
       const path = `${user.id}/${AVATAR_FOLDER}/avatar.${ext}`;
-      const { error } = await supabase?.storage.from(IMAGE_BUCKET).upload(path, blob, {
+      const { error } = await supabase.storage.from(IMAGE_BUCKET).upload(path, blob, {
         upsert: true,
         contentType: blob.type || "image/jpeg",
         cacheControl: "3600",
@@ -536,7 +538,7 @@ export default function KcalsPage() {
         onUploadError?.(error.message);
         return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: avatarPhoto };
       }
-      const { data } = supabase!.storage.from(IMAGE_BUCKET).getPublicUrl(path);
+      const { data } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path);
       return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: data.publicUrl };
     } catch {
       onUploadError?.("Avatar upload failed.");
