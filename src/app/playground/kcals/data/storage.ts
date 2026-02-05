@@ -7,7 +7,7 @@ export interface FoodItem {
   items?: FoodItem[]; // present = this is a group
   portionPercent?: number; // group-only: portion of total calories applied
   imageId?: string;
-  image?: string; // legacy base64 data URL for custom food avatars (migrate to IndexedDB)
+  image?: string; // legacy base64 data URL or remote URL for custom food avatars
   source?: "usda" | "manual";
   sourceName?: string; // USDA food description or entered name
   kcalPer100g?: number;
@@ -35,7 +35,7 @@ export interface CustomFood {
   name: string;
   kcalPer100g: number;
   imageId?: string;
-  image?: string; // legacy base64 data URL (migrate to IndexedDB)
+  image?: string; // legacy base64 data URL or remote URL
 }
 
 export interface RecentFood {
@@ -94,12 +94,17 @@ export function loadFoodList(): FoodItem[] {
 }
 
 export function saveFoodList(foods: FoodItem[]): void {
+  const shouldStoreImage = (image?: string) => !!image && !image.startsWith("data:");
   const sanitize = (item: FoodItem): FoodItem => {
     const { image, ...rest } = item;
-    return {
+    const next: FoodItem = {
       ...rest,
       items: item.items ? item.items.map(sanitize) : undefined,
     };
+    if (shouldStoreImage(image)) {
+      next.image = image;
+    }
+    return next;
   };
   localStorage.setItem(FOOD_LIST_KEY, JSON.stringify(foods.map(sanitize)));
   localStorage.setItem(FOOD_DATE_KEY, new Date().toISOString().slice(0, 10));
@@ -115,7 +120,14 @@ export function loadCustomFoods(): CustomFood[] {
 }
 
 export function saveCustomFoods(foods: CustomFood[]): void {
-  const sanitized = foods.map(({ image, ...rest }) => rest);
+  const shouldStoreImage = (image?: string) => !!image && !image.startsWith("data:");
+  const sanitized = foods.map(({ image, ...rest }) => {
+    const next: CustomFood = { ...rest };
+    if (shouldStoreImage(image)) {
+      next.image = image;
+    }
+    return next;
+  });
   localStorage.setItem(CUSTOM_KEY, JSON.stringify(sanitized));
 }
 

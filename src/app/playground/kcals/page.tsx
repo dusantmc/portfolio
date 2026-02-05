@@ -37,6 +37,7 @@ import { BottomSheet } from "./BottomSheet";
 import { supabase } from "./data/supabase";
 
 const DEFAULT_CALORIE_GOAL = 1600;
+const LAST_DAY_KEY = "kcals_last_day_key";
 
 function formatCompact(n: number): string {
   const abs = Math.abs(n);
@@ -56,6 +57,11 @@ const SYNC_KEY = "kcals_last_sync";
 const CALORIE_GOAL_KEY = "kcals_calorie_goal";
 const AUTO_SYNC_KEY = "kcals_auto_sync_enabled";
 const AUTO_SYNC_DATE_KEY = "kcals_auto_sync_date";
+const AVATAR_MODE_KEY = "kcals_avatar_mode";
+const AVATAR_EMOJI_KEY = "kcals_avatar_emoji";
+const AVATAR_PHOTO_KEY = "kcals_avatar_photo";
+const IMAGE_BUCKET = "kcals-images";
+const IMAGE_FOLDER = "custom-foods";
 
 /* ===========================
    SVG Icons
@@ -165,6 +171,29 @@ function dataUrlToBlob(dataUrl: string): Blob {
   return new Blob([decodeURIComponent(data)], { type: contentType });
 }
 
+function isDataUrl(value?: string | null): boolean {
+  return !!value && value.startsWith("data:");
+}
+
+function getLastGrapheme(value: string): string {
+  if (typeof Intl !== "undefined" && "Segmenter" in Intl) {
+    const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+    const segments = Array.from(segmenter.segment(value));
+    return segments.length ? segments[segments.length - 1].segment : "";
+  }
+  const chars = Array.from(value);
+  return chars.length ? chars[chars.length - 1] : "";
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error("Failed to read image"));
+    reader.readAsDataURL(blob);
+  });
+}
+
 /* ===========================
    Main Component
    =========================== */
@@ -177,6 +206,9 @@ export default function KcalsPage() {
   const [recentFoods, setRecentFoods] = useState<RecentFood[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [avatarMode, setAvatarMode] = useState<"emoji" | "photo">("emoji");
+  const [avatarEmoji, setAvatarEmoji] = useState("");
+  const [avatarPhoto, setAvatarPhoto] = useState<string | null>(null);
   const [authEmail, setAuthEmail] = useState("");
   const [authStatus, setAuthStatus] = useState<"idle" | "sending" | "sent" | "verifying" | "error">("idle");
   const [authStep, setAuthStep] = useState<"email" | "code">("email");
@@ -201,6 +233,7 @@ export default function KcalsPage() {
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const avatarPhotoInputRef = useRef<HTMLInputElement>(null);
   const blurTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const pillLongPressRef = useRef<{
@@ -337,14 +370,143 @@ export default function KcalsPage() {
       }
       const autoSync = localStorage.getItem(AUTO_SYNC_KEY);
       setAutoSyncEnabled(autoSync === "true");
+      const storedMode = localStorage.getItem(AVATAR_MODE_KEY);
+      if (storedMode === "emoji" || storedMode === "photo") {
+        setAvatarMode(storedMode);
+      }
+      const storedEmoji = localStorage.getItem(AVATAR_EMOJI_KEY);
+      if (storedEmoji) {
+        setAvatarEmoji(storedEmoji);
+      }
+      const storedPhoto = localStorage.getItem(AVATAR_PHOTO_KEY);
+      if (storedPhoto) {
+        setAvatarPhoto(storedPhoto);
+      }
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(AVATAR_MODE_KEY, avatarMode);
+  }, [avatarMode]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (avatarEmoji) {
+      localStorage.setItem(AVATAR_EMOJI_KEY, avatarEmoji);
+    } else {
+      localStorage.removeItem(AVATAR_EMOJI_KEY);
+    }
+  }, [avatarEmoji]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (avatarPhoto) {
+      localStorage.setItem(AVATAR_PHOTO_KEY, avatarPhoto);
+    } else {
+      localStorage.removeItem(AVATAR_PHOTO_KEY);
+    }
+  }, [avatarPhoto]);
 
   const setLastSync = useCallback((value: string) => {
     if (typeof window === "undefined") return;
     localStorage.setItem(SYNC_KEY, value);
     setLastSyncAt(value);
   }, []);
+
+  const buildCustomFoodsPayload = useCallback(async () => {
+    const cache = new Map<string, string>();
+    const toStorageUrl = async (imageId: string, imageValue?: string | null) => {
+      if (imageValue && !isDataUrl(imageValue)) return imageValue;
+      if (!supabase || !user) return imageValue ?? null;
+      if (cache.has(imageId)) return cache.get(imageId) ?? null;
+      let blob: Blob | null = null;
+      if (imageValue && isDataUrl(imageValue)) {
+        blob = dataUrlToBlob(imageValue);
+      } else {
+        try {
+          blob = await loadCustomFoodImage(imageId);
+        } catch {
+          blob = null;
+        }
+      }
+      if (!blob) return imageValue ?? null;
+      const ext = blob.type === "image/png" ? "png" : "jpg";
+      const path = `${user.id}/${IMAGE_FOLDER}/${imageId}.${ext}`;
+      const { error } = await supabase.storage.from(IMAGE_BUCKET).upload(path, blob, {
+        upsert: true,
+        contentType: blob.type || "image/jpeg",
+        cacheControl: "3600",
+      });
+      if (error) {
+        const fallback = imageValue ?? null;
+        if (fallback) cache.set(imageId, fallback);
+        return fallback;
+      }
+      const { data } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path);
+      const publicUrl = data.publicUrl;
+      cache.set(imageId, publicUrl);
+      return publicUrl;
+    };
+
+    return await Promise.all(
+      customFoods.map(async (food) => {
+        if (!food.imageId) return food;
+        const url = await toStorageUrl(food.imageId, food.image ?? null);
+        return url ? { ...food, image: url } : food;
+      })
+    );
+  }, [customFoods, user, supabase]);
+
+  const buildFoodListPayload = useCallback(async (items: FoodItem[]) => {
+    const cache = new Map<string, string>();
+    const toStorageUrl = async (imageId: string, imageValue?: string | null) => {
+      if (imageValue && !isDataUrl(imageValue)) return imageValue;
+      if (!supabase || !user) return imageValue ?? null;
+      if (cache.has(imageId)) return cache.get(imageId) ?? null;
+      let blob: Blob | null = null;
+      if (imageValue && isDataUrl(imageValue)) {
+        blob = dataUrlToBlob(imageValue);
+      } else {
+        try {
+          blob = await loadCustomFoodImage(imageId);
+        } catch {
+          blob = null;
+        }
+      }
+      if (!blob) return imageValue ?? null;
+      const ext = blob.type === "image/png" ? "png" : "jpg";
+      const path = `${user.id}/${IMAGE_FOLDER}/${imageId}.${ext}`;
+      const { error } = await supabase.storage.from(IMAGE_BUCKET).upload(path, blob, {
+        upsert: true,
+        contentType: blob.type || "image/jpeg",
+        cacheControl: "3600",
+      });
+      if (error) {
+        const fallback = imageValue ?? null;
+        if (fallback) cache.set(imageId, fallback);
+        return fallback;
+      }
+      const { data } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path);
+      const publicUrl = data.publicUrl;
+      cache.set(imageId, publicUrl);
+      return publicUrl;
+    };
+
+    return await Promise.all(
+      items.map(async (item) => {
+        let nextItem = { ...item };
+        if (item.imageId) {
+          const url = await toStorageUrl(item.imageId, item.image ?? null);
+          if (url) nextItem.image = url;
+        }
+        if (item.items?.length) {
+          nextItem = { ...nextItem, items: await buildFoodListPayload(item.items) };
+        }
+        return nextItem;
+      })
+    );
+  }, [user, supabase]);
 
   const applyRemoteState = useCallback((row: {
     food_list?: FoodItem[] | null;
@@ -388,10 +550,12 @@ export default function KcalsPage() {
     }
     setSyncStatus("syncing");
     setSyncError(null);
+    const customFoodsPayload = await buildCustomFoodsPayload();
+    const foodListPayload = await buildFoodListPayload(foods);
     const payload = {
       user_id: user.id,
-      food_list: foods,
-      custom_foods: customFoods,
+      food_list: foodListPayload,
+      custom_foods: customFoodsPayload,
       recent_foods: recentFoods,
       daily_log: loadDailyLogRaw(),
       updated_at: new Date().toISOString(),
@@ -404,12 +568,16 @@ export default function KcalsPage() {
       setSyncError(error.message);
       return;
     }
+    setCustomFoods(customFoodsPayload);
+    saveCustomFoods(customFoodsPayload);
+    setFoods(foodListPayload);
+    saveFoodList(foodListPayload);
     setSyncStatus("ok");
     setLastSync(payload.updated_at);
     if (reason === "manual") {
       setTimeout(() => setSyncStatus("idle"), 1200);
     }
-  }, [user, foods, customFoods, recentFoods, setLastSync, isWriteAllowed]);
+  }, [user, foods, recentFoods, setLastSync, isWriteAllowed, buildCustomFoodsPayload, buildFoodListPayload]);
 
   const syncFromSupabase = useCallback(async () => {
     if (!supabase || !user) return;
@@ -728,6 +896,8 @@ export default function KcalsPage() {
     day: "numeric",
   }).format(displayDate);
   const profileInitial = user?.email?.trim()?.[0]?.toUpperCase() ?? "U";
+  const avatarEmojiDisplay = avatarEmoji.trim() || profileInitial;
+  const showAvatarPhoto = avatarMode === "photo" && !!avatarPhoto;
 
   const [streak, setStreak] = useState(0);
   const [weeklyBurn, setWeeklyBurn] = useState(0);
@@ -837,6 +1007,53 @@ export default function KcalsPage() {
     setDayStartHourState(value);
     setDayStartHour(value);
   };
+
+  const resetDailyFoods = useCallback(() => {
+    setFoods([]);
+    saveFoodList([]);
+    setGroupModal(null);
+    setEditFoodModal(null);
+    setSelectedCustomFood(null);
+    setEditingFood(null);
+    setShowModal(false);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const currentKey = getDayKey(new Date());
+    const storedKey = localStorage.getItem(LAST_DAY_KEY);
+    if (storedKey && storedKey !== currentKey) {
+      resetDailyFoods();
+    }
+    localStorage.setItem(LAST_DAY_KEY, currentKey);
+  }, [dayStartHour, resetDailyFoods]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let timer: ReturnType<typeof setTimeout>;
+
+    const schedule = () => {
+      const now = new Date();
+      const next = new Date(now);
+      next.setHours(dayStartHour, 0, 0, 0);
+      if (next <= now) {
+        next.setDate(next.getDate() + 1);
+      }
+      const delay = next.getTime() - now.getTime();
+      timer = setTimeout(() => {
+        const currentKey = getDayKey(new Date());
+        const storedKey = localStorage.getItem(LAST_DAY_KEY);
+        if (storedKey !== currentKey) {
+          resetDailyFoods();
+          localStorage.setItem(LAST_DAY_KEY, currentKey);
+        }
+        schedule();
+      }, Math.max(1000, delay + 1000));
+    };
+
+    schedule();
+    return () => clearTimeout(timer);
+  }, [dayStartHour, resetDailyFoods]);
 
   const handleOpenShare = () => {
     badgeMovedRef.current = false;
@@ -1138,6 +1355,31 @@ export default function KcalsPage() {
     setShowProfileModal(false);
   };
 
+  const handleAvatarEmojiChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\s+/g, "");
+    const last = getLastGrapheme(value);
+    setAvatarEmoji(last);
+    setAvatarMode("emoji");
+  };
+
+  const handleAvatarPhotoPick = () => {
+    avatarPhotoInputRef.current?.click();
+  };
+
+  const handleAvatarPhotoChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const blob = await downscaleImage(file, 512, 0.85);
+      const dataUrl = await blobToDataUrl(blob);
+      setAvatarPhoto(dataUrl);
+      setAvatarMode("photo");
+    } catch {
+      // ignore
+    }
+  };
+
   const handleSyncNow = async () => {
     if (!user) {
       setShowAuthModal(true);
@@ -1185,7 +1427,7 @@ export default function KcalsPage() {
     setModalImageBlob(null);
     if (food.imageId) {
       const url = await ensureImageUrl(food.imageId);
-      setModalImageUrl(url);
+      setModalImageUrl(url ?? food.image ?? null);
     } else if (food.image) {
       setModalImageUrl(food.image);
     } else {
@@ -2062,7 +2304,7 @@ export default function KcalsPage() {
     const rawGroupKcal = group ? groupKcalRaw(food) : 0;
     const groupPercent = group ? (food.portionPercent ?? 100) : 100;
     const showGroupPercent = group && groupPercent !== 100;
-    const imageUrl = food.imageId ? imageUrls[food.imageId] : food.image;
+    const imageUrl = food.imageId ? (imageUrls[food.imageId] ?? food.image) : food.image;
 
     return (
       <div
@@ -2192,29 +2434,21 @@ export default function KcalsPage() {
         <div className="kcals-main">
           {/* Top Bar */}
           <div className={`kcals-topbar${isCompact ? " is-compact" : ""}`}>
-            <div className="kcals-chip">
-              <span className="kcals-chip-icon">{"\u{1F5D3}\uFE0F"}</span>
-              {todayLabel}
-            </div>
-            <div className="kcals-topbar-right">
-              <div className="kcals-chip">
-                <span className="kcals-chip-icon">{"\u26A1\uFE0F"}</span>
-                {streak}
-              </div>
-              <button className="kcals-chip kcals-chip-btn" type="button" onClick={() => setShowWeeklyModal(true)}>
-                <span className="kcals-chip-icon">
-                  {weeklyBreakdown.some((e) => calorieGoal - e.remaining >= 800) ? "\u{1F525}" : "\u231B\uFE0F"}
-                </span>
-                {weeklyBreakdown.some((e) => calorieGoal - e.remaining >= 800) ? formatCompact(weeklyBurn) : "0"}
-              </button>
+            <div className="kcals-topbar-left">
               {supabase && (
                 user ? (
                   <button
-                    className="kcals-avatar-btn"
+                    className="kcals-chip kcals-avatar-btn"
                     type="button"
                     onClick={() => setShowProfileModal(true)}
                   >
-                    <span className="kcals-avatar">{profileInitial}</span>
+                    <span className="kcals-avatar-inner">
+                      {showAvatarPhoto ? (
+                        <img src={avatarPhoto ?? ""} alt="" />
+                      ) : (
+                        avatarEmojiDisplay
+                      )}
+                    </span>
                   </button>
                 ) : (
                   <button
@@ -2227,6 +2461,22 @@ export default function KcalsPage() {
                   </button>
                 )
               )}
+              <div className="kcals-chip">
+                <span className="kcals-chip-icon">{"\u{1F5D3}\uFE0F"}</span>
+                {todayLabel}
+              </div>
+            </div>
+            <div className="kcals-topbar-right">
+              <div className="kcals-chip">
+                <span className="kcals-chip-icon">{"\u26A1\uFE0F"}</span>
+                {streak}
+              </div>
+              <button className="kcals-chip kcals-chip-btn" type="button" onClick={() => setShowWeeklyModal(true)}>
+                <span className="kcals-chip-icon">
+                  {weeklyBreakdown.some((e) => calorieGoal - e.remaining >= 800) ? "\u{1F525}" : "\u231B\uFE0F"}
+                </span>
+                {weeklyBreakdown.some((e) => calorieGoal - e.remaining >= 800) ? formatCompact(weeklyBurn) : "0"}
+              </button>
             </div>
             <div className="kcals-topbar-compact">
               <span className="kcals-topbar-compact-value">{totalKcal} kcal</span>
@@ -2318,9 +2568,9 @@ export default function KcalsPage() {
                       }}
                       type="button"
                     >
-                      {(food.imageId ? imageUrls[food.imageId] : food.image) ? (
+                      {(food.imageId ? (imageUrls[food.imageId] ?? food.image) : food.image) ? (
                         <img
-                          src={food.imageId ? imageUrls[food.imageId] : food.image}
+                          src={food.imageId ? (imageUrls[food.imageId] ?? food.image) : food.image}
                           alt=""
                           className="kcals-pill-image"
                         />
@@ -2502,10 +2752,10 @@ export default function KcalsPage() {
       {/* Edit Food Modal */}
       <BottomSheet open={!!editFoodModal} onClose={() => setEditFoodModal(null)}>
         <div className="kcals-modal-handle" />
-        <div className={(editFoodModal?.imageId ? imageUrls[editFoodModal.imageId] : editFoodModal?.image) ? "kcals-modal-image-wrapper" : "kcals-modal-camera"}>
-          {(editFoodModal?.imageId ? imageUrls[editFoodModal.imageId] : editFoodModal?.image) ? (
+        <div className={(editFoodModal?.imageId ? (imageUrls[editFoodModal.imageId] ?? editFoodModal?.image) : editFoodModal?.image) ? "kcals-modal-image-wrapper" : "kcals-modal-camera"}>
+          {(editFoodModal?.imageId ? (imageUrls[editFoodModal.imageId] ?? editFoodModal?.image) : editFoodModal?.image) ? (
             <img
-              src={editFoodModal?.imageId ? imageUrls[editFoodModal.imageId] : editFoodModal?.image}
+              src={editFoodModal?.imageId ? (imageUrls[editFoodModal.imageId] ?? editFoodModal?.image) : editFoodModal?.image}
               alt=""
               className="kcals-modal-camera-image"
             />
@@ -2584,9 +2834,9 @@ export default function KcalsPage() {
               {groupModal?.items?.map((item) => (
                 <div key={item.id} className="kcals-group-list-item">
                   <div className="kcals-food-emoji">
-                    {(item.imageId ? imageUrls[item.imageId] : item.image) ? (
+                    {(item.imageId ? (imageUrls[item.imageId] ?? item.image) : item.image) ? (
                       <img
-                        src={item.imageId ? imageUrls[item.imageId] : item.image}
+                        src={item.imageId ? (imageUrls[item.imageId] ?? item.image) : item.image}
                         alt=""
                         className="kcals-food-image"
                       />
@@ -2793,11 +3043,61 @@ export default function KcalsPage() {
       {/* Profile Modal */}
       <BottomSheet open={showProfileModal} onClose={() => setShowProfileModal(false)} variant="center">
         <div className="kcals-profile-modal">
-          <div className="kcals-profile-avatar">{profileInitial}</div>
+          <div className="kcals-profile-avatar">
+            {avatarMode === "emoji" ? (
+              <input
+                className="kcals-profile-emoji-input"
+                type="text"
+                value={avatarEmojiDisplay}
+                onChange={handleAvatarEmojiChange}
+                onFocus={(e) => e.currentTarget.select()}
+                inputMode="text"
+                aria-label="Emoji avatar"
+              />
+            ) : (
+              <button
+                className={`kcals-profile-photo-btn${avatarPhoto ? " has-photo" : ""}`}
+                type="button"
+                onClick={handleAvatarPhotoPick}
+                aria-label="Choose avatar photo"
+              >
+                {avatarPhoto ? (
+                  <img src={avatarPhoto} alt="" />
+                ) : (
+                  <span className="kcals-profile-photo-icon" aria-hidden="true" />
+                )}
+              </button>
+            )}
+          </div>
+          <div className="kcals-profile-tabs">
+            <button
+              className={`kcals-profile-tab${avatarMode === "emoji" ? " is-active" : ""}`}
+              type="button"
+              onClick={() => setAvatarMode("emoji")}
+              aria-pressed={avatarMode === "emoji"}
+            >
+              <span className="kcals-profile-tab-icon kcals-profile-tab-icon--emoji" aria-hidden="true" />
+            </button>
+            <button
+              className={`kcals-profile-tab${avatarMode === "photo" ? " is-active" : ""}`}
+              type="button"
+              onClick={() => setAvatarMode("photo")}
+              aria-pressed={avatarMode === "photo"}
+            >
+              <span className="kcals-profile-tab-icon kcals-profile-tab-icon--photo" aria-hidden="true" />
+            </button>
+          </div>
           <div className="kcals-profile-email">{user?.email ?? "Account"}</div>
           <button className="kcals-profile-link" type="button" onClick={handleSignOut}>
             Log out
           </button>
+          <input
+            ref={avatarPhotoInputRef}
+            className="kcals-profile-photo-input"
+            type="file"
+            accept="image/*"
+            onChange={handleAvatarPhotoChange}
+          />
         </div>
       </BottomSheet>
 
