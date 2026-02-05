@@ -443,9 +443,14 @@ export default function KcalsPage() {
     if (!accessToken) return supabase;
     return createClient(supabaseUrl, supabaseAnonKey, {
       auth: { persistSession: false, autoRefreshToken: false },
-      global: { headers: { Authorization: `Bearer ${accessToken}` } },
+      global: {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          apikey: supabaseAnonKey,
+        },
+      },
     });
-  }, []);
+  }, [supabase]);
 
   const buildCustomFoodsPayload = useCallback(async (
     storageClient: SupabaseClient | null,
