@@ -2890,9 +2890,9 @@ export default function KcalsPage() {
               </div>
               <button className="kcals-chip kcals-chip-btn" type="button" onClick={() => setShowWeeklyModal(true)}>
                 <span className="kcals-chip-icon">
-                  {weeklyBreakdown.some((e) => calorieGoal - e.remaining >= 800) ? "\u{1F525}" : "\u231B\uFE0F"}
+                  {weeklyBreakdown.some((e) => calorieGoal - e.remaining >= 800) ? "\u{1F525}" : "\u{1F437}"}
                 </span>
-                {weeklyBreakdown.some((e) => calorieGoal - e.remaining >= 800) ? formatCompact(weeklyBurn) : "0"}
+                {weeklyBreakdown.some((e) => calorieGoal - e.remaining >= 800) ? formatCompact(Math.abs(weeklyBurn)) : "0"}
               </button>
             </div>
             <div className="kcals-topbar-compact">
