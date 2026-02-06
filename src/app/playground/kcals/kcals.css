@@ -701,6 +701,11 @@
   font-size: 20px;
 }
 
+.kcals-input-action.is-listening {
+  color: var(--blue);
+  background: rgba(0, 123, 255, 0.08);
+}
+
 .kcals-submit-btn {
   width: 44px;
   height: 36px;

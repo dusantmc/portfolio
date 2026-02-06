@@ -65,6 +65,164 @@ function formatRelativeTime(iso: string | null): string {
   return `${Math.floor(diffMs / day)}d ago`;
 }
 
+function formatSpeechQuantity(value: number): string {
+  if (Number.isInteger(value)) return String(value);
+  return String(Math.round(value * 100) / 100);
+}
+
+const SPOKEN_NUMBER_UNITS: Record<string, number> = {
+  zero: 0,
+  oh: 0,
+  o: 0,
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+  eleven: 11,
+  twelve: 12,
+  thirteen: 13,
+  fourteen: 14,
+  fifteen: 15,
+  sixteen: 16,
+  seventeen: 17,
+  eighteen: 18,
+  nineteen: 19,
+};
+
+const SPOKEN_NUMBER_TENS: Record<string, number> = {
+  twenty: 20,
+  thirty: 30,
+  forty: 40,
+  fifty: 50,
+  sixty: 60,
+  seventy: 70,
+  eighty: 80,
+  ninety: 90,
+};
+
+const SPOKEN_NUMBER_WORDS = [
+  ...Object.keys(SPOKEN_NUMBER_UNITS),
+  ...Object.keys(SPOKEN_NUMBER_TENS),
+  "hundred",
+  "thousand",
+  "point",
+  "and",
+];
+
+const SPOKEN_NUMBER_SEQUENCE = `(?:${SPOKEN_NUMBER_WORDS.join("|")})(?:[\\s-]+(?:${SPOKEN_NUMBER_WORDS.join("|")}))*`;
+const SPOKEN_WITH_UNIT_RE = new RegExp(
+  `\\b(${SPOKEN_NUMBER_SEQUENCE})\\s*(kilograms?|kilogram|kg|grams?|gram|g)\\b`,
+  "gi"
+);
+const SPOKEN_COUNT_PREFIX_RE = new RegExp(
+  `^\\s*(${SPOKEN_NUMBER_SEQUENCE})\\s+(.+)$`,
+  "i"
+);
+
+function parseSpokenNumber(segment: string): number | null {
+  const tokens = segment
+    .toLowerCase()
+    .replace(/-/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!tokens.length) return null;
+
+  const pointIndex = tokens.indexOf("point");
+  const integerTokens = pointIndex >= 0 ? tokens.slice(0, pointIndex) : tokens;
+  const decimalTokens = pointIndex >= 0 ? tokens.slice(pointIndex + 1) : [];
+
+  let total = 0;
+  let current = 0;
+  let seenIntegerToken = false;
+
+  for (const token of integerTokens) {
+    if (token === "and") continue;
+    if (token in SPOKEN_NUMBER_UNITS) {
+      current += SPOKEN_NUMBER_UNITS[token];
+      seenIntegerToken = true;
+      continue;
+    }
+    if (token in SPOKEN_NUMBER_TENS) {
+      current += SPOKEN_NUMBER_TENS[token];
+      seenIntegerToken = true;
+      continue;
+    }
+    if (token === "hundred") {
+      current = (current || 1) * 100;
+      seenIntegerToken = true;
+      continue;
+    }
+    if (token === "thousand") {
+      total += (current || 1) * 1000;
+      current = 0;
+      seenIntegerToken = true;
+      continue;
+    }
+    return null;
+  }
+
+  let value = total + current;
+  if (!seenIntegerToken && decimalTokens.length > 0) {
+    value = 0;
+  }
+
+  if (decimalTokens.length > 0) {
+    let decimalDigits = "";
+    for (const token of decimalTokens) {
+      if (token === "and") continue;
+      if (token in SPOKEN_NUMBER_UNITS) {
+        decimalDigits += String(SPOKEN_NUMBER_UNITS[token]);
+        continue;
+      }
+      if (/^\d$/.test(token)) {
+        decimalDigits += token;
+        continue;
+      }
+      return null;
+    }
+    if (!decimalDigits) return null;
+    value += Number(`0.${decimalDigits}`);
+  }
+
+  return Number.isFinite(value) ? value : null;
+}
+
+function normalizeSpeechInput(text: string): string {
+  let normalized = text;
+  normalized = normalized.replace(
+    SPOKEN_WITH_UNIT_RE,
+    (match, spokenValue: string, unit: string) => {
+      const numericValue = parseSpokenNumber(spokenValue);
+      if (numericValue == null) return match;
+      const normalizedUnit = /^k/i.test(unit) ? "kg" : "g";
+      return `${formatSpeechQuantity(numericValue)}${normalizedUnit}`;
+    }
+  );
+
+  const countMatch = normalized.match(SPOKEN_COUNT_PREFIX_RE);
+  if (countMatch) {
+    const numericValue = parseSpokenNumber(countMatch[1]);
+    if (numericValue != null) {
+      normalized = `${formatSpeechQuantity(numericValue)} ${countMatch[2].trim()}`;
+    }
+  }
+  return normalized;
+}
+
+function hasExplicitQuantity(text: string): boolean {
+  const trimmed = normalizeSpeechInput(text).trim();
+  if (!trimmed) return false;
+  if (/^(\d+(?:\.\d+)?)\s+(.+)$/i.test(trimmed)) return true;
+  if (/\b\d+(?:\.\d+)?\s*(kg|g|grams?)\b/i.test(trimmed)) return true;
+  return false;
+}
+
 function normalizeDailyLog(raw: unknown): Record<string, DailyEntry> {
   if (!raw || typeof raw !== "object") return {};
   const entries: Record<string, DailyEntry> = {};
@@ -285,6 +443,8 @@ export default function KcalsPage() {
   const [emptyStateVariantIndex, setEmptyStateVariantIndex] = useState(0);
   const [inputValue, setInputValue] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
+  const [isDictating, setIsDictating] = useState(false);
+  const [dictationSupported, setDictationSupported] = useState(false);
   const [customFoods, setCustomFoods] = useState<CustomFood[]>([]);
   const [recentFoods, setRecentFoods] = useState<RecentFood[]>([]);
   const [selectedRecentFood, setSelectedRecentFood] = useState<RecentFood | null>(null);
@@ -317,6 +477,7 @@ export default function KcalsPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarPhotoInputRef = useRef<HTMLInputElement>(null);
+  const speechRecognitionRef = useRef<any | null>(null);
   const syncToSupabaseRef = useRef<((reason?: "manual" | "auto") => Promise<boolean>) | null>(null);
   const blurTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -438,8 +599,25 @@ export default function KcalsPage() {
   }, [imageUrls]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const w = window as Window & {
+      SpeechRecognition?: new () => any;
+      webkitSpeechRecognition?: new () => any;
+    };
+    setDictationSupported(!!(w.SpeechRecognition || w.webkitSpeechRecognition));
+  }, []);
+
+  useEffect(() => {
     return () => {
       Object.values(imageUrlsRef.current).forEach((url) => URL.revokeObjectURL(url));
+      const recognition = speechRecognitionRef.current;
+      if (recognition) {
+        try {
+          recognition.stop();
+        } catch {
+          // ignore
+        }
+      }
     };
   }, []);
 
@@ -1742,6 +1920,108 @@ export default function KcalsPage() {
     inputRef.current?.focus();
     requestAnimationFrame(() => inputRef.current?.focus());
   };
+
+  const applySpeechTranscript = useCallback((transcript: string) => {
+    const cleaned = transcript.replace(/\s+/g, " ").trim();
+    if (!cleaned) return;
+    const normalizedTranscript = normalizeSpeechInput(cleaned);
+    const parsed = parseFoodInput(normalizedTranscript);
+    const normalizeName = (value: string) =>
+      value
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, " ")
+        .replace(/\s+/g, " ");
+    const normalizedName = normalizeName(parsed.name);
+    const sameOrClose = (candidate: string) => {
+      const normalizedCandidate = normalizeName(candidate);
+      return normalizedCandidate === normalizedName ||
+        normalizedCandidate.includes(normalizedName) ||
+        normalizedName.includes(normalizedCandidate);
+    };
+    const customMatch = customFoods.find(
+      (f) => sameOrClose(f.name)
+    );
+    const recentMatch = recentFoods.find(
+      (f) => sameOrClose(f.name)
+    );
+    const resolvedName = customMatch?.name ?? recentMatch?.name ?? parsed.name.trim();
+    const quantityText = formatSpeechQuantity(parsed.quantity);
+    const nextValue = parsed.unit === "count"
+      ? `${quantityText} ${resolvedName}`
+      : `${resolvedName} ${quantityText}g`;
+    cancelDismiss();
+    setSelectedCustomFood(null);
+    setSelectedRecentFood(null);
+    setInputValue(nextValue);
+    setInputFocused(true);
+    inputRef.current?.focus();
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, [customFoods, recentFoods, cancelDismiss]);
+
+  const handleMicTap = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const recognition = speechRecognitionRef.current;
+    if (isDictating && recognition) {
+      try {
+        recognition.stop();
+      } catch {
+        // ignore stop errors
+      }
+      return;
+    }
+
+    const w = window as Window & {
+      SpeechRecognition?: new () => any;
+      webkitSpeechRecognition?: new () => any;
+    };
+    const Recognition = w.SpeechRecognition || w.webkitSpeechRecognition;
+    if (!Recognition) {
+      setInputFocused(true);
+      inputRef.current?.focus();
+      return;
+    }
+
+    const instance = new Recognition();
+    speechRecognitionRef.current = instance;
+    instance.lang = navigator.language || "en-US";
+    instance.interimResults = false;
+    instance.continuous = false;
+    instance.maxAlternatives = 1;
+    instance.onstart = () => {
+      setIsDictating(true);
+      setInputFocused(true);
+      cancelDismiss();
+    };
+    instance.onresult = (event: any) => {
+      const transcript = event?.results?.[0]?.[0]?.transcript;
+      if (typeof transcript === "string") {
+        const shouldStopEarly = hasExplicitQuantity(transcript);
+        applySpeechTranscript(transcript);
+        if (shouldStopEarly) {
+          try {
+            instance.stop();
+          } catch {
+            // ignore stop errors
+          }
+        }
+      }
+    };
+    instance.onerror = () => {
+      setIsDictating(false);
+      speechRecognitionRef.current = null;
+    };
+    instance.onend = () => {
+      setIsDictating(false);
+      speechRecognitionRef.current = null;
+    };
+    try {
+      instance.start();
+    } catch {
+      setIsDictating(false);
+      speechRecognitionRef.current = null;
+    }
+  }, [applySpeechTranscript, isDictating]);
 
   /* ===========================
      Custom food handlers
@@ -3152,7 +3432,14 @@ export default function KcalsPage() {
                 <ArrowUpIcon />
               </button>
             ) : (
-              <button className="kcals-input-action" type="button">
+              <button
+                className={`kcals-input-action${isDictating ? " is-listening" : ""}`}
+                type="button"
+                onPointerDown={(e) => e.preventDefault()}
+                onClick={handleMicTap}
+                aria-label={isDictating ? "Stop dictation" : "Start dictation"}
+                title={dictationSupported ? undefined : "Speech input is not supported in this browser"}
+              >
                 <MicIcon />
               </button>
             )}
