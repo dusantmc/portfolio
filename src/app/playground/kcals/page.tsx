@@ -689,9 +689,7 @@ export default function KcalsPage() {
     }
   }, [setLastSync]);
 
-  const isWriteAllowed = typeof window !== "undefined"
-    ? ["www.dusantmc.com", "dusantmc.com"].includes(window.location.hostname)
-    : false;
+  const isWriteAllowed = true;
 
   const syncToSupabase = useCallback(async (reason: "manual" | "auto" = "manual") => {
     if (!supabase || !user) return false;
