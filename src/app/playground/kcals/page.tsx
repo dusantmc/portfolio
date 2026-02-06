@@ -2316,7 +2316,7 @@ export default function KcalsPage() {
       updateFoods((prev) => [
         {
           id: itemId,
-          emoji: "\u{1F4E6}",
+          emoji: "\u{1F372}",
           name: displayName,
           kcal,
           source: "manual",
@@ -3350,14 +3350,14 @@ export default function KcalsPage() {
                       }}
                       type="button"
                     >
-                      {(food.imageId ? (imageUrls[food.imageId] ?? food.image) : food.image) ? (
+	                      {(food.imageId ? (imageUrls[food.imageId] ?? food.image) : food.image) ? (
                         <img
                           src={food.imageId ? (imageUrls[food.imageId] ?? food.image) : food.image}
                           alt=""
                           className="kcals-pill-image"
                         />
 	                      ) : (
-	                        <span className="kcals-pill-emoji">{"\u{1F4E6}"}</span>
+	                        <span className="kcals-pill-emoji">{"\u{1F372}"}</span>
 	                      )}
 	                      <span className="kcals-pill-label">{food.name}</span>
 	                    </button>
