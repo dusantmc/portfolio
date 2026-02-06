@@ -32,7 +32,7 @@ import {
   getStreak,
   getWeeklyBreakdown,
 } from "./data/storage";
-import { parseFoodInput, fetchKcalPer100g, getFoodEmoji } from "./data/usda";
+import { parseFoodInput, fetchKcalPer100g, getFoodEmoji, resolveEmbeddedFood, resolveFoodAlias } from "./data/usda";
 import { BottomSheet } from "./BottomSheet";
 import { supabase, supabaseAnonKey, supabaseUrl } from "./data/supabase";
 
@@ -48,6 +48,22 @@ function formatCompact(n: number): string {
   }
   return n.toString();
 }
+
+function formatRelativeTime(iso: string | null): string {
+  if (!iso) return "never";
+  const ts = new Date(iso).getTime();
+  if (!Number.isFinite(ts)) return "never";
+  const diffMs = Date.now() - ts;
+  if (diffMs <= 0) return "just now";
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  if (diffMs < minute) return "just now";
+  if (diffMs < hour) return `${Math.floor(diffMs / minute)}m ago`;
+  if (diffMs < day) return `${Math.floor(diffMs / hour)}h ago`;
+  return `${Math.floor(diffMs / day)}d ago`;
+}
+
 const SWIPE_THRESHOLD = 48;
 const LONG_PRESS_MS = 1000;
 const MODAL_ANIM_MS = 250;
@@ -63,6 +79,46 @@ const AVATAR_PHOTO_KEY = "kcals_avatar_photo";
 const IMAGE_BUCKET = "kcals-images";
 const IMAGE_FOLDER = "custom-foods";
 const AVATAR_FOLDER = "avatars";
+const EMPTY_STATE_VARIANT_KEY = "kcals_empty_state_variant";
+const EMPTY_STATE_QUICK_CHIPS = [
+  { label: "Eggs", emoji: "\u{1F95A}" },
+  { label: "Chia Seeds", emoji: "\u{1F331}" },
+  { label: "Oats", emoji: "\u{1F963}" },
+  { label: "Smoked salmon", emoji: "\u{1F363}" },
+  { label: "Avocado", emoji: "\u{1F951}" },
+] as const;
+const EMPTY_STATE_VARIANTS = [
+  {
+    emoji: "\u{1F4AA}",
+    title: "Start your day with protein",
+    text: "Type what you ate or select a food from your list",
+  },
+  {
+    emoji: "\u2615",
+    title: "No food logged yet",
+    text: "Start typing or select a food from your list",
+  },
+  {
+    emoji: "\u{1F324}\uFE0F",
+    title: "Small start, big win",
+    text: "Add one food to kick things off",
+  },
+  {
+    emoji: "\u2728",
+    title: "Start your day with protein",
+    text: "Start typing or select a food from your list",
+  },
+  {
+    emoji: "\u{1F37D}\uFE0F",
+    title: "Your plate is empty",
+    text: "Add your first meal to get started",
+  },
+  {
+    emoji: "\u{1F3C3}",
+    title: "Small start, big win",
+    text: "Start typing or select a food from your list",
+  },
+] as const;
 
 /* ===========================
    SVG Icons
@@ -201,10 +257,12 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 
 export default function KcalsPage() {
   const [foods, setFoods] = useState<FoodItem[]>([]);
+  const [emptyStateVariantIndex, setEmptyStateVariantIndex] = useState(0);
   const [inputValue, setInputValue] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
   const [customFoods, setCustomFoods] = useState<CustomFood[]>([]);
   const [recentFoods, setRecentFoods] = useState<RecentFood[]>([]);
+  const [selectedRecentFood, setSelectedRecentFood] = useState<RecentFood | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [avatarMode, setAvatarMode] = useState<"emoji" | "photo">("emoji");
@@ -218,7 +276,6 @@ export default function KcalsPage() {
   const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "error" | "ok">("idle");
   const [syncError, setSyncError] = useState<string | null>(null);
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
-  const [showGoalModal, setShowGoalModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [calorieGoal, setCalorieGoal] = useState(DEFAULT_CALORIE_GOAL);
   const [calorieGoalInput, setCalorieGoalInput] = useState(DEFAULT_CALORIE_GOAL.toString());
@@ -349,6 +406,7 @@ export default function KcalsPage() {
   const profileInitial = user?.email?.trim()?.[0]?.toUpperCase() ?? "U";
   const avatarEmojiDisplay = avatarEmoji.trim() || profileInitial;
   const showAvatarPhoto = avatarMode === "photo" && !!avatarPhoto;
+  const lastSyncRelative = formatRelativeTime(lastSyncAt);
 
   useEffect(() => {
     imageUrlsRef.current = imageUrls;
@@ -1019,6 +1077,8 @@ export default function KcalsPage() {
   const [weeklyBurn, setWeeklyBurn] = useState(0);
   const [showWeeklyModal, setShowWeeklyModal] = useState(false);
   const [weeklyBreakdown, setWeeklyBreakdown] = useState<WeeklyEntry[]>([]);
+  const [lastCustomMatch, setLastCustomMatch] = useState<CustomFood | null>(null);
+  const [lastRecentMatch, setLastRecentMatch] = useState<RecentFood | null>(null);
   const weeklyVisibleEntries = weeklyBreakdown.filter(
     (e) => calorieGoal - e.remaining >= 800
   );
@@ -1072,6 +1132,26 @@ export default function KcalsPage() {
     );
     setWeeklyBurn(qualifying.reduce((sum, e) => sum + e.remaining, 0));
   }, [foods, remaining, calorieGoal, dayStartHour]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = window.localStorage.getItem(EMPTY_STATE_VARIANT_KEY);
+    const parsed = raw != null ? Number.parseInt(raw, 10) : -1;
+    const lastIndex = Number.isFinite(parsed) ? parsed : -1;
+    const nextIndex = (lastIndex + 1 + EMPTY_STATE_VARIANTS.length) % EMPTY_STATE_VARIANTS.length;
+    window.localStorage.setItem(EMPTY_STATE_VARIANT_KEY, String(nextIndex));
+    setEmptyStateVariantIndex(nextIndex);
+  }, []);
+
+  const rotateEmptyStateVariant = useCallback(() => {
+    setEmptyStateVariantIndex((prev) => {
+      const next = (prev + 1) % EMPTY_STATE_VARIANTS.length;
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(EMPTY_STATE_VARIANT_KEY, String(next));
+      }
+      return next;
+    });
+  }, []);
 
   /* ===========================
      Input focus handlers
@@ -1524,6 +1604,16 @@ export default function KcalsPage() {
     }
   };
 
+  const handleOpenAccountOrAuthModal = () => {
+    if (user) {
+      setShowAuthModal(false);
+      setShowProfileModal(true);
+      return;
+    }
+    setShowProfileModal(false);
+    setShowAuthModal(true);
+  };
+
   const handleSyncNow = async () => {
     if (!user) {
       setShowAuthModal(true);
@@ -1562,9 +1652,13 @@ export default function KcalsPage() {
     await syncToSupabase("manual");
   };
 
-  const handlePillTap = (name: string) => {
+  const handlePillTap = (food: RecentFood) => {
     cancelDismiss();
-    setInputValue(name);
+    setSelectedCustomFood(null);
+    setSelectedRecentFood(food);
+    setInputValue("");
+    setInputFocused(true);
+    inputRef.current?.focus();
     requestAnimationFrame(() => inputRef.current?.focus());
   };
 
@@ -1698,7 +1792,25 @@ export default function KcalsPage() {
   const handleCustomPillTap = (food: CustomFood) => {
     cancelDismiss();
     setSelectedCustomFood(food);
+    setSelectedRecentFood(null);
     setInputValue("");
+    setInputFocused(true);
+    inputRef.current?.focus();
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
+
+  const handleEmptyStateChipTap = (chip: (typeof EMPTY_STATE_QUICK_CHIPS)[number]) => {
+    cancelDismiss();
+    setSelectedCustomFood(null);
+    setSelectedRecentFood({
+      name: chip.label,
+      emoji: chip.emoji,
+      count: 0,
+      kcalPer100g: 0,
+    });
+    setInputValue("");
+    setInputFocused(true);
+    inputRef.current?.focus();
     requestAnimationFrame(() => inputRef.current?.focus());
   };
 
@@ -1786,7 +1898,7 @@ export default function KcalsPage() {
     if (chipMenu.type === "custom" && chipMenu.customFood) {
       handleCustomPillTap(chipMenu.customFood);
     } else if (chipMenu.type === "recent" && chipMenu.recentFood) {
-      handlePillTap(chipMenu.recentFood.name);
+      handlePillTap(chipMenu.recentFood);
     }
     clearChipMenuImmediate();
   };
@@ -1827,7 +1939,8 @@ export default function KcalsPage() {
      =========================== */
 
   const handleSubmit = () => {
-    const text = inputValue.trim();
+    let text = inputValue.trim();
+    const recentSelection = selectedRecentFood;
 
     if (selectedCustomFood) {
       let amountText = text || "100g";
@@ -1860,10 +1973,20 @@ export default function KcalsPage() {
       return;
     }
 
+    if (recentSelection) {
+      let amountText = text || "100g";
+      if (!/\s*(kg|g|grams?)\s*$/i.test(amountText)) amountText = `${amountText.trim()}g`;
+      text = `${recentSelection.name} ${amountText}`;
+      setSelectedRecentFood(null);
+    }
+
     if (!text) return;
 
     const parsed = parseFoodInput(text);
-    const emoji = getFoodEmoji(parsed.name);
+    const embeddedFood = resolveEmbeddedFood(parsed.name);
+    const alias = resolveFoodAlias(parsed.name);
+    const canonicalName = alias.displayName;
+    const emoji = alias.emoji ?? getFoodEmoji(canonicalName);
     const itemId = Date.now().toString();
     const toGrams = (gramsPerUnit?: number) =>
       parsed.unit === "count"
@@ -1871,9 +1994,9 @@ export default function KcalsPage() {
         : parsed.quantity;
 
     // Check cache first (recent foods or custom foods)
-    const cached = findCachedFood(parsed.name);
+    const cached = alias.matched ? undefined : findCachedFood(canonicalName);
     const customMatch = customFoods.find(
-      (f) => f.name.toLowerCase() === parsed.name.toLowerCase()
+      (f) => f.name.toLowerCase() === canonicalName.toLowerCase()
     );
     const cachedKcalPer100g = cached?.kcalPer100g ?? customMatch?.kcalPer100g;
     const cachedGramsPerUnit = cached?.gramsPerUnit;
@@ -1883,9 +2006,36 @@ export default function KcalsPage() {
     setInputFocused(false);
     inputRef.current?.blur();
 
+    if (embeddedFood) {
+      const grams = toGrams(embeddedFood.gramsPerUnit);
+      const displayName = `${embeddedFood.name} ${grams}g`;
+      const kcal = Math.round((embeddedFood.kcalPer100g * grams) / 100);
+      updateFoods((prev) => [
+        {
+          id: itemId,
+          emoji: embeddedFood.emoji,
+          name: displayName,
+          kcal,
+          source: "manual" as const,
+          sourceName: embeddedFood.name,
+          kcalPer100g: embeddedFood.kcalPer100g,
+          ...(embeddedFood.gramsPerUnit != null ? { gramsPerUnit: embeddedFood.gramsPerUnit } : {}),
+        },
+        ...prev,
+      ]);
+      trackRecentFood(
+        embeddedFood.name,
+        embeddedFood.emoji,
+        embeddedFood.kcalPer100g,
+        embeddedFood.gramsPerUnit
+      );
+      setRecentFoods(loadRecentFoods());
+      return;
+    }
+
     if (cachedKcalPer100g != null) {
       const grams = toGrams(cachedGramsPerUnit);
-      const displayName = `${parsed.name} ${grams}g`;
+      const displayName = `${canonicalName} ${grams}g`;
       const kcal = Math.round((cachedKcalPer100g * grams) / 100);
       const isCustom = customMatch != null;
       updateFoods((prev) => [
@@ -1895,19 +2045,19 @@ export default function KcalsPage() {
           name: displayName,
           kcal,
           source: isCustom ? "manual" as const : "usda" as const,
-          sourceName: isCustom ? customMatch.name : (cached?.name ?? parsed.name),
+          sourceName: isCustom ? customMatch.name : (cached?.name ?? canonicalName),
           kcalPer100g: cachedKcalPer100g,
           gramsPerUnit: cachedGramsPerUnit,
         },
         ...prev,
       ]);
-      trackRecentFood(parsed.name, emoji, cachedKcalPer100g, cachedGramsPerUnit);
+      trackRecentFood(canonicalName, emoji, cachedKcalPer100g, cachedGramsPerUnit);
       setRecentFoods(loadRecentFoods());
     } else {
       // Not cached: add loading item, fetch from USDA
       const loadingName = parsed.unit === "count"
-        ? `${parsed.name} x${parsed.quantity}`
-        : `${parsed.name} ${parsed.quantity}g`;
+        ? `${canonicalName} x${parsed.quantity}`
+        : `${canonicalName} ${parsed.quantity}g`;
       updateFoods((prev) => [
         { id: itemId, emoji, name: loadingName, kcal: null, loading: true },
         ...prev,
@@ -1916,7 +2066,7 @@ export default function KcalsPage() {
       fetchKcalPer100g(parsed.name).then((result) => {
         if (result != null) {
           const grams = toGrams(result.gramsPerUnit);
-          const displayName = `${parsed.name} ${grams}g`;
+          const displayName = `${canonicalName} ${grams}g`;
           const kcal = Math.round((result.kcalPer100g * grams) / 100);
           updateFoods((prev) =>
             prev.map((f) =>
@@ -1934,14 +2084,14 @@ export default function KcalsPage() {
                 : f
             )
           );
-          trackRecentFood(parsed.name, emoji, result.kcalPer100g, result.gramsPerUnit);
+          trackRecentFood(canonicalName, emoji, result.kcalPer100g, result.gramsPerUnit);
           setRecentFoods(loadRecentFoods());
         } else {
           // API failed — keep kcal null so it shows as "?"
           updateFoods((prev) =>
             prev.map((f) =>
               f.id === itemId
-                ? { ...f, kcal: null, loading: false, source: "manual" as const, sourceName: parsed.name }
+                ? { ...f, kcal: null, loading: false, source: "manual" as const, sourceName: canonicalName }
                 : f
             )
           );
@@ -1961,13 +2111,49 @@ export default function KcalsPage() {
     return n.includes(q);
   };
 
+  const queryActive = inputValue.trim().length > 0;
+  const isFoodListEmpty = foods.length === 0;
+  const emptyStateVariant = EMPTY_STATE_VARIANTS[emptyStateVariantIndex];
+  const baseRecentFoods = recentFoods.filter(
+    (rf) => !customFoods.some((cf) => cf.name.toLowerCase() === rf.name.toLowerCase())
+  );
+  const customMatches = customFoods.filter((food) => matchesFoodName(food.name, inputValue));
+  const recentMatches = baseRecentFoods.filter((food) => matchesFoodName(food.name, inputValue));
+
+  useEffect(() => {
+    if (customMatches.length > 0) {
+      setLastCustomMatch(customMatches[customMatches.length - 1]);
+    }
+  }, [customMatches]);
+
+  useEffect(() => {
+    if (recentMatches.length > 0) {
+      setLastRecentMatch(recentMatches[recentMatches.length - 1]);
+    }
+  }, [recentMatches]);
+
+  const fallbackCustom = lastCustomMatch && customFoods.some((f) => f.id === lastCustomMatch.id)
+    ? lastCustomMatch
+    : null;
+  const fallbackRecent = lastRecentMatch && baseRecentFoods.some((f) => f.name === lastRecentMatch.name)
+    ? lastRecentMatch
+    : null;
+
+  const customPillsToShow = queryActive
+    ? (customMatches.length ? customMatches : fallbackCustom ? [fallbackCustom] : [])
+    : customFoods;
+  const recentPillsToShow = queryActive
+    ? (recentMatches.length ? recentMatches : fallbackRecent ? [fallbackRecent] : [])
+    : baseRecentFoods;
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault();
       handleSubmit();
     }
-    if (e.key === "Backspace" && !inputValue && selectedCustomFood) {
-      setSelectedCustomFood(null);
+    if (e.key === "Backspace" && !inputValue) {
+      if (selectedCustomFood) setSelectedCustomFood(null);
+      if (selectedRecentFood) setSelectedRecentFood(null);
     }
   };
 
@@ -2608,7 +2794,7 @@ export default function KcalsPage() {
                   <button
                     className="kcals-chip kcals-avatar-btn"
                     type="button"
-                    onClick={() => setShowProfileModal(true)}
+                    onClick={handleOpenAccountOrAuthModal}
                   >
                     <span className="kcals-avatar-inner">
                       {showAvatarPhoto ? (
@@ -2622,7 +2808,7 @@ export default function KcalsPage() {
                   <button
                     className="kcals-chip kcals-chip-btn"
                     type="button"
-                    onClick={() => setShowAuthModal(true)}
+                    onClick={handleOpenAccountOrAuthModal}
                   >
                     <span className="kcals-chip-icon">{"\u{1F512}"}</span>
                     Sign in
@@ -2656,18 +2842,18 @@ export default function KcalsPage() {
           </div>
 
           {/* Calorie Display */}
-          <div
-            className={`kcals-calorie-display${isCompact ? " is-hidden" : ""}`}
-            onClick={() => setShowGoalModal(true)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                setShowGoalModal(true);
-              }
-            }}
-          >
+		          <div
+		            className={`kcals-calorie-display${isCompact ? " is-hidden" : ""}`}
+		            onClick={handleOpenAccountOrAuthModal}
+		            role="button"
+		            tabIndex={0}
+		            onKeyDown={(e) => {
+		              if (e.key === "Enter" || e.key === " ") {
+		                e.preventDefault();
+		                handleOpenAccountOrAuthModal();
+		              }
+		            }}
+		          >
             <div className="kcals-calorie-number">
               <span className="kcals-calorie-value">{totalKcal}</span>
               <span className="kcals-calorie-unit">kcal</span>
@@ -2681,18 +2867,50 @@ export default function KcalsPage() {
             </p>
           </div>
 
-          {/* Food List */}
-          <div className="kcals-section-header">
-            <span>Food list ({foods.length})</span>
-            {foods.some((f) => f.loading) && (
-              <span className="kcals-status-text">Fetching from USDA</span>
-            )}
-          </div>
-          <div className="kcals-food-list">
-            {foods.map(renderFoodRow)}
-          </div>
-        </div>
-      )}
+	          {/* Food List / Empty State */}
+		          {isFoodListEmpty ? (
+		            <div className="kcals-empty-state">
+		              <div
+                    key={`empty-variant-${emptyStateVariantIndex}`}
+                    className="kcals-empty-state-content"
+                    onPointerDown={rotateEmptyStateVariant}
+                  >
+		                <div className="kcals-empty-state-emoji">{emptyStateVariant.emoji}</div>
+		                <div className="kcals-empty-state-title">{emptyStateVariant.title}</div>
+		                <div className="kcals-empty-state-text">
+		                  {emptyStateVariant.text}
+		                </div>
+		              </div>
+	              <div className="kcals-empty-chip-list kcals-pills">
+	                {EMPTY_STATE_QUICK_CHIPS.map((chip) => (
+	                  <button
+	                    key={chip.label}
+	                    className="kcals-pill"
+	                    type="button"
+	                    onPointerDown={(e) => e.preventDefault()}
+	                    onClick={() => handleEmptyStateChipTap(chip)}
+	                  >
+	                    <span className="kcals-pill-emoji" aria-hidden="true">{chip.emoji}</span>
+	                    <span className="kcals-pill-label">{chip.label}</span>
+	                  </button>
+	                ))}
+	              </div>
+	            </div>
+	          ) : (
+	            <>
+	              <div className="kcals-section-header">
+	                <span>Food list ({foods.length})</span>
+	                {foods.some((f) => f.loading) && (
+	                  <span className="kcals-status-text">Fetching from USDA</span>
+	                )}
+	              </div>
+	              <div className="kcals-food-list">
+	                {foods.map(renderFoodRow)}
+	              </div>
+	            </>
+	          )}
+	        </div>
+	      )}
 
       {/* Suggestions Panel */}
       {inputFocused && (
@@ -2716,9 +2934,7 @@ export default function KcalsPage() {
               </div>
               {customFoods.length > 0 && (
                 <div className="kcals-pills">
-                  {customFoods
-                    .filter((food) => matchesFoodName(food.name, inputValue))
-                    .map((food) => (
+                  {customPillsToShow.map((food) => (
                     <button
                       key={food.id}
                       className="kcals-pill"
@@ -2742,26 +2958,23 @@ export default function KcalsPage() {
                           alt=""
                           className="kcals-pill-image"
                         />
-                      ) : (
-                        <span className="kcals-pill-emoji">{"\u{1F4E6}"}</span>
-                      )}
-                      {food.name}
-                    </button>
-                  ))}
-                </div>
+	                      ) : (
+	                        <span className="kcals-pill-emoji">{"\u{1F4E6}"}</span>
+	                      )}
+	                      <span className="kcals-pill-label">{food.name}</span>
+	                    </button>
+	                  ))}
+	                </div>
               )}
             </div>
 
-            {recentFoods.filter((rf) => !customFoods.some((cf) => cf.name.toLowerCase() === rf.name.toLowerCase())).length > 0 && (
+            {baseRecentFoods.length > 0 && (
               <div className="kcals-suggestion-section">
                 <div className="kcals-suggestion-header">
                   <span>Frequently Used</span>
                 </div>
                 <div className="kcals-pills">
-                  {recentFoods
-                    .filter((rf) => !customFoods.some((cf) => cf.name.toLowerCase() === rf.name.toLowerCase()))
-                    .filter((food) => matchesFoodName(food.name, inputValue))
-                    .map((food) => (
+                  {recentPillsToShow.map((food) => (
                     <button
                       key={food.name}
                       className="kcals-pill"
@@ -2774,16 +2987,16 @@ export default function KcalsPage() {
                       onPointerCancel={handlePillPointerEnd}
                       onClick={() => {
                         if (!pillLongPressRef.current.triggered) {
-                          handlePillTap(food.name);
+                          handlePillTap(food);
                         }
                       }}
                       type="button"
-                    >
-                      <span className="kcals-pill-emoji">{food.emoji}</span>
-                      {food.name}
-                    </button>
-                  ))}
-                </div>
+	                    >
+	                      <span className="kcals-pill-emoji">{food.emoji}</span>
+	                      <span className="kcals-pill-label">{food.name}</span>
+	                    </button>
+	                  ))}
+	                </div>
               </div>
             )}
           </div>
@@ -2793,14 +3006,16 @@ export default function KcalsPage() {
       {/* Input Bar */}
       <div className="kcals-input-bar">
         <div className="kcals-input-wrapper">
-          {selectedCustomFood && (
-            <span className="kcals-input-tag">{selectedCustomFood.name}</span>
+          {(selectedCustomFood || selectedRecentFood) && (
+            <span className={`kcals-input-tag${selectedCustomFood ? " kcals-input-tag--custom" : ""}`}>
+              {selectedCustomFood?.name ?? selectedRecentFood?.name}
+            </span>
           )}
           <input
             ref={inputRef}
             className="kcals-input"
             type="text"
-            placeholder={selectedCustomFood ? "100g" : "Type what you ate..."}
+            placeholder={selectedCustomFood || selectedRecentFood ? "100g" : "Type what you ate..."}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onFocus={handleInputFocus}
@@ -2808,7 +3023,7 @@ export default function KcalsPage() {
             onKeyDown={handleKeyDown}
             enterKeyHint="send"
           />
-          {inputValue || selectedCustomFood ? (
+          {inputValue || selectedCustomFood || selectedRecentFood ? (
             <button className="kcals-submit-btn" type="button" onPointerDown={(e) => e.preventDefault()} onClick={handleSubmit}>
               <ArrowUpIcon />
             </button>
@@ -3146,76 +3361,9 @@ export default function KcalsPage() {
         )}
       </BottomSheet>
 
-      {/* Calorie Goal & Sync Modal */}
-      <BottomSheet open={showGoalModal} onClose={() => setShowGoalModal(false)}>
-        <div className="kcals-modal-handle" />
-        <div className="kcals-settings-modal">
-          <div className="kcals-settings-title">Daily calorie limit</div>
-          <div className="kcals-settings-input">
-            <input
-              className="kcals-modal-input"
-              type="number"
-              value={calorieGoalInput}
-              onChange={(e) => setCalorieGoalInput(e.target.value)}
-              onBlur={(e) => commitCalorieGoal(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.currentTarget.blur();
-                }
-              }}
-              placeholder={DEFAULT_CALORIE_GOAL.toString()}
-              inputMode="numeric"
-            />
-            <span className="kcals-settings-suffix">kcal</span>
-          </div>
-          <div className="kcals-settings-row">
-            <span>Sync automatically</span>
-            <button
-              className={`kcals-toggle${autoSyncEnabled ? " is-on" : ""}`}
-              type="button"
-              onClick={toggleAutoSync}
-              aria-pressed={autoSyncEnabled}
-            >
-              <span className="kcals-toggle-thumb" />
-            </button>
-          </div>
-          <div className="kcals-settings-row">
-            <span>Day resets at</span>
-            <select
-              className="kcals-settings-select"
-              value={dayStartHour}
-              onChange={(e) => handleDayStartHourChange(Number(e.target.value))}
-            >
-              {Array.from({ length: 24 }, (_, i) => (
-                <option key={i} value={i}>
-                  {String(i).padStart(2, "0")}:00
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="kcals-settings-note">
-            Auto sync runs every morning when your daily log is empty.
-          </div>
-          <div className="kcals-settings-sync">
-            <span className="kcals-settings-last">
-              {lastSyncAt ? `Last sync ${new Date(lastSyncAt).toLocaleString()}` : "Never synced"}
-            </span>
-            <button
-              className="kcals-settings-link"
-              type="button"
-              onClick={handleSyncNow}
-              disabled={syncStatus === "syncing"}
-            >
-              {syncStatus === "syncing" ? "Syncing..." : "Sync now"}
-            </button>
-          </div>
-          {syncError && <div className="kcals-settings-error">{syncError}</div>}
-        </div>
-      </BottomSheet>
-
-      {/* Profile Modal */}
-      <BottomSheet open={showProfileModal} onClose={() => setShowProfileModal(false)} variant="center">
-        <div className="kcals-profile-modal">
+	      {/* Profile Modal */}
+	      <BottomSheet open={showProfileModal} onClose={() => setShowProfileModal(false)} variant="center">
+	        <div className="kcals-profile-modal">
           <div className="kcals-profile-avatar">
             {avatarMode === "emoji" ? (
               <input
@@ -3259,11 +3407,69 @@ export default function KcalsPage() {
             >
               <span className="kcals-profile-tab-icon kcals-profile-tab-icon--photo" aria-hidden="true" />
             </button>
-          </div>
-          <div className="kcals-profile-email">{user?.email ?? "Account"}</div>
-          <button className="kcals-profile-link" type="button" onClick={handleSignOut}>
-            Log out
-          </button>
+	          </div>
+	          <div className="kcals-profile-email">{user?.email ?? "Account"}</div>
+            <div className="kcals-profile-settings">
+              <div className="kcals-profile-settings-row">
+                <span className="kcals-profile-settings-label">Calorie limit (kcal)</span>
+                <input
+                  className="kcals-profile-settings-input"
+                  type="number"
+                  value={calorieGoalInput}
+                  onChange={(e) => setCalorieGoalInput(e.target.value)}
+                  onBlur={(e) => commitCalorieGoal(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  placeholder={DEFAULT_CALORIE_GOAL.toString()}
+                  inputMode="numeric"
+                />
+              </div>
+              <div className="kcals-profile-settings-row">
+                <span className="kcals-profile-settings-label">Day resets at</span>
+                <select
+                  className="kcals-profile-settings-input"
+                  value={dayStartHour}
+                  onChange={(e) => handleDayStartHourChange(Number(e.target.value))}
+                >
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <option key={i} value={i}>
+                      {String(i).padStart(2, "0")}:00
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="kcals-profile-settings-row">
+                <span className="kcals-profile-settings-label">Sync automatically</span>
+                <button
+                  className={`kcals-toggle${autoSyncEnabled ? " is-on" : ""}`}
+                  type="button"
+                  onClick={toggleAutoSync}
+                  aria-pressed={autoSyncEnabled}
+                >
+                  <span className="kcals-toggle-thumb" />
+                </button>
+              </div>
+              {!autoSyncEnabled && (
+                <div className="kcals-profile-sync-row">
+                  <span className="kcals-profile-sync-last">Last sync {lastSyncRelative}</span>
+                  <button
+                    className="kcals-settings-link"
+                    type="button"
+                    onClick={handleSyncNow}
+                    disabled={syncStatus === "syncing"}
+                  >
+                    {syncStatus === "syncing" ? "Syncing..." : "Sync now"}
+                  </button>
+                </div>
+              )}
+              {syncError && <div className="kcals-settings-error">{syncError}</div>}
+            </div>
+	          <button className="kcals-profile-link" type="button" onClick={handleSignOut}>
+	            Log out
+	          </button>
           <input
             ref={avatarPhotoInputRef}
             className="kcals-profile-photo-input"
@@ -3292,12 +3498,12 @@ export default function KcalsPage() {
                 disabled={syncStatus === "syncing"}
               >
                 {syncStatus === "syncing" ? "Syncing..." : "Sync now"}
-              </button>
-              {syncError && <div className="kcals-auth-error">{syncError}</div>}
-              {lastSyncAt && <div className="kcals-auth-hint">Last synced {new Date(lastSyncAt).toLocaleString()}</div>}
-              <button className="kcals-auth-secondary" type="button" onClick={handleSignOut}>
-                Sign out
-              </button>
+	              </button>
+	              {syncError && <div className="kcals-auth-error">{syncError}</div>}
+	              {lastSyncAt && <div className="kcals-auth-hint">Last synced {lastSyncRelative}</div>}
+	              <button className="kcals-auth-secondary" type="button" onClick={handleSignOut}>
+	                Sign out
+	              </button>
             </>
           ) : (
             <>

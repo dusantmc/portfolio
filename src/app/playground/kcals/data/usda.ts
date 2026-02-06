@@ -26,6 +26,96 @@ export function parseFoodInput(text: string): { name: string; quantity: number; 
   return { name: trimmed, quantity: 100, unit: "g" };
 }
 
+type FoodAlias = {
+  aliases: string[];
+  usdaQuery: string;
+  displayName: string;
+  emoji?: string;
+};
+
+const FOOD_ALIASES: FoodAlias[] = [
+  {
+    aliases: ["chia", "black chia seeds", "chia seeds", "dried chia seeds"],
+    usdaQuery: "dried chia seeds",
+    displayName: "Chia seeds",
+    emoji: "\u{1F331}",
+  },
+];
+
+function normalizeAliasKey(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const FOOD_ALIAS_LOOKUP = new Map<string, FoodAlias>();
+for (const alias of FOOD_ALIASES) {
+  for (const entry of alias.aliases) {
+    FOOD_ALIAS_LOOKUP.set(normalizeAliasKey(entry), alias);
+  }
+}
+
+export function resolveFoodAlias(foodName: string): {
+  queryName: string;
+  displayName: string;
+  emoji?: string;
+  matched: boolean;
+} {
+  const normalized = normalizeAliasKey(foodName);
+  const alias = FOOD_ALIAS_LOOKUP.get(normalized);
+  if (!alias) {
+    return { queryName: foodName, displayName: foodName, matched: false };
+  }
+  return {
+    queryName: alias.usdaQuery,
+    displayName: alias.displayName,
+    emoji: alias.emoji,
+    matched: true,
+  };
+}
+
+type EmbeddedFood = {
+  aliases: string[];
+  name: string;
+  kcalPer100g: number;
+  emoji: string;
+  gramsPerUnit?: number;
+};
+
+const EMBEDDED_FOODS: EmbeddedFood[] = [
+  {
+    aliases: ["oat", "oats"],
+    name: "Oats",
+    kcalPer100g: 375,
+    emoji: "\u{1F963}",
+  },
+];
+
+const EMBEDDED_FOOD_LOOKUP = new Map<string, EmbeddedFood>();
+for (const food of EMBEDDED_FOODS) {
+  for (const entry of food.aliases) {
+    EMBEDDED_FOOD_LOOKUP.set(normalizeAliasKey(entry), food);
+  }
+}
+
+export function resolveEmbeddedFood(foodName: string): {
+  name: string;
+  kcalPer100g: number;
+  emoji: string;
+  gramsPerUnit?: number;
+} | null {
+  const food = EMBEDDED_FOOD_LOOKUP.get(normalizeAliasKey(foodName));
+  if (!food) return null;
+  return {
+    name: food.name,
+    kcalPer100g: food.kcalPer100g,
+    emoji: food.emoji,
+    gramsPerUnit: food.gramsPerUnit,
+  };
+}
+
 /* ===========================
    USDA API
    =========================== */
@@ -130,10 +220,38 @@ function pickFood(foods: USDAFood[]): { kcal: number; description: string; grams
   return null;
 }
 
+function pickTopRankedFood(foods: USDAFood[]): { kcal: number; description: string; gramsPerUnit?: number } | null {
+  for (const food of foods) {
+    const kcal = getEnergy(food);
+    if (kcal != null && kcal > 0) {
+      return {
+        kcal,
+        description: food.description,
+        gramsPerUnit: pickGramsPerUnit(food.foodMeasures),
+      };
+    }
+  }
+  return null;
+}
+
 export async function fetchKcalPer100g(
   foodName: string
 ): Promise<{ kcalPer100g: number; description: string; gramsPerUnit?: number } | null> {
-  const normalized = singularize(foodName);
+  const aliased = resolveFoodAlias(foodName);
+  const normalized = singularize(aliased.queryName);
+
+  if (aliased.matched) {
+    try {
+      const foods = await fetchFoods(normalized);
+      if (!foods) return null;
+      const match = pickTopRankedFood(foods);
+      if (!match) return null;
+      return { kcalPer100g: match.kcal, description: match.description, gramsPerUnit: match.gramsPerUnit };
+    } catch {
+      return null;
+    }
+  }
+
   const isCooked = COOKED_KEYWORDS.test(normalized);
 
   try {

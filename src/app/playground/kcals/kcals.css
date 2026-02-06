@@ -22,7 +22,7 @@
   --radius-input: 28px;
   --radius-chip: 36px;
     --radius-modal: 32px;
-  --input-bar-height: 80px;
+  --input-bar-height: 84px;
   --input-bar-total-height: calc(var(--input-bar-height) + env(safe-area-inset-bottom));
 
   background: var(--background);
@@ -65,6 +65,7 @@
   display: flex;
   flex-direction: column;
   height: calc(var(--vvh, 100dvh) - var(--input-bar-total-height));
+  position: relative;
 }
 
 .kcals-content.is-focused {
@@ -94,7 +95,7 @@
   width: 100%;
   max-width: none;
   left: auto;
-  height: var(--input-bar-total-height);
+  height: var(--input-bar-height);
 }
 
 .kcals-input-bar {
@@ -336,6 +337,78 @@
   mask-size: 100% 100%;
 }
 
+.kcals-empty-state {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  padding-bottom: 96px;
+}
+
+.kcals-empty-state-content {
+  height: 100%;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  animation: kcals-empty-fade-in 0.6s ease both;
+}
+
+@keyframes kcals-empty-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+      transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+      transform: translateY(-20px);
+  }
+}
+
+.kcals-empty-state-emoji {
+  font-size: 60px;
+  line-height: 72px;
+  opacity: 0.6;
+  margin-bottom:12px;
+}
+
+.kcals-empty-state-title {
+  margin-top: 8px;
+  font-size: 17px;
+  line-height: 17px;
+  font-weight: 600;
+  color: var(--black-70);
+  opacity: 0.9;
+}
+
+.kcals-empty-state-text {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 18px;
+  font-weight: 400;
+  color: var(--black-50);
+}
+
+.kcals-empty-chip-list {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.kcals-empty-chip-list .kcals-pill {
+  font-weight: 500;
+
+}
+
 .kcals-food-item {
   --swipe-x: 0px;
   --press-scale: 1;
@@ -463,10 +536,14 @@
 
 .kcals-input-tag {
   font-size: 16px;
-  font-weight: 600;
-  color: var(--blue);
+  color: var(--black-100);
   white-space: nowrap;
   margin-right: 4px;
+}
+
+.kcals-input-tag--custom {
+    font-weight: 500;
+  color: var(--blue);
 }
 
 .kcals-input {
@@ -598,6 +675,11 @@
 .kcals-pill-emoji {
   font-size: 18px;
   line-height: 1;
+}
+
+.kcals-pill-label {
+  position: relative;
+  top: 1px;
 }
 
 .kcals-pill-image {
@@ -948,8 +1030,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 8px 16px 12px;
+  gap: 12px;
+  padding: 8px 16px 8px;
 }
 
 .kcals-profile-avatar {
@@ -1015,12 +1097,12 @@
   background: rgba(145, 144, 142, 0.1);
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  overflow: visible;
 }
 
 .kcals-profile-tab {
   height: 32px;
-  width: 36px;
+  width: 44px;
   border-radius: 999px;
   border: none;
   background: transparent;
@@ -1053,8 +1135,8 @@
 
 .kcals-profile-tab.is-active {
   background: var(--white);
-  outline: 0.5px solid var(--border-16);
-  box-shadow: var(--shadow-item);
+  outline: 1px solid var(--border-8);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
 .kcals-profile-photo-input {
@@ -1063,16 +1145,84 @@
 
 .kcals-profile-email {
   text-align: center;
-    font-size: 18px;
+  font-size: 18px;
   line-height: 22px;
   font-weight: 700;
-    color: var(--black-100);
+  color: var(--black-100);
+}
+
+.kcals-profile-settings {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom:8px;
+}
+
+.kcals-profile-settings-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.kcals-profile-settings-label {
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--black-70);
+  line-height: 18px;
+}
+
+.kcals-profile-settings-input {
+  width: 64px;
+  height: 36px;
+  border: 1px solid var(--border-16);
+  border-radius: 12px;
+  background: var(--white);
+  color: var(--black-100);
+  font-size: 15px;
+  font-weight: 500;
+  text-align: center;
+  font-family: inherit;
+  padding: 0 8px;
+}
+
+.kcals-profile-settings-input:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+select.kcals-profile-settings-input {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: none;
+}
+
+select.kcals-profile-settings-input::-ms-expand {
+  display: none;
+}
+
+.kcals-profile-sync-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.kcals-profile-sync-last {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--black-50);
+  line-height: 18px;
 }
 
 .kcals-profile-link {
   background: none;
   border: none;
-  color: var(--black-70);
+  color: var(--black-50);
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
@@ -1110,21 +1260,22 @@
 }
 
 .kcals-toggle {
-  width: 46px;
+  width: 56px;
   height: 28px;
   border-radius: 999px;
-  border: 1px solid var(--border-8);
-  background: #f2f2f2;
+  border: none;
+  background: var(--black-70);
   display: inline-flex;
   align-items: center;
-  padding: 2px;
+  justify-content: flex-start;
+  padding: 3px;
   cursor: pointer;
-  transition: background 0.2s ease;
+  opacity: 0.4;
+  transition: opacity 0.2s ease;
 }
 
 .kcals-toggle.is-on {
-  background: #e3f0ff;
-  border-color: rgba(0, 123, 255, 0.4);
+  opacity: 1;
 }
 
 .kcals-toggle.is-disabled {
@@ -1133,9 +1284,9 @@
 }
 
 .kcals-toggle-thumb {
-  width: 22px;
+  width: 28px;
   height: 22px;
-  border-radius: 50%;
+  border-radius: 11px;
   background: #fff;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
   transform: translateX(0);
@@ -1143,7 +1294,7 @@
 }
 
 .kcals-toggle.is-on .kcals-toggle-thumb {
-  transform: translateX(18px);
+  transform: translateX(22px);
 }
 
 .kcals-settings-note {
@@ -1164,6 +1315,7 @@
   border: none;
   background: none;
   color: var(--blue);
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   padding: 0;
@@ -1713,41 +1865,6 @@
 
 .kcals-chip-menu-item.kcals-chip-menu-danger {
   color: var(--red);
-}
-
-/* ===========================
-   Empty State
-   =========================== */
-
-.kcals-empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 80px 40px;
-  gap: 8px;
-}
-
-.kcals-empty-icon {
-  font-size: 60px;
-  width: 80px;
-  height: 80px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 16px;
-}
-
-.kcals-empty-title {
-  font-size: 16px;
-  font-weight: 500;
-}
-
-.kcals-empty-subtitle {
-  font-size: 14px;
-  color: var(--black-50);
-  line-height: 1.4;
 }
 
 /* ===========================
