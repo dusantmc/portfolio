@@ -2794,7 +2794,7 @@ export default function KcalsPage() {
           {weeklyIsOnTrack ? "\u{1F525}" : "\u{1F437}"}
         </div>
         <div className="kcals-weekly-title">
-          {weeklyIsOnTrack ? "You're on track!" : "Watch out!"}
+          {weeklyIsOnTrack ? "You're on track!" : "Heads up!"}
         </div>
         <div className="kcals-weekly-list">
           {weeklyVisibleEntries.map((entry) => {
@@ -2819,8 +2819,8 @@ export default function KcalsPage() {
           })}
         </div>
         <div className="kcals-weekly-summary">
-          Over the last 7 days you ate<br />
-          <strong>{weeklyAbsTotal.toLocaleString()} kcal</strong> {weeklyIsOnTrack ? "less" : "over"} than the limit
+          Over the last 7 days, you {weeklyIsOnTrack ? "stayed" : "were"}<br />
+          <strong>{weeklyAbsTotal.toLocaleString()} kcal</strong> {weeklyIsOnTrack ? "below" : "above"} your limit
         </div>
       </>
     );
