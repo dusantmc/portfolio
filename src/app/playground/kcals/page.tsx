@@ -3313,10 +3313,21 @@ export default function KcalsPage() {
       {/* Suggestions Panel */}
       {inputFocused && (
         <div className="kcals-suggestions" ref={suggestionsScrollRef}>
-          <div
-            className="kcals-suggestions-dismiss"
-            onClick={dismissSuggestions}
-          />
+          <div className="kcals-suggestions-topbar">
+            <button
+              className="kcals-suggestions-close"
+              type="button"
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={dismissSuggestions}
+              aria-label="Close suggestions"
+            >
+              <img
+                src="/kcals/assets/close.svg"
+                alt=""
+                className="kcals-share-close-icon"
+              />
+            </button>
+          </div>
           <div className="kcals-suggestions-content">
             <div className="kcals-suggestion-section">
               <div className="kcals-suggestion-header">

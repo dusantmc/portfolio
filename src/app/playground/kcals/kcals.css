@@ -735,12 +735,37 @@
   min-height: calc(var(--vvh, 100dvh) - 100px);
 }
 
-.kcals-suggestions-dismiss {
-  flex: 1;
+.kcals-suggestions-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  height: calc(68px + env(safe-area-inset-top));
+  padding: env(safe-area-inset-top) 16px 0;
+  background: rgba(254, 253, 251, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.kcals-suggestions-close {
+  height: 40px;
+  width: 40px;
+  border: none;
+  background: var(--white);
+  border-radius: 20px;
+  outline: 0.5px solid var(--border-8);
+  box-shadow: var(--shadow-item);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--black-100);
 }
 
 .kcals-suggestions-content {
-  padding: 0 16px;
+  padding: 0 16px 16px;
 }
 
 .kcals-suggestion-section {
