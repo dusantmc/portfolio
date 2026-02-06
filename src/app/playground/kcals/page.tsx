@@ -281,6 +281,7 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 
 export default function KcalsPage() {
   const [foods, setFoods] = useState<FoodItem[]>([]);
+  const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [emptyStateVariantIndex, setEmptyStateVariantIndex] = useState(0);
   const [inputValue, setInputValue] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
@@ -443,6 +444,7 @@ export default function KcalsPage() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     setFoods(loadFoodList());
     setCustomFoods(loadCustomFoods());
     setRecentFoods(loadRecentFoods());
@@ -471,6 +473,12 @@ export default function KcalsPage() {
         setAvatarPhoto(storedPhoto);
       }
     }
+    if (!cancelled) {
+      setIsBootstrapping(false);
+    }
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -1139,6 +1147,15 @@ export default function KcalsPage() {
   const weeklyHasData = weeklyVisibleEntries.length > 0;
   const weeklyIsOnTrack = weeklyBurn >= 0;
   const weeklyAbsTotal = Math.abs(weeklyBurn);
+  const weeklyChipHasData = weeklyBreakdown.some(
+    (e) => calorieGoal - e.remaining >= 800
+  );
+  const weeklyChipIcon = weeklyChipHasData
+    ? (weeklyIsOnTrack ? "\u{1F525}" : "\u{1F437}")
+    : "\u231B\uFE0F";
+  const weeklyChipValue = weeklyChipHasData
+    ? formatCompact(Math.abs(weeklyBurn))
+    : "0";
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareBgType, setShareBgType] = useState<"gradient" | "image">("gradient");
   const [shareImage, setShareImage] = useState<string | null>(null);
@@ -1176,6 +1193,7 @@ export default function KcalsPage() {
   const badgeMovedRef = useRef(false);
 
   useEffect(() => {
+    if (isBootstrapping) return;
     const hasFood = foods.some((f) => !f.loading && f.kcal != null);
     saveDailyEntry(remaining, hasFood);
     setStreak(getStreak());
@@ -1185,7 +1203,7 @@ export default function KcalsPage() {
       (e) => calorieGoal - e.remaining >= 800
     );
     setWeeklyBurn(qualifying.reduce((sum, e) => sum + e.remaining, 0));
-  }, [foods, remaining, calorieGoal, dayStartHour]);
+  }, [foods, remaining, calorieGoal, dayStartHour, isBootstrapping]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -2826,6 +2844,37 @@ export default function KcalsPage() {
     );
   };
 
+  const renderMainSkeleton = () => (
+    <>
+      <div className="kcals-topbar kcals-skeleton-topbar" aria-hidden="true">
+        <div className="kcals-topbar-left">
+          <div className="kcals-chip kcals-skeleton-chip kcals-skeleton-chip--avatar" />
+          <div className="kcals-chip kcals-skeleton-chip kcals-skeleton-chip--date" />
+        </div>
+        <div className="kcals-topbar-right">
+          <div className="kcals-chip kcals-skeleton-chip kcals-skeleton-chip--small" />
+          <div className="kcals-chip kcals-skeleton-chip kcals-skeleton-chip--small" />
+        </div>
+      </div>
+      <div className="kcals-calorie-display kcals-skeleton-calorie" aria-hidden="true">
+        <span className="kcals-skeleton-line kcals-skeleton-line--headline" />
+        <span className="kcals-skeleton-line kcals-skeleton-line--subline" />
+      </div>
+      <div className="kcals-section-header kcals-section-header--skeleton" aria-hidden="true">
+        <span className="kcals-skeleton-line kcals-skeleton-line--section" />
+      </div>
+      <div className="kcals-food-list kcals-food-list--skeleton" aria-hidden="true">
+        {[0, 1, 2, 3].map((index) => (
+          <div key={`kcals-skeleton-row-${index}`} className="kcals-food-item kcals-food-item--skeleton">
+            <span className="kcals-skeleton-circle kcals-skeleton-food-emoji" />
+            <span className="kcals-skeleton-line kcals-skeleton-line--food" />
+            <span className="kcals-skeleton-line kcals-skeleton-line--kcal" />
+          </div>
+        ))}
+      </div>
+    </>
+  );
+
   return (
     <>
     <div className={`kcals-content${inputFocused ? " is-focused" : ""}`} onClick={handleContentClick} ref={contentRef}>
@@ -2849,6 +2898,10 @@ export default function KcalsPage() {
       </div>
       {!inputFocused && (
         <div className="kcals-main">
+          {isBootstrapping ? (
+            renderMainSkeleton()
+          ) : (
+            <>
           {/* Top Bar */}
           <div className={`kcals-topbar${isCompact ? " is-compact" : ""}`}>
             <div className="kcals-topbar-left">
@@ -2890,9 +2943,9 @@ export default function KcalsPage() {
               </div>
               <button className="kcals-chip kcals-chip-btn" type="button" onClick={() => setShowWeeklyModal(true)}>
                 <span className="kcals-chip-icon">
-                  {weeklyBreakdown.some((e) => calorieGoal - e.remaining >= 800) ? "\u{1F525}" : "\u{1F437}"}
+                  {weeklyChipIcon}
                 </span>
-                {weeklyBreakdown.some((e) => calorieGoal - e.remaining >= 800) ? formatCompact(Math.abs(weeklyBurn)) : "0"}
+                {weeklyChipValue}
               </button>
             </div>
             <div className="kcals-topbar-compact">
@@ -2972,6 +3025,8 @@ export default function KcalsPage() {
 	              </div>
 	            </>
 	          )}
+            </>
+          )}
 	        </div>
 	      )}
 
@@ -3068,34 +3123,41 @@ export default function KcalsPage() {
 
       {/* Input Bar */}
       <div className="kcals-input-bar">
-        <div className="kcals-input-wrapper">
-          {(selectedCustomFood || selectedRecentFood) && (
-            <span className={`kcals-input-tag${selectedCustomFood ? " kcals-input-tag--custom" : ""}`}>
-              {selectedCustomFood?.name ?? selectedRecentFood?.name}
-            </span>
-          )}
-          <input
-            ref={inputRef}
-            className="kcals-input"
-            type="text"
-            placeholder={selectedCustomFood || selectedRecentFood ? "100g" : "Type what you ate..."}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onFocus={handleInputFocus}
-            onBlur={handleInputBlur}
-            onKeyDown={handleKeyDown}
-            enterKeyHint="send"
-          />
-          {inputValue || selectedCustomFood || selectedRecentFood ? (
-            <button className="kcals-submit-btn" type="button" onPointerDown={(e) => e.preventDefault()} onClick={handleSubmit}>
-              <ArrowUpIcon />
-            </button>
-          ) : (
-            <button className="kcals-input-action" type="button">
-              <MicIcon />
-            </button>
-          )}
-        </div>
+        {isBootstrapping && !inputFocused ? (
+          <div className="kcals-input-wrapper kcals-input-wrapper--skeleton" aria-hidden="true">
+            <span className="kcals-skeleton-line kcals-skeleton-line--input" />
+            <span className="kcals-skeleton-circle kcals-skeleton-input-action" />
+          </div>
+        ) : (
+          <div className="kcals-input-wrapper">
+            {(selectedCustomFood || selectedRecentFood) && (
+              <span className={`kcals-input-tag${selectedCustomFood ? " kcals-input-tag--custom" : ""}`}>
+                {selectedCustomFood?.name ?? selectedRecentFood?.name}
+              </span>
+            )}
+            <input
+              ref={inputRef}
+              className="kcals-input"
+              type="text"
+              placeholder={selectedCustomFood || selectedRecentFood ? "100g" : "Type what you ate..."}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
+              onKeyDown={handleKeyDown}
+              enterKeyHint="send"
+            />
+            {inputValue || selectedCustomFood || selectedRecentFood ? (
+              <button className="kcals-submit-btn" type="button" onPointerDown={(e) => e.preventDefault()} onClick={handleSubmit}>
+                <ArrowUpIcon />
+              </button>
+            ) : (
+              <button className="kcals-input-action" type="button">
+                <MicIcon />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Chip Context Menu */}

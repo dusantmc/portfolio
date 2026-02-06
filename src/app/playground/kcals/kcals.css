@@ -501,6 +501,130 @@
 }
 
 /* ===========================
+   Skeleton Loader
+   =========================== */
+
+@keyframes kcals-skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.kcals-skeleton-line,
+.kcals-skeleton-circle,
+.kcals-skeleton-chip {
+  background: linear-gradient(
+    90deg,
+    rgba(25, 24, 21, 0.06) 20%,
+    rgba(25, 24, 21, 0.12) 50%,
+    rgba(25, 24, 21, 0.06) 80%
+  );
+  background-size: 200% 100%;
+  animation: kcals-skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+.kcals-skeleton-topbar {
+  pointer-events: none;
+}
+
+.kcals-skeleton-chip {
+  padding: 0;
+  color: transparent;
+  border-color: transparent;
+}
+
+.kcals-skeleton-chip--avatar {
+  width: 36px;
+}
+
+.kcals-skeleton-chip--date {
+  width: 106px;
+}
+
+.kcals-skeleton-chip--small {
+  width: 56px;
+}
+
+.kcals-skeleton-calorie {
+  gap: 10px;
+  pointer-events: none;
+}
+
+.kcals-skeleton-line {
+  display: inline-flex;
+  border-radius: 999px;
+}
+
+.kcals-skeleton-line--headline {
+  width: 186px;
+  height: 48px;
+  border-radius: 16px;
+}
+
+.kcals-skeleton-line--subline {
+  width: 208px;
+  height: 20px;
+}
+
+.kcals-section-header--skeleton {
+  pointer-events: none;
+}
+
+.kcals-skeleton-line--section {
+  width: 122px;
+  height: 12px;
+}
+
+.kcals-food-list--skeleton {
+  overflow: hidden;
+}
+
+.kcals-food-item--skeleton {
+  pointer-events: none;
+}
+
+.kcals-skeleton-circle {
+  display: inline-flex;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.kcals-skeleton-food-emoji {
+  width: 32px;
+  height: 32px;
+}
+
+.kcals-skeleton-line--food {
+  width: 160px;
+  height: 18px;
+  margin-left: 12px;
+}
+
+.kcals-skeleton-line--kcal {
+  width: 88px;
+  height: 18px;
+  margin-left: auto;
+}
+
+.kcals-input-wrapper--skeleton {
+  pointer-events: none;
+}
+
+.kcals-skeleton-line--input {
+  flex: 1;
+  height: 18px;
+}
+
+.kcals-skeleton-input-action {
+  width: 36px;
+  height: 36px;
+  margin-left: 12px;
+}
+
+/* ===========================
    Input Bar
    =========================== */
 
