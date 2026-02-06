@@ -1635,6 +1635,14 @@ export default function KcalsPage() {
       setTimeout(() => setSyncStatus("idle"), 1200);
       return;
     }
+    // IMPORTANT: when local data exists, push first to avoid overwriting
+    // newer unsynced local entries with stale remote state.
+    if (localHasData) {
+      await syncToSupabase("manual");
+      return;
+    }
+
+    // Local is empty: safe to restore from cloud.
     const pullResult = await syncFromSupabase();
     if (pullResult === "data") {
       setSyncStatus("ok");
@@ -1645,11 +1653,9 @@ export default function KcalsPage() {
       setSyncStatus("error");
       return;
     }
-    if (!localHasData) {
-      await syncToSupabase("manual");
-      return;
-    }
-    await syncToSupabase("manual");
+    setSyncStatus("error");
+    setSyncError("No remote data found for this account.");
+    setTimeout(() => setSyncStatus("idle"), 1200);
   };
 
   const handlePillTap = (food: RecentFood) => {
