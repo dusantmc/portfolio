@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, type ChangeEvent, type Pointe
 import type { User } from "@supabase/supabase-js";
 import { SmokeRing } from "@paper-design/shaders-react";
 import {
+  type DailyEntry,
   type FoodItem,
   type CustomFood,
   type RecentFood,
@@ -62,6 +63,29 @@ function formatRelativeTime(iso: string | null): string {
   if (diffMs < hour) return `${Math.floor(diffMs / minute)}m ago`;
   if (diffMs < day) return `${Math.floor(diffMs / hour)}h ago`;
   return `${Math.floor(diffMs / day)}d ago`;
+}
+
+function normalizeDailyLog(raw: unknown): Record<string, DailyEntry> {
+  if (!raw || typeof raw !== "object") return {};
+  const entries: Record<string, DailyEntry> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!value || typeof value !== "object") continue;
+    const remaining = Number((value as { remaining?: unknown }).remaining);
+    const logged = (value as { logged?: unknown }).logged;
+    if (!Number.isFinite(remaining) || typeof logged !== "boolean") continue;
+    entries[key] = { remaining, logged };
+  }
+  return entries;
+}
+
+function mergeDailyLogs(
+  localLog: unknown,
+  remoteLog: unknown
+): Record<string, DailyEntry> {
+  const remote = normalizeDailyLog(remoteLog);
+  const local = normalizeDailyLog(localLog);
+  // Keep remote history, but local wins for conflicting dates.
+  return { ...remote, ...local };
 }
 
 const SWIPE_THRESHOLD = 48;
@@ -623,16 +647,21 @@ export default function KcalsPage() {
     onUploadError?: (message: string) => void
   ) => {
     if (!user || !supabase) {
-      return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: avatarPhoto ?? null };
+      return {
+        mode: avatarMode,
+        emoji: avatarEmojiDisplay,
+        photo: avatarPhoto ?? null,
+        calorieGoal,
+      };
     }
     if (avatarMode !== "photo") {
-      return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: null };
+      return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: null, calorieGoal };
     }
     if (!avatarPhoto) {
-      return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: null };
+      return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: null, calorieGoal };
     }
     if (!isDataUrl(avatarPhoto)) {
-      return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: avatarPhoto };
+      return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: avatarPhoto, calorieGoal };
     }
     try {
       const blob = dataUrlToBlob(avatarPhoto);
@@ -641,21 +670,26 @@ export default function KcalsPage() {
       const { error, publicUrl } = await uploadToStorage(path, blob);
       if (error) {
         onUploadError?.(`Storage upload failed: ${error} (path: ${path}, uid: ${user.id})`);
-        return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: avatarPhoto };
+        return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: avatarPhoto, calorieGoal };
       }
-      return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: publicUrl };
+      return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: publicUrl, calorieGoal };
     } catch {
       onUploadError?.("Avatar upload failed.");
-      return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: avatarPhoto };
+      return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: avatarPhoto, calorieGoal };
     }
-  }, [user, avatarMode, avatarEmojiDisplay, avatarPhoto, supabase]);
+  }, [user, avatarMode, avatarEmojiDisplay, avatarPhoto, calorieGoal, supabase]);
 
   const applyRemoteState = useCallback((row: {
     food_list?: FoodItem[] | null;
     custom_foods?: CustomFood[] | null;
     recent_foods?: RecentFood[] | null;
     daily_log?: Record<string, unknown> | null;
-    profile?: { mode?: "emoji" | "photo"; emoji?: string; photo?: string | null } | null;
+    profile?: {
+      mode?: "emoji" | "photo";
+      emoji?: string;
+      photo?: string | null;
+      calorieGoal?: number;
+    } | null;
     updated_at?: string | null;
   }) => {
     if (row.food_list) {
@@ -670,9 +704,8 @@ export default function KcalsPage() {
       setRecentFoods(row.recent_foods);
       localStorage.setItem("kcals-recent-foods", JSON.stringify(row.recent_foods));
     }
-    if (row.daily_log && typeof row.daily_log === "object") {
-      saveDailyLogRaw(row.daily_log as Record<string, any>);
-    }
+    const mergedDailyLog = mergeDailyLogs(loadDailyLogRaw(), row.daily_log);
+    saveDailyLogRaw(mergedDailyLog);
     if (row.profile) {
       if (row.profile.mode === "emoji" || row.profile.mode === "photo") {
         setAvatarMode(row.profile.mode);
@@ -682,6 +715,13 @@ export default function KcalsPage() {
       }
       if (row.profile.photo !== undefined) {
         setAvatarPhoto(row.profile.photo);
+      }
+      const remoteGoal = Number(row.profile.calorieGoal);
+      if (Number.isFinite(remoteGoal) && remoteGoal > 0) {
+        const normalizedGoal = Math.round(remoteGoal);
+        setCalorieGoal(normalizedGoal);
+        setCalorieGoalInput(normalizedGoal.toString());
+        localStorage.setItem(CALORIE_GOAL_KEY, normalizedGoal.toString());
       }
     }
     if (row.updated_at) {
@@ -711,6 +751,21 @@ export default function KcalsPage() {
       const sub = sessionInfo?.sub ?? "none";
       uploadErrors.push(`${message} (role: ${role}, sub: ${sub})`);
     };
+    let remoteDailyLog: Record<string, unknown> | null = null;
+    {
+      const { data: remoteState, error: remoteError } = await supabase
+        .from("kcals_state")
+        .select("daily_log")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (remoteError && remoteError.code !== "PGRST116") {
+        setSyncStatus("error");
+        setSyncError(`Sync precheck failed: ${remoteError.message}`);
+        return false;
+      }
+      remoteDailyLog = (remoteState?.daily_log as Record<string, unknown> | null) ?? null;
+    }
+    const mergedDailyLog = mergeDailyLogs(loadDailyLogRaw(), remoteDailyLog);
     const customFoodsPayload = await buildCustomFoodsPayload(reportUploadError);
     const foodListPayload = await buildFoodListPayload(foods, reportUploadError);
     const profilePayload = await buildAvatarPayload(reportUploadError);
@@ -719,7 +774,7 @@ export default function KcalsPage() {
       food_list: foodListPayload,
       custom_foods: customFoodsPayload,
       recent_foods: recentFoods,
-      daily_log: loadDailyLogRaw(),
+      daily_log: mergedDailyLog,
       profile: profilePayload,
       updated_at: new Date().toISOString(),
     };
@@ -735,6 +790,7 @@ export default function KcalsPage() {
     saveCustomFoods(customFoodsPayload);
     setFoods(foodListPayload);
     saveFoodList(foodListPayload);
+    saveDailyLogRaw(mergedDailyLog);
     if (profilePayload.mode) {
       setAvatarMode(profilePayload.mode);
     }
@@ -1619,11 +1675,14 @@ export default function KcalsPage() {
     }
     setSyncStatus("syncing");
     setSyncError(null);
+    const localGoalConfigured =
+      typeof window !== "undefined" && localStorage.getItem(CALORIE_GOAL_KEY) != null;
     const localHasData =
       foods.length > 0 ||
       customFoods.length > 0 ||
       recentFoods.length > 0 ||
-      Object.keys(loadDailyLogRaw() || {}).length > 0;
+      Object.keys(loadDailyLogRaw() || {}).length > 0 ||
+      localGoalConfigured;
     if (!isWriteAllowed) {
       const result = await syncFromSupabase();
       setSyncStatus(result === "data" ? "ok" : "error");
