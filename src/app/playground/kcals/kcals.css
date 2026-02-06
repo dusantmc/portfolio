@@ -741,12 +741,12 @@
   z-index: 6;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: flex-end;
   height: calc(68px + env(safe-area-inset-top));
   padding: env(safe-area-inset-top) 16px 0;
   background: rgba(254, 253, 251, 0.8);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .kcals-suggestions-close {

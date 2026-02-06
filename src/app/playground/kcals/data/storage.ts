@@ -209,6 +209,7 @@ const DAY_START_HOUR_KEY = "kcals-day-start-hour";
 export interface DailyEntry {
   remaining: number;
   logged: boolean;
+  goal?: number;
 }
 
 export function formatDateKey(d: Date): string {
@@ -265,9 +266,14 @@ export function saveDailyLogRaw(data: Record<string, DailyEntry>): void {
   localStorage.setItem(DAILY_LOG_KEY, JSON.stringify(data));
 }
 
-export function saveDailyEntry(remaining: number, logged: boolean): void {
+export function saveDailyEntry(remaining: number, logged: boolean, goal: number): void {
   const log = loadDailyLog();
-  log[getDayKey(new Date())] = { remaining, logged };
+  const normalizedGoal = Number.isFinite(goal) && goal > 0 ? Math.round(goal) : undefined;
+  log[getDayKey(new Date())] = {
+    remaining,
+    logged,
+    ...(normalizedGoal != null ? { goal: normalizedGoal } : {}),
+  };
   // Keep only last 30 days
   const keys = Object.keys(log).sort();
   if (keys.length > 30) {
@@ -315,6 +321,7 @@ export function getWeeklyRemaining(): number {
 export interface WeeklyEntry {
   dateKey: string;
   remaining: number;
+  goal?: number;
 }
 
 export function getWeeklyBreakdown(): WeeklyEntry[] {
@@ -325,7 +332,7 @@ export function getWeeklyBreakdown(): WeeklyEntry[] {
     const dateKey = getDayKey(d);
     const entry = log[dateKey];
     if (entry?.logged) {
-      entries.push({ dateKey, remaining: entry.remaining });
+      entries.push({ dateKey, remaining: entry.remaining, ...(entry.goal != null ? { goal: entry.goal } : {}) });
     }
     d.setDate(d.getDate() - 1);
   }

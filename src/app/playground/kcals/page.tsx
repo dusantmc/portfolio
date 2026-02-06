@@ -231,7 +231,13 @@ function normalizeDailyLog(raw: unknown): Record<string, DailyEntry> {
     const remaining = Number((value as { remaining?: unknown }).remaining);
     const logged = (value as { logged?: unknown }).logged;
     if (!Number.isFinite(remaining) || typeof logged !== "boolean") continue;
-    entries[key] = { remaining, logged };
+    const goalRaw = Number((value as { goal?: unknown }).goal);
+    const goal = Number.isFinite(goalRaw) && goalRaw > 0 ? Math.round(goalRaw) : undefined;
+    entries[key] = {
+      remaining,
+      logged,
+      ...(goal != null ? { goal } : {}),
+    };
   }
   return entries;
 }
@@ -1303,6 +1309,7 @@ export default function KcalsPage() {
 
   const totalKcal = foods.reduce((sum, f) => sum + groupKcal(f), 0);
   const remaining = calorieGoal - totalKcal;
+  const remainingAbs = Math.abs(remaining);
   const remainingPrefix = remaining >= 0 ? "+" : "";
   const remainingIsNegative = remaining < 0;
   const shaderColors = totalKcal <= calorieGoal
@@ -1319,14 +1326,18 @@ export default function KcalsPage() {
   const [weeklyBreakdown, setWeeklyBreakdown] = useState<WeeklyEntry[]>([]);
   const [lastCustomMatch, setLastCustomMatch] = useState<CustomFood | null>(null);
   const [lastRecentMatch, setLastRecentMatch] = useState<RecentFood | null>(null);
+  const getWeeklyEntryConsumed = useCallback(
+    (entry: WeeklyEntry) => (entry.goal ?? DEFAULT_CALORIE_GOAL) - entry.remaining,
+    []
+  );
   const weeklyVisibleEntries = weeklyBreakdown.filter(
-    (e) => calorieGoal - e.remaining >= 800
+    (e) => getWeeklyEntryConsumed(e) >= 800
   );
   const weeklyHasData = weeklyVisibleEntries.length > 0;
   const weeklyIsOnTrack = weeklyBurn >= 0;
   const weeklyAbsTotal = Math.abs(weeklyBurn);
   const weeklyChipHasData = weeklyBreakdown.some(
-    (e) => calorieGoal - e.remaining >= 800
+    (e) => getWeeklyEntryConsumed(e) >= 800
   );
   const weeklyChipIcon = weeklyChipHasData
     ? (weeklyIsOnTrack ? "\u{1F525}" : "\u{1F437}")
@@ -1373,15 +1384,15 @@ export default function KcalsPage() {
   useEffect(() => {
     if (isBootstrapping) return;
     const hasFood = foods.some((f) => !f.loading && f.kcal != null);
-    saveDailyEntry(remaining, hasFood);
+    saveDailyEntry(remaining, hasFood, calorieGoal);
     setStreak(getStreak());
     const breakdown = getWeeklyBreakdown();
     setWeeklyBreakdown(breakdown);
     const qualifying = breakdown.filter(
-      (e) => calorieGoal - e.remaining >= 800
+      (e) => getWeeklyEntryConsumed(e) >= 800
     );
     setWeeklyBurn(qualifying.reduce((sum, e) => sum + e.remaining, 0));
-  }, [foods, remaining, calorieGoal, dayStartHour, isBootstrapping]);
+  }, [foods, remaining, calorieGoal, dayStartHour, isBootstrapping, getWeeklyEntryConsumed]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -3232,7 +3243,7 @@ export default function KcalsPage() {
               <span className="kcals-topbar-compact-value">{totalKcal} kcal</span>
               <span className={`kcals-topbar-compact-remaining${remainingIsNegative ? " is-negative" : ""}`}>
                 {remainingPrefix}
-                {remaining.toLocaleString()} remaining
+                {(remainingIsNegative ? remainingAbs : remaining).toLocaleString()} {remainingIsNegative ? "over the limit" : "remaining"}
               </span>
             </div>
           </div>
@@ -3257,9 +3268,9 @@ export default function KcalsPage() {
             <p className={`kcals-calorie-remaining${remainingIsNegative ? " is-negative" : ""}`}>
               <strong>
                 {remainingPrefix}
-                {remaining.toLocaleString()}kcal
+                {(remainingIsNegative ? remainingAbs : remaining).toLocaleString()}kcal
               </strong>
-              <span> remaining</span>
+              <span>{remainingIsNegative ? " over the limit" : " remaining"}</span>
             </p>
           </div>
 
