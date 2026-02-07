@@ -37,9 +37,24 @@ import {
 import { parseFoodInput, fetchKcalPer100g, getFoodEmoji, resolveEmbeddedFood, resolveFoodAlias } from "./data/usda";
 import { BottomSheet } from "./BottomSheet";
 import { supabase, supabaseAnonKey, supabaseUrl } from "./data/supabase";
+import textModesJson from "./data/text-modes.json";
 
 const DEFAULT_CALORIE_GOAL = 1600;
 const LAST_DAY_KEY = "kcals_last_day_key";
+const APP_ATTITUDE_KEY = "kcals_app_attitude";
+
+type AttitudeModeId = "standard" | "karen";
+
+type AttitudeModeCatalog = Record<
+  AttitudeModeId,
+  {
+    label: string;
+    strings: Record<string, string>;
+  }
+>;
+
+const ATTITUDE_MODES = textModesJson as AttitudeModeCatalog;
+const ATTITUDE_MODE_OPTIONS: AttitudeModeId[] = ["standard", "karen"];
 
 function formatCompact(n: number): string {
   const abs = Math.abs(n);
@@ -278,6 +293,16 @@ function formatSummaryAmount(grams: number): string {
   return `${Math.round(grams)}g`;
 }
 
+function splitByKcalToken(template: string): { before: string; after: string } {
+  const token = "{kcal}";
+  const index = template.indexOf(token);
+  if (index === -1) return { before: template, after: "" };
+  return {
+    before: template.slice(0, index),
+    after: template.slice(index + token.length),
+  };
+}
+
 function normalizeDailyLog(raw: unknown): Record<string, DailyEntry> {
   if (!raw || typeof raw !== "object") return {};
   const entries: Record<string, DailyEntry> = {};
@@ -514,6 +539,7 @@ export default function KcalsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [avatarMode, setAvatarMode] = useState<"emoji" | "photo">("emoji");
+  const [attitudeMode, setAttitudeMode] = useState<AttitudeModeId>("standard");
   const [avatarEmoji, setAvatarEmoji] = useState("");
   const [avatarPhoto, setAvatarPhoto] = useState<string | null>(null);
   const [authEmail, setAuthEmail] = useState("");
@@ -705,6 +731,10 @@ export default function KcalsPage() {
       if (storedMode === "emoji" || storedMode === "photo") {
         setAvatarMode(storedMode);
       }
+      const storedAttitude = localStorage.getItem(APP_ATTITUDE_KEY);
+      if (storedAttitude === "standard" || storedAttitude === "karen") {
+        setAttitudeMode(storedAttitude);
+      }
       const storedEmoji = localStorage.getItem(AVATAR_EMOJI_KEY);
       if (storedEmoji) {
         setAvatarEmoji(storedEmoji);
@@ -726,6 +756,11 @@ export default function KcalsPage() {
     if (typeof window === "undefined") return;
     localStorage.setItem(AVATAR_MODE_KEY, avatarMode);
   }, [avatarMode]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(APP_ATTITUDE_KEY, attitudeMode);
+  }, [attitudeMode]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -898,19 +933,20 @@ export default function KcalsPage() {
     if (!user || !supabase) {
       return {
         mode: avatarMode,
+        attitude: attitudeMode,
         emoji: avatarEmojiDisplay,
         photo: avatarPhoto ?? null,
         calorieGoal,
       };
     }
     if (avatarMode !== "photo") {
-      return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: null, calorieGoal };
+      return { mode: avatarMode, attitude: attitudeMode, emoji: avatarEmojiDisplay, photo: null, calorieGoal };
     }
     if (!avatarPhoto) {
-      return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: null, calorieGoal };
+      return { mode: avatarMode, attitude: attitudeMode, emoji: avatarEmojiDisplay, photo: null, calorieGoal };
     }
     if (!isDataUrl(avatarPhoto)) {
-      return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: avatarPhoto, calorieGoal };
+      return { mode: avatarMode, attitude: attitudeMode, emoji: avatarEmojiDisplay, photo: avatarPhoto, calorieGoal };
     }
     try {
       const blob = dataUrlToBlob(avatarPhoto);
@@ -919,14 +955,14 @@ export default function KcalsPage() {
       const { error, publicUrl } = await uploadToStorage(path, blob);
       if (error) {
         onUploadError?.(`Storage upload failed: ${error} (path: ${path}, uid: ${user.id})`);
-        return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: avatarPhoto, calorieGoal };
+        return { mode: avatarMode, attitude: attitudeMode, emoji: avatarEmojiDisplay, photo: avatarPhoto, calorieGoal };
       }
-      return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: publicUrl, calorieGoal };
+      return { mode: avatarMode, attitude: attitudeMode, emoji: avatarEmojiDisplay, photo: publicUrl, calorieGoal };
     } catch {
       onUploadError?.("Avatar upload failed.");
-      return { mode: avatarMode, emoji: avatarEmojiDisplay, photo: avatarPhoto, calorieGoal };
+      return { mode: avatarMode, attitude: attitudeMode, emoji: avatarEmojiDisplay, photo: avatarPhoto, calorieGoal };
     }
-  }, [user, avatarMode, avatarEmojiDisplay, avatarPhoto, calorieGoal, supabase]);
+  }, [user, avatarMode, attitudeMode, avatarEmojiDisplay, avatarPhoto, calorieGoal, supabase]);
 
   const applyRemoteState = useCallback((row: {
     food_list?: FoodItem[] | null;
@@ -935,6 +971,7 @@ export default function KcalsPage() {
     daily_log?: Record<string, unknown> | null;
     profile?: {
       mode?: "emoji" | "photo";
+      attitude?: AttitudeModeId;
       emoji?: string;
       photo?: string | null;
       calorieGoal?: number;
@@ -958,6 +995,10 @@ export default function KcalsPage() {
     if (row.profile) {
       if (row.profile.mode === "emoji" || row.profile.mode === "photo") {
         setAvatarMode(row.profile.mode);
+      }
+      if (row.profile.attitude === "standard" || row.profile.attitude === "karen") {
+        setAttitudeMode(row.profile.attitude);
+        localStorage.setItem(APP_ATTITUDE_KEY, row.profile.attitude);
       }
       if (row.profile.emoji != null) {
         setAvatarEmoji(row.profile.emoji);
@@ -1436,6 +1477,44 @@ export default function KcalsPage() {
     }
     return rows;
   }, [summaryRangeDays, summarySort, foods, dayStartHour, lastSyncAt]);
+  const currentAttitude = ATTITUDE_MODES[attitudeMode] ?? ATTITUDE_MODES.standard;
+  const getAttitudeString = useCallback((key: string, fallback: string) => {
+    return currentAttitude.strings[key] ?? ATTITUDE_MODES.standard.strings[key] ?? fallback;
+  }, [currentAttitude]);
+  const remainingAmountText = `${remainingPrefix}${(remainingIsNegative ? remainingAbs : remaining).toLocaleString()}`;
+  const heroLineTemplate = getAttitudeString(
+    remainingIsNegative ? "hero_over_limit" : "hero_remaining",
+    remainingIsNegative ? "{kcal}kcal over the limit" : "{kcal}kcal remaining"
+  );
+  const heroLineParts = splitByKcalToken(heroLineTemplate);
+  const heroLineHasToken = heroLineTemplate.includes("{kcal}");
+  const compactLineTemplate = getAttitudeString(
+    remainingIsNegative ? "compact_over_limit" : "compact_remaining",
+    remainingIsNegative ? "{kcal} over the limit" : "{kcal} remaining"
+  );
+  const compactLine = compactLineTemplate.includes("{kcal}")
+    ? compactLineTemplate.replace("{kcal}", remainingAmountText)
+    : `${remainingAmountText} ${remainingIsNegative ? "over the limit" : "remaining"}`;
+  const weeklyTitleText = getAttitudeString(
+    weeklyIsOnTrack ? "weekly_title_on_track" : "weekly_title_over_limit",
+    weeklyIsOnTrack ? "You're on track!" : "Heads up!"
+  );
+  const weeklySummaryTemplate = getAttitudeString(
+    weeklyIsOnTrack ? "weekly_summary_under" : "weekly_summary_over",
+    weeklyIsOnTrack
+      ? "Over the last 7 days, you stayed {kcal} below your limit"
+      : "Over the last 7 days, you were {kcal} above your limit"
+  );
+  const weeklySummaryParts = splitByKcalToken(weeklySummaryTemplate);
+  const weeklySummaryHasToken = weeklySummaryTemplate.includes("{kcal}");
+  const weeklySummaryAmount = `${weeklyAbsTotal.toLocaleString()} kcal`;
+  const profileCalorieLimitLabel = getAttitudeString("profile_calorie_limit_label", "Calorie limit (kcal)");
+  const profileDayResetsLabel = getAttitudeString("profile_day_resets_label", "Day resets at");
+  const profileSyncAutomaticallyLabel = getAttitudeString("profile_sync_automatically_label", "Sync automatically");
+  const profileAppAttitudeLabel = getAttitudeString("profile_app_attitude_label", "App attitude");
+  const profileLogOutLabel = getAttitudeString("profile_log_out", "Log out");
+  const chatboxPlaceholder = getAttitudeString("chatbox_placeholder", "Type what you ate...");
+  const shareLabel = getAttitudeString("share_label", "Share");
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareBgType, setShareBgType] = useState<"gradient" | "image">("gradient");
   const [shareImage, setShareImage] = useState<string | null>(null);
@@ -3195,7 +3274,7 @@ export default function KcalsPage() {
           {weeklyIsOnTrack ? "\u{1F525}" : "\u{1F437}"}
         </div>
         <div className="kcals-weekly-title">
-          {weeklyIsOnTrack ? "You're on track!" : "Heads up!"}
+          {weeklyTitleText}
         </div>
         <div className="kcals-weekly-list">
           {weeklyVisibleEntries.map((entry) => {
@@ -3220,8 +3299,15 @@ export default function KcalsPage() {
           })}
         </div>
         <div className="kcals-weekly-summary">
-          Over the last 7 days, you {weeklyIsOnTrack ? "stayed" : "were"}<br />
-          <strong>{weeklyAbsTotal.toLocaleString()} kcal</strong> {weeklyIsOnTrack ? "below" : "above"} your limit
+          {weeklySummaryHasToken ? (
+            <>
+              {weeklySummaryParts.before}
+              <strong>{weeklySummaryAmount}</strong>
+              {weeklySummaryParts.after}
+            </>
+          ) : (
+            weeklySummaryTemplate
+          )}
         </div>
       </>
     );
@@ -3334,8 +3420,7 @@ export default function KcalsPage() {
             <div className="kcals-topbar-compact">
               <span className="kcals-topbar-compact-value">{totalKcal} kcal</span>
               <span className={`kcals-topbar-compact-remaining${remainingIsNegative ? " is-negative" : ""}`}>
-                {remainingPrefix}
-                {(remainingIsNegative ? remainingAbs : remaining).toLocaleString()} {remainingIsNegative ? "over the limit" : "remaining"}
+                {compactLine}
               </span>
             </div>
           </div>
@@ -3358,11 +3443,15 @@ export default function KcalsPage() {
               <span className="kcals-calorie-unit">kcal</span>
             </div>
             <p className={`kcals-calorie-remaining${remainingIsNegative ? " is-negative" : ""}`}>
-              <strong>
-                {remainingPrefix}
-                {(remainingIsNegative ? remainingAbs : remaining).toLocaleString()}kcal
-              </strong>
-              <span>{remainingIsNegative ? " over the limit" : " remaining"}</span>
+              {heroLineHasToken ? (
+                <>
+                  {heroLineParts.before && <span>{heroLineParts.before}</span>}
+                  <strong>{remainingAmountText}</strong>
+                  {heroLineParts.after && <span>{heroLineParts.after}</span>}
+                </>
+              ) : (
+                <span>{heroLineTemplate}</span>
+              )}
             </p>
           </div>
 
@@ -3533,7 +3622,7 @@ export default function KcalsPage() {
               ref={inputRef}
               className="kcals-input"
               type="text"
-              placeholder={selectedCustomFood || selectedRecentFood ? "100g" : "Type what you ate..."}
+              placeholder={selectedCustomFood || selectedRecentFood ? "100g" : chatboxPlaceholder}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onFocus={handleInputFocus}
@@ -3937,7 +4026,7 @@ export default function KcalsPage() {
 	          <div className="kcals-profile-email">{user?.email ?? "Account"}</div>
             <div className="kcals-profile-settings">
               <div className="kcals-profile-settings-row">
-                <span className="kcals-profile-settings-label">Calorie limit (kcal)</span>
+                <span className="kcals-profile-settings-label">{profileCalorieLimitLabel}</span>
                 <input
                   className="kcals-profile-settings-input"
                   type="number"
@@ -3954,7 +4043,7 @@ export default function KcalsPage() {
                 />
               </div>
               <div className="kcals-profile-settings-row">
-                <span className="kcals-profile-settings-label">Day resets at</span>
+                <span className="kcals-profile-settings-label">{profileDayResetsLabel}</span>
                 <select
                   className="kcals-profile-settings-input"
                   value={dayStartHour}
@@ -3968,7 +4057,21 @@ export default function KcalsPage() {
                 </select>
               </div>
               <div className="kcals-profile-settings-row">
-                <span className="kcals-profile-settings-label">Sync automatically</span>
+                <span className="kcals-profile-settings-label">{profileAppAttitudeLabel}</span>
+                <select
+                  className="kcals-profile-settings-input kcals-profile-settings-input--attitude"
+                  value={attitudeMode}
+                  onChange={(e) => setAttitudeMode(e.target.value as AttitudeModeId)}
+                >
+                  {ATTITUDE_MODE_OPTIONS.map((modeId) => (
+                    <option key={modeId} value={modeId}>
+                      {ATTITUDE_MODES[modeId]?.label ?? modeId}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="kcals-profile-settings-row">
+                <span className="kcals-profile-settings-label">{profileSyncAutomaticallyLabel}</span>
                 <button
                   className={`kcals-toggle${autoSyncEnabled ? " is-on" : ""}`}
                   type="button"
@@ -3994,7 +4097,7 @@ export default function KcalsPage() {
               {syncError && <div className="kcals-settings-error">{syncError}</div>}
             </div>
 	          <button className="kcals-profile-link" type="button" onClick={handleSignOut}>
-	            Log out
+	            {profileLogOutLabel}
 	          </button>
           <input
             ref={avatarPhotoInputRef}
@@ -4184,7 +4287,7 @@ export default function KcalsPage() {
           {weeklyHasData && (
             <button className="kcals-weekly-share" type="button" onClick={handleOpenShare}>
               <img src="/kcals/assets/share.svg" alt="" className="kcals-weekly-share-icon" />
-              Share
+              {shareLabel}
             </button>
           )}
         </>
@@ -4255,7 +4358,7 @@ export default function KcalsPage() {
               onClick={handleShareNow}
               disabled={shareStatus === "rendering"}
             >
-              {shareStatus === "rendering" ? "Preparing..." : "Share"}
+              {shareStatus === "rendering" ? "Preparing..." : shareLabel}
             </button>
           </div>
           <div className="kcals-share-bottom" data-share-ui>

@@ -1342,6 +1342,12 @@
   padding: 0 8px;
 }
 
+.kcals-profile-settings-input--attitude {
+  width: 132px;
+  text-align: left;
+  padding: 0 10px;
+}
+
 .kcals-profile-settings-input:focus {
   outline: none;
   border-color: var(--blue);

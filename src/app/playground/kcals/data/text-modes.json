@@ -1,0 +1,42 @@
+{
+  "standard": {
+    "label": "Standard",
+    "strings": {
+      "hero_remaining": "{kcal}kcal remaining",
+      "hero_over_limit": "{kcal}kcal over the limit",
+      "compact_remaining": "{kcal} remaining",
+      "compact_over_limit": "{kcal} over the limit",
+      "weekly_title_on_track": "You're on track!",
+      "weekly_title_over_limit": "Heads up!",
+      "weekly_summary_under": "Over the last 7 days, you stayed {kcal} below your limit",
+      "weekly_summary_over": "Over the last 7 days, you were {kcal} above your limit",
+      "profile_calorie_limit_label": "Calorie limit (kcal)",
+      "profile_day_resets_label": "Day resets at",
+      "profile_sync_automatically_label": "Sync automatically",
+      "profile_app_attitude_label": "App attitude",
+      "profile_log_out": "Log out",
+      "chatbox_placeholder": "Type what you ate...",
+      "share_label": "Share"
+    }
+  },
+  "karen": {
+    "label": "Karen's mode",
+    "strings": {
+      "hero_remaining": "{kcal}kcal before you mess this up",
+      "hero_over_limit": "{kcal}kcal you didn’t need",
+      "compact_remaining": "{kcal} before you mess this up",
+      "compact_over_limit": "{kcal} over the limit",
+      "weekly_title_on_track": "Fine. You didn’t mess it up.",
+      "weekly_title_over_limit": "You messed this up...",
+      "weekly_summary_under": "Over the last 7 days, you were {kcal} below your limit. Finally.",
+      "weekly_summary_over": "Over the last 7 days, you were {kcal} above your limit",
+      "profile_calorie_limit_label": "Calorie limit (kcal)",
+      "profile_day_resets_label": "Daily amnesia starts at",
+      "profile_sync_automatically_label": "Too lazy to sync",
+      "profile_app_attitude_label": "App attitude",
+      "profile_log_out": "I wanna leave",
+      "chatbox_placeholder": "Type what you ate. Don’t lie.",
+      "share_label": "Share my shame"
+    }
+  }
+}
