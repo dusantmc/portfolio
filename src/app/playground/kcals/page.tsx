@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, type ChangeEvent, type PointerEvent } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, type ChangeEvent, type PointerEvent } from "react";
 import type { User } from "@supabase/supabase-js";
 import { SmokeRing } from "@paper-design/shaders-react";
 import {
   type DailyEntry,
+  type DailyFoodSummary,
   type FoodItem,
   type CustomFood,
   type RecentFood,
@@ -223,6 +224,60 @@ function hasExplicitQuantity(text: string): boolean {
   return false;
 }
 
+function normalizeDailyFoods(raw: unknown): Record<string, DailyFoodSummary> | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const normalized: Record<string, DailyFoodSummary> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!value || typeof value !== "object") continue;
+    const name = String((value as { name?: unknown }).name ?? "").trim();
+    const gramsRaw = Number((value as { grams?: unknown }).grams);
+    if (!name || !Number.isFinite(gramsRaw) || gramsRaw <= 0) continue;
+    const emojiRaw = (value as { emoji?: unknown }).emoji;
+    normalized[key] = {
+      name,
+      grams: Math.round(gramsRaw),
+      ...(typeof emojiRaw === "string" && emojiRaw ? { emoji: emojiRaw } : {}),
+    };
+  }
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+function buildDailyFoodSummary(items: FoodItem[]): Record<string, DailyFoodSummary> {
+  const summary: Record<string, DailyFoodSummary> = {};
+  const visit = (item: FoodItem) => {
+    if (item.items?.length) {
+      item.items.forEach(visit);
+      return;
+    }
+    if (item.loading) return;
+    const parsed = parseFoodInput(item.name);
+    const grams = parsed.unit === "count"
+      ? Math.round(parsed.quantity * (item.gramsPerUnit ?? 100))
+      : Math.round(parsed.quantity);
+    if (!Number.isFinite(grams) || grams <= 0) return;
+    const name = parsed.name.trim();
+    if (!name) return;
+    const key = name.toLowerCase();
+    const existing = summary[key];
+    summary[key] = {
+      name,
+      grams: (existing?.grams ?? 0) + grams,
+      ...(item.emoji ? { emoji: item.emoji } : existing?.emoji ? { emoji: existing.emoji } : {}),
+    };
+  };
+  items.forEach(visit);
+  return summary;
+}
+
+function formatSummaryAmount(grams: number): string {
+  if (grams >= 1000) {
+    const kilos = grams / 1000;
+    const rounded = Math.round(kilos * 10) / 10;
+    return `${Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1)}kg`;
+  }
+  return `${Math.round(grams)}g`;
+}
+
 function normalizeDailyLog(raw: unknown): Record<string, DailyEntry> {
   if (!raw || typeof raw !== "object") return {};
   const entries: Record<string, DailyEntry> = {};
@@ -233,10 +288,12 @@ function normalizeDailyLog(raw: unknown): Record<string, DailyEntry> {
     if (!Number.isFinite(remaining) || typeof logged !== "boolean") continue;
     const goalRaw = Number((value as { goal?: unknown }).goal);
     const goal = Number.isFinite(goalRaw) && goalRaw > 0 ? Math.round(goalRaw) : undefined;
+    const foods = normalizeDailyFoods((value as { foods?: unknown }).foods);
     entries[key] = {
       remaining,
       logged,
       ...(goal != null ? { goal } : {}),
+      ...(foods ? { foods } : {}),
     };
   }
   return entries;
@@ -1321,6 +1378,9 @@ export default function KcalsPage() {
     day: "numeric",
   }).format(displayDate);
   const [streak, setStreak] = useState(0);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [summaryRangeDays, setSummaryRangeDays] = useState<7 | 30>(7);
+  const [summarySort, setSummarySort] = useState<"amount" | "name">("amount");
   const [weeklyBurn, setWeeklyBurn] = useState(0);
   const [showWeeklyModal, setShowWeeklyModal] = useState(false);
   const [weeklyBreakdown, setWeeklyBreakdown] = useState<WeeklyEntry[]>([]);
@@ -1345,6 +1405,37 @@ export default function KcalsPage() {
   const weeklyChipValue = weeklyChipHasData
     ? formatCompact(Math.abs(weeklyBurn))
     : "0";
+  const summaryRows = useMemo(() => {
+    const dailyLog = loadDailyLogRaw();
+    const totals = new Map<string, DailyFoodSummary>();
+    const cursor = new Date();
+    for (let i = 0; i < summaryRangeDays; i++) {
+      const dayKey = getDayKey(cursor);
+      const dayEntry = dailyLog[dayKey];
+      const dayFoods = dayEntry?.foods;
+      if (dayFoods) {
+        for (const [foodKey, value] of Object.entries(dayFoods)) {
+          const grams = Number(value.grams);
+          if (!Number.isFinite(grams) || grams <= 0) continue;
+          const key = foodKey.toLowerCase();
+          const existing = totals.get(key);
+          totals.set(key, {
+            name: value.name,
+            grams: (existing?.grams ?? 0) + Math.round(grams),
+            ...(value.emoji ? { emoji: value.emoji } : existing?.emoji ? { emoji: existing.emoji } : {}),
+          });
+        }
+      }
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    const rows = Array.from(totals.entries()).map(([key, value]) => ({ key, ...value }));
+    if (summarySort === "name") {
+      rows.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+    } else {
+      rows.sort((a, b) => b.grams - a.grams || a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+    }
+    return rows;
+  }, [summaryRangeDays, summarySort, foods, dayStartHour, lastSyncAt]);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareBgType, setShareBgType] = useState<"gradient" | "image">("gradient");
   const [shareImage, setShareImage] = useState<string | null>(null);
@@ -1384,7 +1475,8 @@ export default function KcalsPage() {
   useEffect(() => {
     if (isBootstrapping) return;
     const hasFood = foods.some((f) => !f.loading && f.kcal != null);
-    saveDailyEntry(remaining, hasFood, calorieGoal);
+    const dailyFoods = buildDailyFoodSummary(foods);
+    saveDailyEntry(remaining, hasFood, calorieGoal, dailyFoods);
     setStreak(getStreak());
     const breakdown = getWeeklyBreakdown();
     setWeeklyBreakdown(breakdown);
@@ -3228,10 +3320,10 @@ export default function KcalsPage() {
               </div>
             </div>
             <div className="kcals-topbar-right">
-              <div className="kcals-chip">
+              <button className="kcals-chip kcals-chip-btn" type="button" onClick={() => setShowSummaryModal(true)}>
                 <span className="kcals-chip-icon">{"\u26A1\uFE0F"}</span>
                 {streak}
-              </div>
+              </button>
               <button className="kcals-chip kcals-chip-btn" type="button" onClick={() => setShowWeeklyModal(true)}>
                 <span className="kcals-chip-icon">
                   {weeklyChipIcon}
@@ -3917,7 +4009,7 @@ export default function KcalsPage() {
       {/* Auth Modal */}
       <BottomSheet open={showAuthModal} onClose={() => setShowAuthModal(false)} variant="center">
         <div className="kcals-auth-modal">
-          <div className="kcals-auth-title">Cloud Sync</div>
+          <div className="kcals-auth-title">Sign In</div>
           <div className="kcals-auth-subtitle">
             {user ? "Manage your sync settings." : "Sign in to sync your data across devices."}
           </div>
@@ -4024,6 +4116,65 @@ export default function KcalsPage() {
             </>
           )}
         </div>
+      </BottomSheet>
+
+      {/* Summary Modal */}
+      <BottomSheet
+        open={showSummaryModal}
+        onClose={() => setShowSummaryModal(false)}
+        variant="center"
+        className="kcals-summary-modal"
+      >
+        <div className="kcals-summary-title">Summary</div>
+        <div className="kcals-summary-controls">
+          <div className="kcals-summary-toggle">
+            <button
+              className={`kcals-summary-toggle-btn${summaryRangeDays === 7 ? " is-active" : ""}`}
+              type="button"
+              onClick={() => setSummaryRangeDays(7)}
+            >
+              7 days
+            </button>
+            <button
+              className={`kcals-summary-toggle-btn${summaryRangeDays === 30 ? " is-active" : ""}`}
+              type="button"
+              onClick={() => setSummaryRangeDays(30)}
+            >
+              30 days
+            </button>
+          </div>
+          <div className="kcals-summary-toggle">
+            <button
+              className={`kcals-summary-toggle-btn${summarySort === "amount" ? " is-active" : ""}`}
+              type="button"
+              onClick={() => setSummarySort("amount")}
+            >
+              Amount
+            </button>
+            <button
+              className={`kcals-summary-toggle-btn${summarySort === "name" ? " is-active" : ""}`}
+              type="button"
+              onClick={() => setSummarySort("name")}
+            >
+              Name
+            </button>
+          </div>
+        </div>
+        {summaryRows.length === 0 ? (
+          <div className="kcals-summary-empty">No foods logged in the selected period.</div>
+        ) : (
+          <div className="kcals-summary-list">
+            {summaryRows.map((row) => (
+              <div key={row.key} className="kcals-summary-row">
+                <div className="kcals-summary-food">
+                  <span className="kcals-summary-emoji">{row.emoji ?? "\u{1F372}"}</span>
+                  <span className="kcals-summary-name">{row.name}</span>
+                </div>
+                <span className="kcals-summary-amount">{formatSummaryAmount(row.grams)}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </BottomSheet>
 
       {/* Weekly Breakdown Modal */}

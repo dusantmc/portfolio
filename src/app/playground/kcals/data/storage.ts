@@ -210,6 +210,13 @@ export interface DailyEntry {
   remaining: number;
   logged: boolean;
   goal?: number;
+  foods?: Record<string, DailyFoodSummary>;
+}
+
+export interface DailyFoodSummary {
+  name: string;
+  grams: number;
+  emoji?: string;
 }
 
 export function formatDateKey(d: Date): string {
@@ -266,13 +273,34 @@ export function saveDailyLogRaw(data: Record<string, DailyEntry>): void {
   localStorage.setItem(DAILY_LOG_KEY, JSON.stringify(data));
 }
 
-export function saveDailyEntry(remaining: number, logged: boolean, goal: number): void {
+export function saveDailyEntry(
+  remaining: number,
+  logged: boolean,
+  goal: number,
+  foods?: Record<string, DailyFoodSummary>
+): void {
   const log = loadDailyLog();
   const normalizedGoal = Number.isFinite(goal) && goal > 0 ? Math.round(goal) : undefined;
+  const normalizedFoods = foods
+    ? Object.fromEntries(
+      Object.entries(foods)
+        .map(([key, item]) => {
+          const grams = Number(item.grams);
+          if (!Number.isFinite(grams) || grams <= 0 || !item.name?.trim()) return null;
+          return [key, {
+            name: item.name.trim(),
+            grams: Math.round(grams),
+            ...(item.emoji ? { emoji: item.emoji } : {}),
+          }] as const;
+        })
+        .filter((item): item is readonly [string, DailyFoodSummary] => item != null)
+    )
+    : undefined;
   log[getDayKey(new Date())] = {
     remaining,
     logged,
     ...(normalizedGoal != null ? { goal: normalizedGoal } : {}),
+    ...(normalizedFoods ? { foods: normalizedFoods } : {}),
   };
   // Keep only last 30 days
   const keys = Object.keys(log).sort();
