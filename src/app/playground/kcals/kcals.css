@@ -403,6 +403,7 @@
   font-weight: 600;
   color: var(--black-70);
   opacity: 0.9;
+  white-space: pre-line;
 }
 
 .kcals-empty-state-text {
@@ -411,6 +412,7 @@
   line-height: 18px;
   font-weight: 400;
   color: var(--black-50);
+  white-space: pre-line;
 }
 
 .kcals-empty-chip-list {
@@ -1346,6 +1348,7 @@
   font-weight: 400;
   color: var(--black-70);
   line-height: 18px;
+  white-space: pre-line;
 }
 
 .kcals-profile-settings-input {
@@ -1368,6 +1371,7 @@
   padding: 0 24px 0 10px;
   position: relative;
   cursor: pointer;
+  white-space: pre-line;
 }
 
 .kcals-profile-attitude {
@@ -1391,6 +1395,7 @@
 
 .kcals-profile-attitude-popover .kcals-chip-menu-item {
   justify-content: flex-start;
+  white-space: pre-line;
 }
 
 .kcals-profile-settings-input--attitude::after {
@@ -1444,6 +1449,7 @@ select.kcals-profile-settings-input::-ms-expand {
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
+  white-space: pre-line;
 }
 
 .kcals-settings-title {
@@ -2122,6 +2128,7 @@ select.kcals-profile-settings-input::-ms-expand {
   color: var(--black-50);
   letter-spacing: 0.4px;
   text-transform: uppercase;
+  white-space: pre-line;
 }
 
 .kcals-food-share-card {
@@ -2468,6 +2475,7 @@ select.kcals-profile-settings-input::-ms-expand {
   line-height: 22px;
   font-weight: 700;
   margin-bottom: 8px;
+  white-space: pre-line;
 }
 
 .kcals-weekly-subtitle {
@@ -2540,6 +2548,7 @@ select.kcals-profile-settings-input::-ms-expand {
   gap: 4px;
   margin-top: 16px;
   margin-bottom: 4px;
+  white-space: pre-line;
 }
 
 .kcals-weekly-share-icon {

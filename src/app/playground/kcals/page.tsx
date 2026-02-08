@@ -56,6 +56,10 @@ type AttitudeModeCatalog = Record<
 const ATTITUDE_MODES = textModesJson as AttitudeModeCatalog;
 const ATTITUDE_MODE_OPTIONS: AttitudeModeId[] = ["standard", "karen"];
 
+function normalizeModeText(value: string): string {
+  return value.replace(/\\n/g, "\n");
+}
+
 function formatCompact(n: number): string {
   const abs = Math.abs(n);
   if (abs >= 1000) {
@@ -1757,7 +1761,8 @@ export default function KcalsPage() {
   }, [summaryRangeDays, summarySort, foods, customFoods, imageUrls, dayStartHour, lastSyncAt]);
   const currentAttitude = ATTITUDE_MODES[attitudeMode] ?? ATTITUDE_MODES.standard;
   const getAttitudeString = useCallback((key: string, fallback: string) => {
-    return currentAttitude.strings[key] ?? ATTITUDE_MODES.standard.strings[key] ?? fallback;
+    const raw = currentAttitude.strings[key] ?? ATTITUDE_MODES.standard.strings[key] ?? fallback;
+    return normalizeModeText(raw);
   }, [currentAttitude]);
   const emptyStateVariants = useMemo(
     () =>
