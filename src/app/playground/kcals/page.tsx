@@ -707,6 +707,8 @@ export default function KcalsPage() {
   const [editFoodModal, setEditFoodModal] = useState<FoodItem | null>(null);
   const [editFoodName, setEditFoodName] = useState("");
   const [editFoodGrams, setEditFoodGrams] = useState("");
+  const [editFoodUnit, setEditFoodUnit] = useState<"g" | "count">("g");
+  const [editFoodSize, setEditFoodSize] = useState("medium");
 
   // Drag state
   const [dragItemId, setDragItemId] = useState<string | null>(null);
@@ -3001,7 +3003,9 @@ export default function KcalsPage() {
 
     if (embeddedFood) {
       const grams = toGrams(embeddedFood.gramsPerUnit);
-      const displayName = `${embeddedFood.name} ${grams}g`;
+      const displayName = parsed.unit === "count"
+        ? `${embeddedFood.name} ${parsed.quantity} ${parsed.size ?? "medium"}`
+        : `${embeddedFood.name} ${grams}g`;
       const kcal = Math.round((embeddedFood.kcalPer100g * grams) / 100);
       updateFoods((prev) => [
         {
@@ -3030,7 +3034,9 @@ export default function KcalsPage() {
     const sizeOverride = parsed.size && parsed.size !== "medium";
     if (cachedKcalPer100g != null && !sizeOverride) {
       const grams = toGrams(cachedGramsPerUnit);
-      const displayName = `${canonicalName} ${grams}g`;
+      const displayName = parsed.unit === "count"
+        ? `${canonicalName} ${parsed.quantity} ${parsed.size ?? "medium"}`
+        : `${canonicalName} ${grams}g`;
       const kcal = Math.round((cachedKcalPer100g * grams) / 100);
       const isCustom = customMatch != null;
       updateFoods((prev) => [
@@ -3052,7 +3058,7 @@ export default function KcalsPage() {
     } else {
       // Not cached: add loading item, fetch from USDA
       const loadingName = parsed.unit === "count"
-        ? `${canonicalName} x${parsed.quantity}`
+        ? `${canonicalName} ${parsed.quantity} ${parsed.size ?? "medium"}`
         : `${canonicalName} ${parsed.quantity}g`;
       updateFoods((prev) => [
         { id: itemId, emoji, name: loadingName, kcal: null, loading: true },
@@ -3062,7 +3068,9 @@ export default function KcalsPage() {
       fetchKcalPer100g(parsed.name, parsed.size).then((result) => {
         if (result != null) {
           const grams = toGrams(result.gramsPerUnit);
-          const displayName = `${canonicalName} ${grams}g`;
+          const displayName = parsed.unit === "count"
+            ? `${canonicalName} ${parsed.quantity} ${parsed.size ?? "medium"}`
+            : `${canonicalName} ${grams}g`;
           const kcal = Math.round((result.kcalPer100g * grams) / 100);
           updateFoods((prev) =>
             prev.map((f) =>
@@ -3312,16 +3320,27 @@ export default function KcalsPage() {
     const parsed = parseFoodInput(food.name);
     setEditFoodName(parsed.name);
     setEditFoodGrams(parsed.quantity.toString());
+    setEditFoodUnit(parsed.unit);
+    setEditFoodSize(parsed.size ?? "medium");
     setEditFoodModal(food);
   };
 
   const handleSaveEditFood = () => {
     if (!editFoodModal) return;
     const name = editFoodName.trim();
-    const grams = Number(editFoodGrams);
-    if (!name || isNaN(grams) || grams <= 0) return;
+    const amount = Number(editFoodGrams);
+    if (!name || isNaN(amount) || amount <= 0) return;
 
-    const displayName = `${name} ${grams}g`;
+    let displayName: string;
+    let grams: number;
+    if (editFoodUnit === "count") {
+      displayName = `${name} ${amount} ${editFoodSize}`;
+      grams = Math.round(amount * (editFoodModal.gramsPerUnit ?? 100));
+    } else {
+      displayName = `${name} ${amount}g`;
+      grams = amount;
+    }
+
     const kcalPer100g = editFoodModal.kcalPer100g;
     const kcal = kcalPer100g != null
       ? Math.round((kcalPer100g * grams) / 100)
@@ -4491,10 +4510,10 @@ export default function KcalsPage() {
                 type="number"
                 value={editFoodGrams}
                 onChange={(e) => setEditFoodGrams(e.target.value)}
-                placeholder="100"
+                placeholder={editFoodUnit === "count" ? "1" : "100"}
                 inputMode="numeric"
               />
-              <span className="kcals-modal-kcal-suffix">g</span>
+              <span className="kcals-modal-kcal-suffix">{editFoodUnit === "count" ? editFoodSize : "g"}</span>
             </div>
           </div>
         </div>
