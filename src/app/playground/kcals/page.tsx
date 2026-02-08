@@ -2935,7 +2935,8 @@ export default function KcalsPage() {
 
     if (selectedCustomFood) {
       let amountText = text || "100g";
-      if (!/\s*(kg|g|grams?)\s*$/i.test(amountText)) amountText = `${amountText.trim()}g`;
+      const isCount = /^\d+(?:\.\d+)?(?:\s+(?:baby|small|sm|medium|med|large|lg))?\s*$/i.test(amountText);
+      if (!isCount && !/\s*(kg|g|grams?)\s*$/i.test(amountText)) amountText = `${amountText.trim()}g`;
       const combinedText = `${selectedCustomFood.name} ${amountText}`;
       const parsed = parseFoodInput(combinedText);
       const grams = parsed.quantity;
@@ -2966,7 +2967,8 @@ export default function KcalsPage() {
 
     if (recentSelection) {
       let amountText = text || "100g";
-      if (!/\s*(kg|g|grams?)\s*$/i.test(amountText)) amountText = `${amountText.trim()}g`;
+      const isCount = /^\d+(?:\.\d+)?(?:\s+(?:baby|small|sm|medium|med|large|lg))?\s*$/i.test(amountText);
+      if (!isCount && !/\s*(kg|g|grams?)\s*$/i.test(amountText)) amountText = `${amountText.trim()}g`;
       text = `${recentSelection.name} ${amountText}`;
       setSelectedRecentFood(null);
     }
