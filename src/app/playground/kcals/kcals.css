@@ -1366,10 +1366,7 @@
   width: fit-content;
   text-align: left;
   padding: 0 24px 0 10px;
-  background-image: url("/kcals/assets/chevron.svg");
-  background-repeat: no-repeat;
-  background-position: right 8px center;
-  background-size: 12px 12px;
+  position: relative;
   cursor: pointer;
 }
 
@@ -1382,16 +1379,32 @@
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  z-index: 6;
+  left: auto;
+  z-index: 220;
 }
 
-.kcals-profile-attitude-popover {
+.kcals-chip-menu.kcals-profile-attitude-popover {
   position: static;
-  min-width: 160px;
+  min-width: 100%;
+  width: max-content;
 }
 
 .kcals-profile-attitude-popover .kcals-chip-menu-item {
   justify-content: flex-start;
+}
+
+.kcals-profile-settings-input--attitude::after {
+  content: "";
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  transform: translateY(-50%);
+  background-color: rgba(25, 24, 21, 0.5);
+  mask: url("/kcals/assets/chevron.svg") no-repeat center / contain;
+  -webkit-mask: url("/kcals/assets/chevron.svg") no-repeat center / contain;
+  pointer-events: none;
 }
 
 .kcals-profile-settings-input:focus {
