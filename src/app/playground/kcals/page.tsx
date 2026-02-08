@@ -4035,7 +4035,7 @@ export default function KcalsPage() {
               Insert
             </button>
             <button className="kcals-chip-menu-item" onClick={handleChipMenuShare} type="button">
-              {shareLabel}
+              Share
             </button>
             {chipMenu?.type === "custom" && (
               <button className="kcals-chip-menu-item" onClick={handleChipMenuEdit} type="button">

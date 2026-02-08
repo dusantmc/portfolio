@@ -59,20 +59,20 @@
       "empty_state_variant_1_title": "Start your day with protein",
       "empty_state_variant_1_text": "Type what you ate or select a food from your list",
       "empty_state_variant_2_emoji": "☕",
-      "empty_state_variant_2_title": "No food logged yet",
-      "empty_state_variant_2_text": "Start typing or select a food from your list",
+      "empty_state_variant_2_title": "Nothing logged. Of course.",
+      "empty_state_variant_2_text": "Start typing. Ignoring it won’t log itself.",
       "empty_state_variant_3_emoji": "🌤️",
-      "empty_state_variant_3_title": "Small start, big win",
-      "empty_state_variant_3_text": "Add one food to kick things off",
+      "empty_state_variant_3_title": "Just start. It’s not hard.",
+      "empty_state_variant_3_text": "Add one food. That’s the bare minimum",
       "empty_state_variant_4_emoji": "✨",
       "empty_state_variant_4_title": "Start your day with protein",
-      "empty_state_variant_4_text": "Start typing or select a food from your list",
+      "empty_state_variant_4_text": "Start typing. You know how this works",
       "empty_state_variant_5_emoji": "🍽️",
-      "empty_state_variant_5_title": "Your plate is empty",
-      "empty_state_variant_5_text": "Add your first meal to get started",
+      "empty_state_variant_5_title": "Your plate is empty. Shocking.",
+      "empty_state_variant_5_text": "Add your first meal. We’ll wait.",
       "empty_state_variant_6_emoji": "🏃",
-      "empty_state_variant_6_title": "Small start, big win",
-      "empty_state_variant_6_text": "Start typing or select a food from your list"
+      "empty_state_variant_6_title": "One entry. That’s all we’re asking.",
+      "empty_state_variant_6_text": "Start typing. Don’t overthink it."
     }
   }
 }
