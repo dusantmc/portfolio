@@ -350,6 +350,7 @@ const IMAGE_BUCKET = "kcals-images";
 const IMAGE_FOLDER = "custom-foods";
 const AVATAR_FOLDER = "avatars";
 const EMPTY_STATE_VARIANT_KEY = "kcals_empty_state_variant";
+const SHARE_RECIPIENTS_KEY = "kcals-share-recipients";
 const EMPTY_STATE_QUICK_CHIPS = [
   { label: "Eggs", emoji: "\u{1F95A}" },
   { label: "Chia Seeds", emoji: "\u{1F331}" },
@@ -357,7 +358,7 @@ const EMPTY_STATE_QUICK_CHIPS = [
   { label: "Smoked salmon", emoji: "\u{1F363}" },
   { label: "Avocado", emoji: "\u{1F951}" },
 ] as const;
-const EMPTY_STATE_VARIANTS = [
+const DEFAULT_EMPTY_STATE_VARIANTS = [
   {
     emoji: "\u{1F4AA}",
     title: "Start your day with protein",
@@ -389,6 +390,51 @@ const EMPTY_STATE_VARIANTS = [
     text: "Start typing or select a food from your list",
   },
 ] as const;
+
+interface SharedFoodPayload {
+  name: string;
+  emoji: string;
+  kcalPer100g: number;
+  gramsPerUnit?: number;
+  image?: string | null;
+}
+
+interface IncomingFoodShare {
+  id: string;
+  fromUserId: string;
+  fromEmail: string;
+  createdAt: string;
+  item: SharedFoodPayload;
+}
+
+function normalizeEmail(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function loadShareRecipients(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = JSON.parse(localStorage.getItem(SHARE_RECIPIENTS_KEY) || "[]");
+    if (!Array.isArray(raw)) return [];
+    const emails = raw
+      .filter((entry): entry is string => typeof entry === "string")
+      .map((email) => normalizeEmail(email))
+      .filter((email) => email.length > 0);
+    return Array.from(new Set(emails)).slice(0, 10);
+  } catch {
+    return [];
+  }
+}
+
+function saveShareRecipients(emails: string[]): void {
+  if (typeof window === "undefined") return;
+  const normalized = Array.from(new Set(emails.map((email) => normalizeEmail(email)).filter(Boolean))).slice(0, 10);
+  localStorage.setItem(SHARE_RECIPIENTS_KEY, JSON.stringify(normalized));
+}
 
 /* ===========================
    SVG Icons
@@ -536,6 +582,16 @@ export default function KcalsPage() {
   const [customFoods, setCustomFoods] = useState<CustomFood[]>([]);
   const [recentFoods, setRecentFoods] = useState<RecentFood[]>([]);
   const [selectedRecentFood, setSelectedRecentFood] = useState<RecentFood | null>(null);
+  const [incomingShares, setIncomingShares] = useState<IncomingFoodShare[]>([]);
+  const [showIncomingSharesPage, setShowIncomingSharesPage] = useState(false);
+  const [incomingShareActionId, setIncomingShareActionId] = useState<string | null>(null);
+  const [incomingSharesError, setIncomingSharesError] = useState<string | null>(null);
+  const [shareRecipients, setShareRecipients] = useState<string[]>([]);
+  const [shareDraftFood, setShareDraftFood] = useState<SharedFoodPayload | null>(null);
+  const [showShareFoodSheet, setShowShareFoodSheet] = useState(false);
+  const [shareRecipientEmail, setShareRecipientEmail] = useState("");
+  const [shareFoodStatus, setShareFoodStatus] = useState<"idle" | "sending">("idle");
+  const [shareFoodError, setShareFoodError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [avatarMode, setAvatarMode] = useState<"emoji" | "photo">("emoji");
@@ -715,6 +771,7 @@ export default function KcalsPage() {
     setFoods(loadFoodList());
     setCustomFoods(loadCustomFoods());
     setRecentFoods(loadRecentFoods());
+    setShareRecipients(loadShareRecipients());
     if (typeof window !== "undefined") {
       setLastSyncAt(localStorage.getItem(SYNC_KEY));
       const storedGoal = localStorage.getItem(CALORIE_GOAL_KEY);
@@ -835,6 +892,94 @@ export default function KcalsPage() {
     const payload = await res.json().catch(() => ({}));
     return { error: null as string | null, publicUrl: payload?.publicUrl ?? null };
   }, [supabase]);
+
+  const fetchShareApi = useCallback(async (
+    endpoint: "send" | "inbox" | "respond",
+    init: RequestInit
+  ): Promise<{ ok: boolean; data: any; error: string | null }> => {
+    if (!supabase || !supabaseUrl || !supabaseAnonKey) {
+      return { ok: false, data: null, error: "Supabase is not configured." };
+    }
+    const { data } = await supabase.auth.getSession();
+    const accessToken = data.session?.access_token;
+    if (!accessToken) {
+      return { ok: false, data: null, error: "Please sign in first." };
+    }
+    const headers = new Headers(init.headers ?? undefined);
+    headers.set("Authorization", `Bearer ${accessToken}`);
+    if (init.body && !headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
+    const response = await fetch(`/playground/kcals/api/food-share/${endpoint}`, {
+      ...init,
+      headers,
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return { ok: false, data: payload, error: payload?.error ?? response.statusText };
+    }
+    return { ok: true, data: payload, error: null };
+  }, [supabase]);
+
+  const normalizeIncomingShares = useCallback((raw: unknown): IncomingFoodShare[] => {
+    if (!Array.isArray(raw)) return [];
+    const items: IncomingFoodShare[] = [];
+    for (const entry of raw) {
+      if (!entry || typeof entry !== "object") continue;
+      const object = entry as Record<string, unknown>;
+      const shareId = typeof object.id === "string" ? object.id : null;
+      const fromEmail = typeof object.fromEmail === "string" ? object.fromEmail : "";
+      const fromUserId = typeof object.fromUserId === "string" ? object.fromUserId : "";
+      const createdAt = typeof object.createdAt === "string" ? object.createdAt : new Date().toISOString();
+      const itemRaw = object.item;
+      if (!shareId || !itemRaw || typeof itemRaw !== "object") continue;
+      const itemObject = itemRaw as Record<string, unknown>;
+      const name = typeof itemObject.name === "string" ? itemObject.name : "";
+      const emoji = typeof itemObject.emoji === "string" ? itemObject.emoji : getFoodEmoji(name || "food");
+      const kcalPer100g = Number(itemObject.kcalPer100g);
+      if (!name.trim() || !Number.isFinite(kcalPer100g) || kcalPer100g <= 0) continue;
+      const gramsPerUnit = Number(itemObject.gramsPerUnit);
+      const image = typeof itemObject.image === "string" ? itemObject.image : null;
+      items.push({
+        id: shareId,
+        fromEmail,
+        fromUserId,
+        createdAt,
+        item: {
+          name: name.trim(),
+          emoji,
+          kcalPer100g: Math.round(kcalPer100g),
+          ...(Number.isFinite(gramsPerUnit) && gramsPerUnit > 0 ? { gramsPerUnit } : {}),
+          ...(image ? { image } : {}),
+        },
+      });
+    }
+    return items;
+  }, []);
+
+  const refreshIncomingShares = useCallback(async () => {
+    if (!user) {
+      setIncomingShares([]);
+      return;
+    }
+    const response = await fetchShareApi("inbox", { method: "GET" });
+    if (!response.ok) {
+      setIncomingSharesError(response.error);
+      return;
+    }
+    setIncomingShares(normalizeIncomingShares(response.data?.items));
+    setIncomingSharesError(null);
+  }, [user, fetchShareApi, normalizeIncomingShares]);
+
+  const rememberShareRecipient = useCallback((email: string) => {
+    const normalized = normalizeEmail(email);
+    if (!normalized) return;
+    setShareRecipients((prev) => {
+      const next = [normalized, ...prev.filter((entry) => entry !== normalized)].slice(0, 10);
+      saveShareRecipients(next);
+      return next;
+    });
+  }, []);
 
   const buildCustomFoodsPayload = useCallback(async (
     onUploadError?: (message: string) => void
@@ -1042,10 +1187,11 @@ export default function KcalsPage() {
       uploadErrors.push(`${message} (role: ${role}, sub: ${sub})`);
     };
     let remoteDailyLog: Record<string, unknown> | null = null;
+    let remoteProfile: Record<string, unknown> | null = null;
     {
       const { data: remoteState, error: remoteError } = await supabase
         .from("kcals_state")
-        .select("daily_log")
+        .select("daily_log, profile")
         .eq("user_id", user.id)
         .maybeSingle();
       if (remoteError && remoteError.code !== "PGRST116") {
@@ -1054,18 +1200,26 @@ export default function KcalsPage() {
         return false;
       }
       remoteDailyLog = (remoteState?.daily_log as Record<string, unknown> | null) ?? null;
+      remoteProfile = (remoteState?.profile && typeof remoteState.profile === "object")
+        ? (remoteState.profile as Record<string, unknown>)
+        : null;
     }
     const mergedDailyLog = mergeDailyLogs(loadDailyLogRaw(), remoteDailyLog);
     const customFoodsPayload = await buildCustomFoodsPayload(reportUploadError);
     const foodListPayload = await buildFoodListPayload(foods, reportUploadError);
     const profilePayload = await buildAvatarPayload(reportUploadError);
+    const mergedProfilePayload = {
+      ...(remoteProfile ?? {}),
+      ...profilePayload,
+      email: user.email ?? "",
+    };
     const payload = {
       user_id: user.id,
       food_list: foodListPayload,
       custom_foods: customFoodsPayload,
       recent_foods: recentFoods,
       daily_log: mergedDailyLog,
-      profile: profilePayload,
+      profile: mergedProfilePayload,
       updated_at: new Date().toISOString(),
     };
     const { error } = await supabase
@@ -1151,6 +1305,30 @@ export default function KcalsPage() {
   useEffect(() => {
     if (user) setShowAuthModal(false);
   }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      setIncomingShares([]);
+      setIncomingSharesError(null);
+      setShowIncomingSharesPage(false);
+      setShowShareFoodSheet(false);
+      return;
+    }
+    let cancelled = false;
+    const run = async () => {
+      await refreshIncomingShares();
+    };
+    void run();
+    const timer = window.setInterval(() => {
+      if (!cancelled) {
+        void refreshIncomingShares();
+      }
+    }, 45000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [user, refreshIncomingShares]);
 
   useEffect(() => {
     if (!showAuthModal) return;
@@ -1481,6 +1659,18 @@ export default function KcalsPage() {
   const getAttitudeString = useCallback((key: string, fallback: string) => {
     return currentAttitude.strings[key] ?? ATTITUDE_MODES.standard.strings[key] ?? fallback;
   }, [currentAttitude]);
+  const emptyStateVariants = useMemo(
+    () =>
+      DEFAULT_EMPTY_STATE_VARIANTS.map((variant, index) => {
+        const key = index + 1;
+        return {
+          emoji: getAttitudeString(`empty_state_variant_${key}_emoji`, variant.emoji),
+          title: getAttitudeString(`empty_state_variant_${key}_title`, variant.title),
+          text: getAttitudeString(`empty_state_variant_${key}_text`, variant.text),
+        };
+      }),
+    [getAttitudeString]
+  );
   const remainingAmountText = `${remainingPrefix}${(remainingIsNegative ? remainingAbs : remaining).toLocaleString()}`;
   const heroLineTemplate = getAttitudeString(
     remainingIsNegative ? "hero_over_limit" : "hero_remaining",
@@ -1488,6 +1678,11 @@ export default function KcalsPage() {
   );
   const heroLineParts = splitByKcalToken(heroLineTemplate);
   const heroLineHasToken = heroLineTemplate.includes("{kcal}");
+  const heroStyledUnitMatch = heroLineParts.after.match(/^(\s*kcal\b)/i);
+  const heroStyledUnit = heroStyledUnitMatch ? heroStyledUnitMatch[1] : "";
+  const heroLineAfterText = heroStyledUnit
+    ? heroLineParts.after.slice(heroStyledUnit.length)
+    : heroLineParts.after;
   const compactLineTemplate = getAttitudeString(
     remainingIsNegative ? "compact_over_limit" : "compact_remaining",
     remainingIsNegative ? "{kcal} over the limit" : "{kcal} remaining"
@@ -1515,6 +1710,10 @@ export default function KcalsPage() {
   const profileLogOutLabel = getAttitudeString("profile_log_out", "Log out");
   const chatboxPlaceholder = getAttitudeString("chatbox_placeholder", "Type what you ate...");
   const shareLabel = getAttitudeString("share_label", "Share");
+  const filteredShareRecipients = shareRecipients.filter(
+    (email) => email !== normalizeEmail(user?.email ?? "")
+  );
+  const canSendSharedFood = shareRecipientEmail.trim().length > 0 && shareFoodStatus !== "sending";
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareBgType, setShareBgType] = useState<"gradient" | "image">("gradient");
   const [shareImage, setShareImage] = useState<string | null>(null);
@@ -1570,20 +1769,22 @@ export default function KcalsPage() {
     const raw = window.localStorage.getItem(EMPTY_STATE_VARIANT_KEY);
     const parsed = raw != null ? Number.parseInt(raw, 10) : -1;
     const lastIndex = Number.isFinite(parsed) ? parsed : -1;
-    const nextIndex = (lastIndex + 1 + EMPTY_STATE_VARIANTS.length) % EMPTY_STATE_VARIANTS.length;
+    if (emptyStateVariants.length === 0) return;
+    const nextIndex = (lastIndex + 1 + emptyStateVariants.length) % emptyStateVariants.length;
     window.localStorage.setItem(EMPTY_STATE_VARIANT_KEY, String(nextIndex));
     setEmptyStateVariantIndex(nextIndex);
-  }, []);
+  }, [emptyStateVariants.length]);
 
   const rotateEmptyStateVariant = useCallback(() => {
+    if (emptyStateVariants.length === 0) return;
     setEmptyStateVariantIndex((prev) => {
-      const next = (prev + 1) % EMPTY_STATE_VARIANTS.length;
+      const next = (prev + 1) % emptyStateVariants.length;
       if (typeof window !== "undefined") {
         window.localStorage.setItem(EMPTY_STATE_VARIANT_KEY, String(next));
       }
       return next;
     });
-  }, []);
+  }, [emptyStateVariants.length]);
 
   /* ===========================
      Input focus handlers
@@ -1604,6 +1805,9 @@ export default function KcalsPage() {
   };
 
   const dismissSuggestions = () => {
+    setInputValue("");
+    setSelectedCustomFood(null);
+    setSelectedRecentFood(null);
     setInputFocused(false);
     inputRef.current?.blur();
   };
@@ -2009,6 +2213,9 @@ export default function KcalsPage() {
     await supabase.auth.signOut();
     setUser(null);
     setShowProfileModal(false);
+    setShowShareFoodSheet(false);
+    setShowIncomingSharesPage(false);
+    setIncomingShares([]);
   };
 
   const handleAvatarEmojiChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -2436,6 +2643,49 @@ export default function KcalsPage() {
     }, MODAL_ANIM_MS);
   };
 
+  const getChipMenuShareDraft = useCallback((): SharedFoodPayload | null => {
+    if (!chipMenu) return null;
+    if (chipMenu.type === "custom" && chipMenu.customFood) {
+      const food = chipMenu.customFood;
+      const kcal = Number(food.kcalPer100g);
+      if (!Number.isFinite(kcal) || kcal <= 0) return null;
+      const image = food.image && !isDataUrl(food.image) ? food.image : null;
+      return {
+        name: food.name,
+        emoji: getFoodEmoji(food.name),
+        kcalPer100g: Math.round(kcal),
+        ...(image ? { image } : {}),
+      };
+    }
+    if (chipMenu.type === "recent" && chipMenu.recentFood) {
+      const food = chipMenu.recentFood;
+      const kcal = Number(food.kcalPer100g);
+      if (!Number.isFinite(kcal) || kcal <= 0) return null;
+      return {
+        name: food.name,
+        emoji: food.emoji || getFoodEmoji(food.name),
+        kcalPer100g: Math.round(kcal),
+        ...(food.gramsPerUnit != null ? { gramsPerUnit: food.gramsPerUnit } : {}),
+      };
+    }
+    return null;
+  }, [chipMenu]);
+
+  const handleChipMenuShare = () => {
+    const draft = getChipMenuShareDraft();
+    clearChipMenuImmediate();
+    if (!draft) return;
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+    setShareDraftFood(draft);
+    setShareRecipientEmail("");
+    setShareFoodError(null);
+    setShareFoodStatus("idle");
+    setShowShareFoodSheet(true);
+  };
+
   const handleChipMenuInsert = () => {
     if (!chipMenu) return;
     if (chipMenu.type === "custom" && chipMenu.customFood) {
@@ -2475,6 +2725,61 @@ export default function KcalsPage() {
     removeRecentFood(chipMenu.recentFood.name);
     setRecentFoods(loadRecentFoods());
     clearChipMenuImmediate();
+  };
+
+  const handleShareFoodSend = async () => {
+    if (!shareDraftFood) return;
+    const email = normalizeEmail(shareRecipientEmail);
+    if (!email) {
+      setShareFoodError("Enter email address.");
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setShareFoodError("Enter a valid email address.");
+      return;
+    }
+    setShareFoodStatus("sending");
+    setShareFoodError(null);
+    const response = await fetchShareApi("send", {
+      method: "POST",
+      body: JSON.stringify({
+        recipientEmail: email,
+        item: shareDraftFood,
+      }),
+    });
+    if (!response.ok) {
+      setShareFoodStatus("idle");
+      setShareFoodError(response.error ?? "Failed to send.");
+      return;
+    }
+    rememberShareRecipient(email);
+    setShareFoodStatus("idle");
+    setShowShareFoodSheet(false);
+    setShareRecipientEmail("");
+    setShareDraftFood(null);
+  };
+
+  const handleIncomingShareAction = async (shareId: string, action: "accept" | "deny") => {
+    if (incomingShareActionId) return;
+    setIncomingShareActionId(shareId);
+    setIncomingSharesError(null);
+    const response = await fetchShareApi("respond", {
+      method: "POST",
+      body: JSON.stringify({ shareId, action }),
+    });
+    if (!response.ok) {
+      setIncomingShareActionId(null);
+      setIncomingSharesError(response.error ?? "Action failed.");
+      return;
+    }
+    const nextIncoming = normalizeIncomingShares(response.data?.items);
+    setIncomingShares(nextIncoming);
+    if (Array.isArray(response.data?.customFoods)) {
+      const nextCustomFoods = response.data.customFoods as CustomFood[];
+      setCustomFoods(nextCustomFoods);
+      saveCustomFoods(nextCustomFoods);
+    }
+    setIncomingShareActionId(null);
   };
 
   /* ===========================
@@ -2656,7 +2961,10 @@ export default function KcalsPage() {
 
   const queryActive = inputValue.trim().length > 0;
   const isFoodListEmpty = foods.length === 0;
-  const emptyStateVariant = EMPTY_STATE_VARIANTS[emptyStateVariantIndex];
+  const emptyStateVariant =
+    emptyStateVariants[emptyStateVariantIndex] ??
+    emptyStateVariants[0] ??
+    DEFAULT_EMPTY_STATE_VARIANTS[0];
   const baseRecentFoods = recentFoods.filter(
     (rf) => !customFoods.some((cf) => cf.name.toLowerCase() === rf.name.toLowerCase())
   );
@@ -3446,8 +3754,8 @@ export default function KcalsPage() {
               {heroLineHasToken ? (
                 <>
                   {heroLineParts.before && <span>{heroLineParts.before}</span>}
-                  <strong>{remainingAmountText}</strong>
-                  {heroLineParts.after && <span>{heroLineParts.after}</span>}
+                  <strong>{remainingAmountText}{heroStyledUnit}</strong>
+                  {heroLineAfterText && <span>{heroLineAfterText}</span>}
                 </>
               ) : (
                 <span>{heroLineTemplate}</span>
@@ -3486,12 +3794,27 @@ export default function KcalsPage() {
 	            </div>
 	          ) : (
 	            <>
-	              <div className="kcals-section-header">
-	                <span>Food list ({foods.length})</span>
-	                {foods.some((f) => f.loading) && (
-	                  <span className="kcals-status-text">Fetching from USDA</span>
-	                )}
-	              </div>
+		              <div className="kcals-section-header">
+		                <div className="kcals-section-header-left">
+		                  <span>Food list ({foods.length})</span>
+		                  {incomingShares.length > 0 && (
+		                    <button
+                          className="kcals-section-new-btn"
+                          type="button"
+                          onClick={() => {
+                            setIncomingSharesError(null);
+                            setShowIncomingSharesPage(true);
+                            void refreshIncomingShares();
+                          }}
+                        >
+                          New ({incomingShares.length})
+                        </button>
+		                  )}
+		                </div>
+		                {foods.some((f) => f.loading) && (
+		                  <span className="kcals-status-text">Fetching from USDA</span>
+		                )}
+		              </div>
 	              <div className="kcals-food-list">
 	                {foods.map(renderFoodRow)}
 	              </div>
@@ -3667,6 +3990,9 @@ export default function KcalsPage() {
             <button className="kcals-chip-menu-item" onClick={handleChipMenuInsert} type="button">
               Insert
             </button>
+            <button className="kcals-chip-menu-item" onClick={handleChipMenuShare} type="button">
+              {shareLabel}
+            </button>
             {chipMenu?.type === "custom" && (
               <button className="kcals-chip-menu-item" onClick={handleChipMenuEdit} type="button">
                 Edit
@@ -3682,7 +4008,146 @@ export default function KcalsPage() {
           </div>
         </div>
       )}
+
+      {showIncomingSharesPage && (
+        <div className="kcals-received-screen">
+          <div className="kcals-received-topbar">
+            <button
+              className="kcals-received-close"
+              type="button"
+              onClick={() => setShowIncomingSharesPage(false)}
+              aria-label="Close received food"
+            >
+              <img src="/kcals/assets/close.svg" alt="" className="kcals-share-close-icon" />
+            </button>
+          </div>
+          <div className="kcals-received-title">Received food ({incomingShares.length})</div>
+          {incomingSharesError && <div className="kcals-received-error">{incomingSharesError}</div>}
+          <div className="kcals-received-list">
+            {incomingShares.map((shareItem) => (
+              <div key={shareItem.id} className="kcals-received-item">
+                <div className="kcals-food-item kcals-received-item-card">
+                  <div className="kcals-food-emoji">{shareItem.item.emoji}</div>
+                  <div className="kcals-received-item-content">
+                    <div className="kcals-food-name">{shareItem.item.name}</div>
+                    <div className="kcals-received-item-from">from {shareItem.fromEmail || "unknown"}</div>
+                  </div>
+                  <div className="kcals-received-actions">
+                    <button
+                      className="kcals-received-action kcals-received-action--deny"
+                      type="button"
+                      disabled={incomingShareActionId === shareItem.id}
+                      onClick={() => handleIncomingShareAction(shareItem.id, "deny")}
+                    >
+                      Deny
+                    </button>
+                    <button
+                      className="kcals-received-action"
+                      type="button"
+                      disabled={incomingShareActionId === shareItem.id}
+                      onClick={() => handleIncomingShareAction(shareItem.id, "accept")}
+                    >
+                      Accept
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {incomingShares.length === 0 && (
+              <div className="kcals-received-empty">No new shared foods.</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
+
+      <BottomSheet
+        open={showShareFoodSheet}
+        onClose={() => {
+          setShowShareFoodSheet(false);
+          setShareFoodError(null);
+          setShareRecipientEmail("");
+          setShareDraftFood(null);
+          setShareFoodStatus("idle");
+        }}
+      >
+        <div className="kcals-modal-handle" />
+        <div className="kcals-food-share-sheet">
+          <div className="kcals-food-share-topbar">
+            <button
+              className="kcals-food-share-back"
+              type="button"
+              onClick={() => {
+                setShowShareFoodSheet(false);
+                setShareFoodError(null);
+                setShareRecipientEmail("");
+                setShareDraftFood(null);
+                setShareFoodStatus("idle");
+              }}
+              aria-label="Back"
+            >
+              ←
+            </button>
+            <div className="kcals-food-share-title">{shareLabel.toUpperCase()}</div>
+            <span aria-hidden="true" />
+          </div>
+
+          {shareDraftFood && (
+            <div className="kcals-food-item kcals-food-share-card">
+              <div className="kcals-food-emoji">{shareDraftFood.emoji}</div>
+              <div className="kcals-food-name">{shareDraftFood.name}</div>
+              <div className="kcals-food-kcal">{shareDraftFood.kcalPer100g}kcal/100g</div>
+            </div>
+          )}
+
+          <div className="kcals-food-share-label">Send to</div>
+          <input
+            className="kcals-food-share-input"
+            type="email"
+            value={shareRecipientEmail}
+            onChange={(e) => {
+              setShareRecipientEmail(e.target.value);
+              if (shareFoodError) setShareFoodError(null);
+            }}
+            placeholder="Enter email address"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+          />
+
+          {filteredShareRecipients.length > 0 && (
+            <>
+              <div className="kcals-food-share-label">Suggestions</div>
+              <div className="kcals-pills kcals-food-share-suggestions">
+                {filteredShareRecipients.map((email) => (
+                  <button
+                    key={email}
+                    className="kcals-pill"
+                    type="button"
+                    onClick={() => {
+                      setShareRecipientEmail(email);
+                      setShareFoodError(null);
+                    }}
+                  >
+                    <span className="kcals-pill-emoji" aria-hidden="true">{avatarEmojiDisplay}</span>
+                    <span className="kcals-pill-label">{email}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {shareFoodError && <div className="kcals-food-share-error">{shareFoodError}</div>}
+          <button
+            className="kcals-food-share-send"
+            type="button"
+            disabled={!canSendSharedFood}
+            onClick={handleShareFoodSend}
+          >
+            {shareFoodStatus === "sending" ? "Sending..." : "Send"}
+          </button>
+        </div>
+      </BottomSheet>
 
       {/* Custom Food Modal */}
       <BottomSheet open={showModal} onClose={handleCloseModal}>

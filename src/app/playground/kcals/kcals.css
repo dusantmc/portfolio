@@ -192,6 +192,7 @@
   font-size: 13px;
   color: var(--green);
   font-weight: 600;
+  white-space: pre-line;
 }
 
 .kcals-topbar-compact-remaining.is-negative {
@@ -277,6 +278,7 @@
   font-size: 17px;
   line-height: 20px;
   margin-top: 0;
+  white-space: pre-line;
 }
 
 .kcals-calorie-remaining strong {
@@ -306,6 +308,24 @@
   opacity: 0.5;
   padding: 0 24px;
   margin-bottom: 10px;
+}
+
+.kcals-section-header-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kcals-section-new-btn {
+  border: none;
+  background: none;
+  color: #007bff;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0;
 }
 
 .kcals-food-list {
@@ -1343,9 +1363,16 @@
 }
 
 .kcals-profile-settings-input--attitude {
-  width: 132px;
+  width: fit-content;
   text-align: left;
-  padding: 0 10px;
+  padding: 0 24px 0 10px;
+}
+
+select.kcals-profile-settings-input--attitude {
+  background-image: url("/kcals/assets/chevron.svg");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px 12px;
 }
 
 .kcals-profile-settings-input:focus {
@@ -2028,6 +2055,228 @@ select.kcals-profile-settings-input::-ms-expand {
 }
 
 /* ===========================
+   Food Sharing
+   =========================== */
+
+.kcals-food-share-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.kcals-food-share-topbar {
+  display: grid;
+  grid-template-columns: 32px 1fr 32px;
+  align-items: center;
+  margin-top: -6px;
+}
+
+.kcals-food-share-back {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: none;
+  color: var(--black-70);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.kcals-food-share-title {
+  text-align: center;
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 700;
+  color: var(--black-50);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.kcals-food-share-card {
+  margin-top: 6px;
+}
+
+.kcals-food-share-label {
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--black-50);
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
+.kcals-food-share-input {
+  width: 100%;
+  height: 56px;
+  border-radius: 16px;
+  border: 1px solid var(--border-16);
+  background: var(--white);
+  color: var(--black-100);
+  font-size: 16px;
+  font-family: inherit;
+  padding: 0 16px;
+  outline: none;
+}
+
+.kcals-food-share-input:focus {
+  border-color: var(--blue);
+}
+
+.kcals-food-share-input::placeholder {
+  color: var(--black-50);
+}
+
+.kcals-food-share-suggestions .kcals-pill {
+  max-width: 100%;
+}
+
+.kcals-food-share-suggestions .kcals-pill-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kcals-food-share-error {
+  font-size: 13px;
+  line-height: 16px;
+  color: var(--red);
+}
+
+.kcals-food-share-send {
+  width: 100%;
+  height: 52px;
+  border: none;
+  border-radius: 16px;
+  background: var(--blue);
+  color: var(--white);
+  font-size: 17px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.kcals-food-share-send:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.kcals-received-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 220;
+  background: var(--background);
+  display: flex;
+  flex-direction: column;
+  padding: calc(env(safe-area-inset-top) + 10px) 16px 16px;
+}
+
+.kcals-received-topbar {
+  height: 36px;
+  display: flex;
+  align-items: center;
+}
+
+.kcals-received-close {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.kcals-received-title {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--black-50);
+  opacity: 0.9;
+}
+
+.kcals-received-error {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--red);
+}
+
+.kcals-received-list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.kcals-received-item-card {
+  height: auto;
+  min-height: 56px;
+  padding-right: 12px;
+}
+
+.kcals-received-item-content {
+  margin-left: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.kcals-received-item-content .kcals-food-name {
+  margin-left: 0;
+}
+
+.kcals-received-item-from {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 14px;
+  color: var(--black-70);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kcals-received-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  margin-left: 8px;
+}
+
+.kcals-received-action {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--blue);
+  font-size: 17px;
+  line-height: 20px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.kcals-received-action--deny {
+  color: var(--red);
+}
+
+.kcals-received-action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.kcals-received-empty {
+  font-size: 14px;
+  color: var(--black-50);
+  padding: 12px 4px;
+}
+
+/* ===========================
    Chip Button
    =========================== */
 
@@ -2227,6 +2476,7 @@ select.kcals-profile-settings-input::-ms-expand {
   font-size: 14px;
   color: var(--black-70);
   line-height: 1.5;
+  white-space: pre-line;
 }
 
 .kcals-weekly-summary strong {

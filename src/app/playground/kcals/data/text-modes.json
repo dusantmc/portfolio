@@ -16,7 +16,25 @@
       "profile_app_attitude_label": "App attitude",
       "profile_log_out": "Log out",
       "chatbox_placeholder": "Type what you ate...",
-      "share_label": "Share"
+      "share_label": "Share",
+      "empty_state_variant_1_emoji": "💪",
+      "empty_state_variant_1_title": "Start your day with protein",
+      "empty_state_variant_1_text": "Type what you ate or select a food from your list",
+      "empty_state_variant_2_emoji": "☕",
+      "empty_state_variant_2_title": "No food logged yet",
+      "empty_state_variant_2_text": "Start typing or select a food from your list",
+      "empty_state_variant_3_emoji": "🌤️",
+      "empty_state_variant_3_title": "Small start, big win",
+      "empty_state_variant_3_text": "Add one food to kick things off",
+      "empty_state_variant_4_emoji": "✨",
+      "empty_state_variant_4_title": "Start your day with protein",
+      "empty_state_variant_4_text": "Start typing or select a food from your list",
+      "empty_state_variant_5_emoji": "🍽️",
+      "empty_state_variant_5_title": "Your plate is empty",
+      "empty_state_variant_5_text": "Add your first meal to get started",
+      "empty_state_variant_6_emoji": "🏃",
+      "empty_state_variant_6_title": "Small start, big win",
+      "empty_state_variant_6_text": "Start typing or select a food from your list"
     }
   },
   "karen": {
@@ -36,7 +54,25 @@
       "profile_app_attitude_label": "App attitude",
       "profile_log_out": "I wanna leave",
       "chatbox_placeholder": "Type what you ate. Don’t lie.",
-      "share_label": "Share my shame"
+      "share_label": "Share my shame",
+      "empty_state_variant_1_emoji": "💪",
+      "empty_state_variant_1_title": "Start your day with protein",
+      "empty_state_variant_1_text": "Type what you ate or select a food from your list",
+      "empty_state_variant_2_emoji": "☕",
+      "empty_state_variant_2_title": "No food logged yet",
+      "empty_state_variant_2_text": "Start typing or select a food from your list",
+      "empty_state_variant_3_emoji": "🌤️",
+      "empty_state_variant_3_title": "Small start, big win",
+      "empty_state_variant_3_text": "Add one food to kick things off",
+      "empty_state_variant_4_emoji": "✨",
+      "empty_state_variant_4_title": "Start your day with protein",
+      "empty_state_variant_4_text": "Start typing or select a food from your list",
+      "empty_state_variant_5_emoji": "🍽️",
+      "empty_state_variant_5_title": "Your plate is empty",
+      "empty_state_variant_5_text": "Add your first meal to get started",
+      "empty_state_variant_6_emoji": "🏃",
+      "empty_state_variant_6_title": "Small start, big win",
+      "empty_state_variant_6_text": "Start typing or select a food from your list"
     }
   }
 }
