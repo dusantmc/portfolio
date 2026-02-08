@@ -2373,6 +2373,14 @@ select.kcals-profile-settings-input::-ms-expand {
   line-height: 1;
 }
 
+.kcals-summary-image {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
 .kcals-summary-name {
   font-size: 15px;
   font-weight: 500;

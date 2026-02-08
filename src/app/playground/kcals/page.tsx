@@ -548,6 +548,10 @@ function isDataUrl(value?: string | null): boolean {
   return !!value && value.startsWith("data:");
 }
 
+function isBlobUrl(value?: string | null): boolean {
+  return !!value && value.startsWith("blob:");
+}
+
 function getLastGrapheme(value: string): string {
   if (typeof Intl !== "undefined" && "Segmenter" in Intl) {
     const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
@@ -1627,6 +1631,9 @@ export default function KcalsPage() {
   const summaryRows = useMemo(() => {
     const dailyLog = loadDailyLogRaw();
     const totals = new Map<string, DailyFoodSummary>();
+    const customByName = new Map(
+      customFoods.map((food) => [food.name.trim().toLowerCase(), food] as const)
+    );
     const cursor = new Date();
     for (let i = 0; i < summaryRangeDays; i++) {
       const dayKey = getDayKey(cursor);
@@ -1647,14 +1654,24 @@ export default function KcalsPage() {
       }
       cursor.setDate(cursor.getDate() - 1);
     }
-    const rows = Array.from(totals.entries()).map(([key, value]) => ({ key, ...value }));
+    const rows = Array.from(totals.entries()).map(([key, value]) => {
+      const custom = customByName.get(value.name.trim().toLowerCase());
+      const image = custom?.imageId
+        ? (imageUrls[custom.imageId] ?? custom.image)
+        : custom?.image;
+      return {
+        key,
+        ...value,
+        ...(image ? { image } : {}),
+      };
+    });
     if (summarySort === "name") {
       rows.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
     } else {
       rows.sort((a, b) => b.grams - a.grams || a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
     }
     return rows;
-  }, [summaryRangeDays, summarySort, foods, dayStartHour, lastSyncAt]);
+  }, [summaryRangeDays, summarySort, foods, customFoods, imageUrls, dayStartHour, lastSyncAt]);
   const currentAttitude = ATTITUDE_MODES[attitudeMode] ?? ATTITUDE_MODES.standard;
   const getAttitudeString = useCallback((key: string, fallback: string) => {
     return currentAttitude.strings[key] ?? ATTITUDE_MODES.standard.strings[key] ?? fallback;
@@ -2643,13 +2660,31 @@ export default function KcalsPage() {
     }, MODAL_ANIM_MS);
   };
 
-  const getChipMenuShareDraft = useCallback((): SharedFoodPayload | null => {
+  const resolveSharableImage = useCallback(async (
+    imageId?: string,
+    imageValue?: string | null
+  ): Promise<string | null> => {
+    if (imageValue && !isBlobUrl(imageValue)) return imageValue;
+    if (!imageId) return null;
+    try {
+      const blob = await loadCustomFoodImage(imageId);
+      if (!blob) return null;
+      return await blobToDataUrl(blob);
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const getChipMenuShareDraft = useCallback(async (): Promise<SharedFoodPayload | null> => {
     if (!chipMenu) return null;
     if (chipMenu.type === "custom" && chipMenu.customFood) {
       const food = chipMenu.customFood;
       const kcal = Number(food.kcalPer100g);
       if (!Number.isFinite(kcal) || kcal <= 0) return null;
-      const image = food.image && !isDataUrl(food.image) ? food.image : null;
+      const resolvedImage = food.imageId
+        ? (imageUrls[food.imageId] ?? food.image)
+        : food.image;
+      const image = await resolveSharableImage(food.imageId, resolvedImage ?? null);
       return {
         name: food.name,
         emoji: getFoodEmoji(food.name),
@@ -2661,18 +2696,26 @@ export default function KcalsPage() {
       const food = chipMenu.recentFood;
       const kcal = Number(food.kcalPer100g);
       if (!Number.isFinite(kcal) || kcal <= 0) return null;
+      const customMatch = customFoods.find(
+        (entry) => entry.name.trim().toLowerCase() === food.name.trim().toLowerCase()
+      );
+      const resolvedImage = customMatch?.imageId
+        ? (imageUrls[customMatch.imageId] ?? customMatch.image)
+        : customMatch?.image;
+      const image = await resolveSharableImage(customMatch?.imageId, resolvedImage ?? null);
       return {
         name: food.name,
         emoji: food.emoji || getFoodEmoji(food.name),
         kcalPer100g: Math.round(kcal),
         ...(food.gramsPerUnit != null ? { gramsPerUnit: food.gramsPerUnit } : {}),
+        ...(image ? { image } : {}),
       };
     }
     return null;
-  }, [chipMenu]);
+  }, [chipMenu, customFoods, imageUrls, resolveSharableImage]);
 
-  const handleChipMenuShare = () => {
-    const draft = getChipMenuShareDraft();
+  const handleChipMenuShare = async () => {
+    const draft = await getChipMenuShareDraft();
     clearChipMenuImmediate();
     if (!draft) return;
     if (!user) {
@@ -2896,6 +2939,7 @@ export default function KcalsPage() {
           sourceName: isCustom ? customMatch.name : (cached?.name ?? canonicalName),
           kcalPer100g: cachedKcalPer100g,
           gramsPerUnit: cachedGramsPerUnit,
+          ...(customMatch?.imageId ? { imageId: customMatch.imageId } : {}),
         },
         ...prev,
       ]);
@@ -4027,7 +4071,13 @@ export default function KcalsPage() {
             {incomingShares.map((shareItem) => (
               <div key={shareItem.id} className="kcals-received-item">
                 <div className="kcals-food-item kcals-received-item-card">
-                  <div className="kcals-food-emoji">{shareItem.item.emoji}</div>
+                  <div className="kcals-food-emoji">
+                    {shareItem.item.image ? (
+                      <img src={shareItem.item.image} alt="" className="kcals-food-image" />
+                    ) : (
+                      shareItem.item.emoji
+                    )}
+                  </div>
                   <div className="kcals-received-item-content">
                     <div className="kcals-food-name">{shareItem.item.name}</div>
                     <div className="kcals-received-item-from">from {shareItem.fromEmail || "unknown"}</div>
@@ -4094,7 +4144,13 @@ export default function KcalsPage() {
 
           {shareDraftFood && (
             <div className="kcals-food-item kcals-food-share-card">
-              <div className="kcals-food-emoji">{shareDraftFood.emoji}</div>
+              <div className="kcals-food-emoji">
+                {shareDraftFood.image ? (
+                  <img src={shareDraftFood.image} alt="" className="kcals-food-image" />
+                ) : (
+                  shareDraftFood.emoji
+                )}
+              </div>
               <div className="kcals-food-name">{shareDraftFood.name}</div>
               <div className="kcals-food-kcal">{shareDraftFood.kcalPer100g}kcal/100g</div>
             </div>
@@ -4735,7 +4791,11 @@ export default function KcalsPage() {
             {summaryRows.map((row) => (
               <div key={row.key} className="kcals-summary-row">
                 <div className="kcals-summary-food">
-                  <span className="kcals-summary-emoji">{row.emoji ?? "\u{1F372}"}</span>
+                  {row.image ? (
+                    <img src={row.image} alt="" className="kcals-summary-image" />
+                  ) : (
+                    <span className="kcals-summary-emoji">{row.emoji ?? "\u{1F372}"}</span>
+                  )}
                   <span className="kcals-summary-name">{row.name}</span>
                 </div>
                 <span className="kcals-summary-amount">{formatSummaryAmount(row.grams)}</span>
