@@ -407,6 +407,12 @@ interface IncomingFoodShare {
   item: SharedFoodPayload;
 }
 
+interface ShareRecipientAvatar {
+  mode: "emoji" | "photo";
+  emoji?: string;
+  photo?: string | null;
+}
+
 function normalizeEmail(value: string): string {
   return value.trim().toLowerCase();
 }
@@ -591,6 +597,7 @@ export default function KcalsPage() {
   const [incomingShareActionId, setIncomingShareActionId] = useState<string | null>(null);
   const [incomingSharesError, setIncomingSharesError] = useState<string | null>(null);
   const [shareRecipients, setShareRecipients] = useState<string[]>([]);
+  const [shareRecipientAvatars, setShareRecipientAvatars] = useState<Record<string, ShareRecipientAvatar>>({});
   const [shareDraftFood, setShareDraftFood] = useState<SharedFoodPayload | null>(null);
   const [showShareFoodSheet, setShowShareFoodSheet] = useState(false);
   const [shareRecipientEmail, setShareRecipientEmail] = useState("");
@@ -611,6 +618,7 @@ export default function KcalsPage() {
   const [syncError, setSyncError] = useState<string | null>(null);
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showAttitudeMenu, setShowAttitudeMenu] = useState(false);
   const [calorieGoal, setCalorieGoal] = useState(DEFAULT_CALORIE_GOAL);
   const [calorieGoalInput, setCalorieGoalInput] = useState(DEFAULT_CALORIE_GOAL.toString());
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(false);
@@ -642,6 +650,8 @@ export default function KcalsPage() {
     startY: 0,
   });
   const chipMenuAnchorRef = useRef<HTMLElement | null>(null);
+  const attitudeTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const attitudeMenuRef = useRef<HTMLDivElement | null>(null);
   const suggestionsScrollRef = useRef<HTMLDivElement | null>(null);
 
   // Chip context menu state
@@ -898,7 +908,7 @@ export default function KcalsPage() {
   }, [supabase]);
 
   const fetchShareApi = useCallback(async (
-    endpoint: "send" | "inbox" | "respond",
+    endpoint: "send" | "inbox" | "respond" | "recipients",
     init: RequestInit
   ): Promise<{ ok: boolean; data: any; error: string | null }> => {
     if (!supabase || !supabaseUrl || !supabaseAnonKey) {
@@ -961,6 +971,29 @@ export default function KcalsPage() {
     return items;
   }, []);
 
+  const normalizeRecipientAvatars = useCallback(
+    (raw: unknown): Record<string, ShareRecipientAvatar> => {
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+      const output: Record<string, ShareRecipientAvatar> = {};
+      for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+        if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+        const avatar = value as Record<string, unknown>;
+        const email = normalizeEmail(key);
+        if (!email) continue;
+        const mode = avatar.mode === "photo" ? "photo" : "emoji";
+        const emoji = typeof avatar.emoji === "string" ? avatar.emoji : undefined;
+        const photo = typeof avatar.photo === "string" ? avatar.photo : null;
+        output[email] = {
+          mode,
+          ...(emoji ? { emoji } : {}),
+          ...(photo ? { photo } : { photo: null }),
+        };
+      }
+      return output;
+    },
+    []
+  );
+
   const refreshIncomingShares = useCallback(async () => {
     if (!user) {
       setIncomingShares([]);
@@ -984,6 +1017,35 @@ export default function KcalsPage() {
       return next;
     });
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setShareRecipientAvatars({});
+      return;
+    }
+    const ownEmail = normalizeEmail(user.email ?? "");
+    const emails = shareRecipients.filter((email) => email && email !== ownEmail);
+    if (emails.length === 0) {
+      setShareRecipientAvatars({});
+      return;
+    }
+    let cancelled = false;
+    const run = async () => {
+      const response = await fetchShareApi("recipients", {
+        method: "POST",
+        body: JSON.stringify({ emails }),
+      });
+      if (!response.ok || cancelled) return;
+      const recipients = normalizeRecipientAvatars(response.data?.recipients);
+      if (!cancelled) {
+        setShareRecipientAvatars(recipients);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, shareRecipients, fetchShareApi, normalizeRecipientAvatars]);
 
   const buildCustomFoodsPayload = useCallback(async (
     onUploadError?: (message: string) => void
@@ -1341,6 +1403,27 @@ export default function KcalsPage() {
     setAuthOtp("");
     setAuthStep("email");
   }, [showAuthModal]);
+
+  useEffect(() => {
+    if (!showProfileModal) {
+      setShowAttitudeMenu(false);
+    }
+  }, [showProfileModal]);
+
+  useEffect(() => {
+    if (!showAttitudeMenu) return;
+    const handlePointerDown = (event: Event) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (attitudeTriggerRef.current?.contains(target)) return;
+      if (attitudeMenuRef.current?.contains(target)) return;
+      setShowAttitudeMenu(false);
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [showAttitudeMenu]);
 
   useEffect(() => {
     setDayStartHourState(getDayStartHour());
@@ -4185,7 +4268,13 @@ export default function KcalsPage() {
                       setShareFoodError(null);
                     }}
                   >
-                    <span className="kcals-pill-emoji" aria-hidden="true">{avatarEmojiDisplay}</span>
+                    {shareRecipientAvatars[email]?.mode === "photo" && shareRecipientAvatars[email]?.photo ? (
+                      <img src={shareRecipientAvatars[email].photo ?? ""} alt="" className="kcals-pill-image" />
+                    ) : (
+                      <span className="kcals-pill-emoji" aria-hidden="true">
+                        {shareRecipientAvatars[email]?.emoji?.trim() || email.trim()[0]?.toUpperCase() || "•"}
+                      </span>
+                    )}
                     <span className="kcals-pill-label">{email}</span>
                   </button>
                 ))}
@@ -4579,17 +4668,37 @@ export default function KcalsPage() {
               </div>
               <div className="kcals-profile-settings-row">
                 <span className="kcals-profile-settings-label">{profileAppAttitudeLabel}</span>
-                <select
-                  className="kcals-profile-settings-input kcals-profile-settings-input--attitude"
-                  value={attitudeMode}
-                  onChange={(e) => setAttitudeMode(e.target.value as AttitudeModeId)}
-                >
-                  {ATTITUDE_MODE_OPTIONS.map((modeId) => (
-                    <option key={modeId} value={modeId}>
-                      {ATTITUDE_MODES[modeId]?.label ?? modeId}
-                    </option>
-                  ))}
-                </select>
+                <div className="kcals-profile-attitude">
+                  <button
+                    ref={attitudeTriggerRef}
+                    className="kcals-profile-settings-input kcals-profile-settings-input--attitude"
+                    type="button"
+                    onClick={() => setShowAttitudeMenu((prev) => !prev)}
+                    aria-haspopup="menu"
+                    aria-expanded={showAttitudeMenu}
+                  >
+                    {ATTITUDE_MODES[attitudeMode]?.label ?? attitudeMode}
+                  </button>
+                  {showAttitudeMenu && (
+                    <div className="kcals-profile-attitude-menu" ref={attitudeMenuRef}>
+                      <div className="kcals-chip-menu kcals-profile-attitude-popover">
+                        {ATTITUDE_MODE_OPTIONS.map((modeId) => (
+                          <button
+                            key={modeId}
+                            className="kcals-chip-menu-item"
+                            type="button"
+                            onClick={() => {
+                              setAttitudeMode(modeId);
+                              setShowAttitudeMenu(false);
+                            }}
+                          >
+                            {ATTITUDE_MODES[modeId]?.label ?? modeId}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="kcals-profile-settings-row">
                 <span className="kcals-profile-settings-label">{profileSyncAutomaticallyLabel}</span>

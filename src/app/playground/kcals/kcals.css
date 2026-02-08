@@ -1366,13 +1366,32 @@
   width: fit-content;
   text-align: left;
   padding: 0 24px 0 10px;
-}
-
-select.kcals-profile-settings-input--attitude {
   background-image: url("/kcals/assets/chevron.svg");
   background-repeat: no-repeat;
   background-position: right 8px center;
   background-size: 12px 12px;
+  cursor: pointer;
+}
+
+.kcals-profile-attitude {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.kcals-profile-attitude-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 6;
+}
+
+.kcals-profile-attitude-popover {
+  position: static;
+  min-width: 160px;
+}
+
+.kcals-profile-attitude-popover .kcals-chip-menu-item {
+  justify-content: flex-start;
 }
 
 .kcals-profile-settings-input:focus {
@@ -1384,7 +1403,6 @@ select.kcals-profile-settings-input {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-  background-image: none;
 }
 
 select.kcals-profile-settings-input::-ms-expand {
