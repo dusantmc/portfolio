@@ -4,7 +4,19 @@ const PROXY_URL = "/playground/kcals/api/usda";
    Input Parser
    =========================== */
 
-export function parseFoodInput(text: string): { name: string; quantity: number; unit: "g" | "count" } {
+type FoodSize = "baby" | "small" | "medium" | "large";
+
+function normalizeSize(raw: string | undefined): FoodSize | undefined {
+  if (!raw) return undefined;
+  const l = raw.toLowerCase();
+  if (l === "baby") return "baby";
+  if (l === "small" || l === "sm") return "small";
+  if (l === "medium" || l === "med") return "medium";
+  if (l === "large" || l === "lg") return "large";
+  return undefined;
+}
+
+export function parseFoodInput(text: string): { name: string; quantity: number; unit: "g" | "count"; size?: FoodSize } {
   const trimmed = text.trim();
 
   // Match patterns like "Bananas 250g", "Chicken 200 grams", "Rice 1.5kg"
@@ -16,10 +28,16 @@ export function parseFoodInput(text: string): { name: string; quantity: number; 
     return { name, quantity: grams, unit: "g" };
   }
 
-  // Match count patterns like "2 eggs", "2 boiled eggs"
-  const countMatch = trimmed.match(/^(\d+(?:\.\d+)?)\s+(.+)$/);
+  // Match count patterns like "2 eggs", "2 large bananas", "2 sm apples"
+  const countMatch = trimmed.match(/^(\d+(?:\.\d+)?)\s+(?:(baby|small|sm|medium|med|large|lg)\s+)?(.+)$/i);
   if (countMatch) {
-    return { name: countMatch[2].trim(), quantity: parseFloat(countMatch[1]), unit: "count" };
+    return { name: countMatch[3].trim(), quantity: parseFloat(countMatch[1]), unit: "count", size: normalizeSize(countMatch[2]) };
+  }
+
+  // Match "Banana 2", "Banana 2 large", "Apple 3 sm"
+  const nameThenCountMatch = trimmed.match(/^(.+?)\s+(\d+(?:\.\d+)?)(?:\s+(baby|small|sm|medium|med|large|lg))?\s*$/i);
+  if (nameThenCountMatch) {
+    return { name: nameThenCountMatch[1].trim(), quantity: parseFloat(nameThenCountMatch[2]), unit: "count", size: normalizeSize(nameThenCountMatch[3]) };
   }
 
   // No quantity found — treat entire input as food name, default 100g
@@ -176,10 +194,15 @@ async function fetchFoods(query: string): Promise<USDAFood[] | null> {
 
 const VOLUME_MEASURE = /\b(cup|tbsp|tablespoon|tsp|teaspoon|fl oz|fluid|ml|liter)\b/i;
 
-function pickGramsPerUnit(measures?: USDAFoodMeasure[]): number | undefined {
+function pickGramsPerUnit(measures?: USDAFoodMeasure[], size?: FoodSize): number | undefined {
   if (!measures || measures.length === 0) return undefined;
-  const medium = measures.find((m) => /\bmedium\b/i.test(m.disseminationText) && m.gramWeight > 0);
-  if (medium) return medium.gramWeight;
+  const targetSize = size ?? "medium";
+  const sizeMatch = measures.find((m) => new RegExp(`\\b${targetSize}\\b`, "i").test(m.disseminationText) && m.gramWeight > 0);
+  if (sizeMatch) return sizeMatch.gramWeight;
+  if (targetSize === "baby") {
+    const extraSmall = measures.find((m) => /\bextra small\b/i.test(m.disseminationText) && m.gramWeight > 0);
+    if (extraSmall) return extraSmall.gramWeight;
+  }
   const single = measures.find(
     (m) => /^1\s/.test(m.disseminationText) && !VOLUME_MEASURE.test(m.disseminationText) && m.gramWeight > 0
   );
@@ -188,7 +211,7 @@ function pickGramsPerUnit(measures?: USDAFoodMeasure[]): number | undefined {
   return first?.gramWeight;
 }
 
-function pickFood(foods: USDAFood[]): { kcal: number; description: string; gramsPerUnit?: number } | null {
+function pickFood(foods: USDAFood[], size?: FoodSize): { kcal: number; description: string; gramsPerUnit?: number } | null {
   const hasKcal = (f: USDAFood) => {
     const v = getEnergy(f);
     return v != null && v > 0;
@@ -197,7 +220,7 @@ function pickFood(foods: USDAFood[]): { kcal: number; description: string; grams
   const toResult = (f: USDAFood) => ({
     kcal: getEnergy(f)!,
     description: f.description,
-    gramsPerUnit: pickGramsPerUnit(f.foodMeasures),
+    gramsPerUnit: pickGramsPerUnit(f.foodMeasures, size),
   });
 
   // Prefer raw/fresh: find first result with "raw" in description
@@ -220,14 +243,14 @@ function pickFood(foods: USDAFood[]): { kcal: number; description: string; grams
   return null;
 }
 
-function pickTopRankedFood(foods: USDAFood[]): { kcal: number; description: string; gramsPerUnit?: number } | null {
+function pickTopRankedFood(foods: USDAFood[], size?: FoodSize): { kcal: number; description: string; gramsPerUnit?: number } | null {
   for (const food of foods) {
     const kcal = getEnergy(food);
     if (kcal != null && kcal > 0) {
       return {
         kcal,
         description: food.description,
-        gramsPerUnit: pickGramsPerUnit(food.foodMeasures),
+        gramsPerUnit: pickGramsPerUnit(food.foodMeasures, size),
       };
     }
   }
@@ -235,7 +258,8 @@ function pickTopRankedFood(foods: USDAFood[]): { kcal: number; description: stri
 }
 
 export async function fetchKcalPer100g(
-  foodName: string
+  foodName: string,
+  size?: FoodSize
 ): Promise<{ kcalPer100g: number; description: string; gramsPerUnit?: number } | null> {
   const aliased = resolveFoodAlias(foodName);
   const normalized = singularize(aliased.queryName);
@@ -244,7 +268,7 @@ export async function fetchKcalPer100g(
     try {
       const foods = await fetchFoods(normalized);
       if (!foods) return null;
-      const match = pickTopRankedFood(foods);
+      const match = pickTopRankedFood(foods, size);
       if (!match) return null;
       return { kcalPer100g: match.kcal, description: match.description, gramsPerUnit: match.gramsPerUnit };
     } catch {
@@ -258,14 +282,14 @@ export async function fetchKcalPer100g(
     if (!isCooked) {
       const rawFoods = await fetchFoods(`${normalized} raw`);
       if (rawFoods) {
-        const match = pickFood(rawFoods);
+        const match = pickFood(rawFoods, size);
         if (match) return { kcalPer100g: match.kcal, description: match.description, gramsPerUnit: match.gramsPerUnit };
       }
     }
 
     const fallbackFoods = await fetchFoods(normalized);
     if (fallbackFoods) {
-      const match = pickFood(fallbackFoods);
+      const match = pickFood(fallbackFoods, size);
       if (match) return { kcalPer100g: match.kcal, description: match.description, gramsPerUnit: match.gramsPerUnit };
     }
 

@@ -787,7 +787,7 @@
 }
 
 .kcals-suggestions-content {
-  padding: 0 16px 16px;
+  padding: 0 16px 8px;
 }
 
 .kcals-suggestion-section {
@@ -856,6 +856,20 @@
 .kcals-pill-label {
   position: relative;
   top: 1px;
+}
+
+.kcals-pill--amount {
+  padding: 0 14px;
+}
+
+.kcals-pill--back {
+  padding: 0 10px;
+}
+
+.kcals-pill--back-icon {
+  width: 18px;
+  height: 18px;
+  opacity: 0.5;
 }
 
 .kcals-pill-image {

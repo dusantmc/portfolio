@@ -44,6 +44,7 @@ export interface RecentFood {
   count: number;
   kcalPer100g: number;
   gramsPerUnit?: number;
+  lastAmount?: number;
 }
 
 const FOOD_LIST_KEY = "kcals-food-list";
@@ -140,15 +141,16 @@ export function loadRecentFoods(): RecentFood[] {
   }
 }
 
-export function trackRecentFood(name: string, emoji: string, kcalPer100g: number, gramsPerUnit?: number): void {
+export function trackRecentFood(name: string, emoji: string, kcalPer100g: number, gramsPerUnit?: number, lastAmount?: number): void {
   const recent = loadRecentFoods();
   const existing = recent.find((f) => f.name.toLowerCase() === name.toLowerCase());
   if (existing) {
     existing.count++;
     existing.kcalPer100g = kcalPer100g;
     if (gramsPerUnit != null) existing.gramsPerUnit = gramsPerUnit;
+    if (lastAmount != null) existing.lastAmount = lastAmount;
   } else {
-    recent.push({ name, emoji, count: 1, kcalPer100g, ...(gramsPerUnit != null ? { gramsPerUnit } : {}) });
+    recent.push({ name, emoji, count: 1, kcalPer100g, ...(gramsPerUnit != null ? { gramsPerUnit } : {}), ...(lastAmount != null ? { lastAmount } : {}) });
   }
   recent.sort((a, b) => b.count - a.count);
   localStorage.setItem(RECENT_KEY, JSON.stringify(recent.slice(0, 10)));

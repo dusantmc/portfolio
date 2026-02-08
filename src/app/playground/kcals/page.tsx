@@ -634,6 +634,7 @@ export default function KcalsPage() {
   const [modalImageUrl, setModalImageUrl] = useState<string | null>(null);
   const [modalImageBlob, setModalImageBlob] = useState<Blob | null>(null);
   const [selectedCustomFood, setSelectedCustomFood] = useState<CustomFood | null>(null);
+  const [amountCount, setAmountCount] = useState<number | null>(null);
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1913,6 +1914,7 @@ export default function KcalsPage() {
     setInputValue("");
     setSelectedCustomFood(null);
     setSelectedRecentFood(null);
+    setAmountCount(null);
     setInputFocused(false);
     inputRef.current?.blur();
   };
@@ -2412,7 +2414,10 @@ export default function KcalsPage() {
     setInputValue("");
     setInputFocused(true);
     inputRef.current?.focus();
-    requestAnimationFrame(() => inputRef.current?.focus());
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      suggestionsScrollRef.current?.scrollTo({ top: suggestionsScrollRef.current.scrollHeight, behavior: "smooth" });
+    });
   };
 
   const applySpeechTranscript = useCallback((transcript: string) => {
@@ -2441,8 +2446,9 @@ export default function KcalsPage() {
     );
     const resolvedName = customMatch?.name ?? recentMatch?.name ?? parsed.name.trim();
     const quantityText = formatSpeechQuantity(parsed.quantity);
+    const sizeLabel = parsed.size && parsed.size !== "medium" ? ` ${parsed.size}` : "";
     const nextValue = parsed.unit === "count"
-      ? `${quantityText} ${resolvedName}`
+      ? `${quantityText}${sizeLabel} ${resolvedName}`
       : `${resolvedName} ${quantityText}g`;
     cancelDismiss();
     setSelectedCustomFood(null);
@@ -2651,7 +2657,10 @@ export default function KcalsPage() {
     setInputValue("");
     setInputFocused(true);
     inputRef.current?.focus();
-    requestAnimationFrame(() => inputRef.current?.focus());
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      suggestionsScrollRef.current?.scrollTo({ top: suggestionsScrollRef.current.scrollHeight, behavior: "smooth" });
+    });
   };
 
   const handleEmptyStateChipTap = (chip: (typeof EMPTY_STATE_QUICK_CHIPS)[number]) => {
@@ -2666,7 +2675,10 @@ export default function KcalsPage() {
     setInputValue("");
     setInputFocused(true);
     inputRef.current?.focus();
-    requestAnimationFrame(() => inputRef.current?.focus());
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      suggestionsScrollRef.current?.scrollTo({ top: suggestionsScrollRef.current.scrollHeight, behavior: "smooth" });
+    });
   };
 
   const handlePillPointerDown = (
@@ -3006,13 +3018,15 @@ export default function KcalsPage() {
         embeddedFood.name,
         embeddedFood.emoji,
         embeddedFood.kcalPer100g,
-        embeddedFood.gramsPerUnit
+        embeddedFood.gramsPerUnit,
+        grams
       );
       setRecentFoods(loadRecentFoods());
       return;
     }
 
-    if (cachedKcalPer100g != null) {
+    const sizeOverride = parsed.size && parsed.size !== "medium";
+    if (cachedKcalPer100g != null && !sizeOverride) {
       const grams = toGrams(cachedGramsPerUnit);
       const displayName = `${canonicalName} ${grams}g`;
       const kcal = Math.round((cachedKcalPer100g * grams) / 100);
@@ -3031,7 +3045,7 @@ export default function KcalsPage() {
         },
         ...prev,
       ]);
-      trackRecentFood(canonicalName, emoji, cachedKcalPer100g, cachedGramsPerUnit);
+      trackRecentFood(canonicalName, emoji, cachedKcalPer100g, cachedGramsPerUnit, grams);
       setRecentFoods(loadRecentFoods());
     } else {
       // Not cached: add loading item, fetch from USDA
@@ -3043,7 +3057,7 @@ export default function KcalsPage() {
         ...prev,
       ]);
 
-      fetchKcalPer100g(parsed.name).then((result) => {
+      fetchKcalPer100g(parsed.name, parsed.size).then((result) => {
         if (result != null) {
           const grams = toGrams(result.gramsPerUnit);
           const displayName = `${canonicalName} ${grams}g`;
@@ -3064,7 +3078,7 @@ export default function KcalsPage() {
                 : f
             )
           );
-          trackRecentFood(canonicalName, emoji, result.kcalPer100g, result.gramsPerUnit);
+          trackRecentFood(canonicalName, emoji, result.kcalPer100g, result.gramsPerUnit, grams);
           setRecentFoods(loadRecentFoods());
         } else {
           // API failed — keep kcal null so it shows as "?"
@@ -4053,6 +4067,88 @@ export default function KcalsPage() {
 	                    </button>
 	                  ))}
 	                </div>
+              </div>
+            )}
+
+            {(selectedCustomFood || selectedRecentFood) && (
+              <div className="kcals-suggestion-section">
+                <div className="kcals-suggestion-header">
+                  <span>Amount</span>
+                </div>
+                <div className="kcals-pills">
+                  {amountCount == null ? (
+                    <>
+                      {(() => {
+                        const defaults = ["1", "2", "50g", "100g", "150g"];
+                        const last = selectedRecentFood?.lastAmount;
+                        if (last == null || defaults.includes(`${last}g`)) return defaults;
+                        const chip = `${last}g`;
+                        const all = [...defaults, chip];
+                        return all.sort((a, b) => {
+                          const na = parseFloat(a);
+                          const nb = parseFloat(b);
+                          const ga = a.endsWith("g");
+                          const gb = b.endsWith("g");
+                          if (ga !== gb) return ga ? 1 : -1;
+                          return na - nb;
+                        });
+                      })().map((amt) => (
+                        <button
+                          key={amt}
+                          className="kcals-pill kcals-pill--amount"
+                          type="button"
+                          onPointerDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            if (/^\d+$/.test(amt)) {
+                              setAmountCount(parseInt(amt, 10));
+                              setInputValue(amt + " ");
+                            } else {
+                              setInputValue(amt);
+                            }
+                          }}
+                        >
+                          <span className="kcals-pill-label">{amt}</span>
+                        </button>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        className="kcals-pill kcals-pill--amount kcals-pill--back"
+                        type="button"
+                        onPointerDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          setAmountCount(null);
+                          setInputValue("");
+                          requestAnimationFrame(() => suggestionsScrollRef.current?.scrollTo({ top: suggestionsScrollRef.current.scrollHeight, behavior: "smooth" }));
+                        }}
+                      >
+                        <img src="/kcals/assets/back.svg" alt="Back" className="kcals-pill--back-icon" />
+                      </button>
+                      {(/banana/i.test(selectedCustomFood?.name ?? selectedRecentFood?.name ?? "")) && (
+                        <button
+                          className="kcals-pill kcals-pill--amount"
+                          type="button"
+                          onPointerDown={(e) => e.preventDefault()}
+                          onClick={() => setInputValue(`${amountCount} baby`)}
+                        >
+                          <span className="kcals-pill-label">Baby</span>
+                        </button>
+                      )}
+                      {["Small", "Medium", "Large"].map((size) => (
+                        <button
+                          key={size}
+                          className="kcals-pill kcals-pill--amount"
+                          type="button"
+                          onPointerDown={(e) => e.preventDefault()}
+                          onClick={() => setInputValue(`${amountCount} ${size.toLowerCase()}`)}
+                        >
+                          <span className="kcals-pill-label">{size}</span>
+                        </button>
+                      ))}
+                    </>
+                  )}
+                </div>
               </div>
             )}
           </div>
