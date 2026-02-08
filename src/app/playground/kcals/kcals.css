@@ -1403,8 +1403,8 @@
   position: absolute;
   right: 8px;
   top: 50%;
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   transform: translateY(-50%);
   background-color: rgba(25, 24, 21, 0.5);
   mask: url("/kcals/assets/chevron.svg") no-repeat center / contain;
