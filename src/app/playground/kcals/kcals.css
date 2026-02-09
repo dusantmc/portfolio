@@ -2460,10 +2460,15 @@ select.kcals-profile-settings-input::-ms-expand {
   box-sizing: border-box;
 }
 
-.kcals-summary-checkbox.is-checked,
+.kcals-summary-checkbox.is-checked {
+  background: #3478F6;
+  border-color: #3478F6;
+}
+
 .kcals-summary-checkbox.is-all {
   background: #3478F6;
   border-color: #3478F6;
+  opacity: 0.3;
 }
 
 .kcals-summary-checkbox.is-partial {
@@ -2482,7 +2487,7 @@ select.kcals-profile-settings-input::-ms-expand {
 }
 
 .kcals-summary-select-btn {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 8px;
   border: none;
@@ -2583,9 +2588,7 @@ select.kcals-profile-settings-input::-ms-expand {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 10px;
   background: var(--white);
-  outline: 0.5px solid var(--border-8);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -2595,7 +2598,7 @@ select.kcals-profile-settings-input::-ms-expand {
 }
 
 .kcals-summary-row.is-selected {
-  outline-color: var(--border-8);
+  outline-color: var(--border-16);
 }
 
 .kcals-summary-row.is-selected .kcals-summary-name {
@@ -2612,11 +2615,14 @@ select.kcals-profile-settings-input::-ms-expand {
 .kcals-summary-emoji {
   font-size: 18px;
   line-height: 1;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
 }
 
 .kcals-summary-image {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;

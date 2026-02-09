@@ -2069,8 +2069,18 @@ export default function KcalsPage() {
     const rows = summarySelected.size > 0
       ? summaryRows.filter((r) => summarySelected.has(r.key))
       : summaryRows;
-    const lines = rows.map((row) => `- [ ] ${row.name}: ${formatSummaryAmount(row.grams)}`);
-    await navigator.clipboard.writeText(lines.join("\n"));
+    const html = `<ul>${rows.map((row) => `<li>${row.name}: ${formatSummaryAmount(row.grams)}</li>`).join("")}</ul>`;
+    const plain = rows.map((row) => `${row.name}: ${formatSummaryAmount(row.grams)}`).join("\n");
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "text/html": new Blob([html], { type: "text/html" }),
+          "text/plain": new Blob([plain], { type: "text/plain" }),
+        }),
+      ]);
+    } catch {
+      await navigator.clipboard.writeText(plain);
+    }
   };
 
   const handleShareFile = (file: File) => {
@@ -5094,8 +5104,8 @@ export default function KcalsPage() {
                 type="button"
                 onClick={() => { setSummarySelectOpen((v) => !v); setSummaryRangeOpen(false); }}
               >
-                <span className={`kcals-summary-checkbox${summarySelected.size > 0 && summarySelected.size === summaryRows.length ? " is-all" : summarySelected.size > 0 ? " is-partial" : ""}`}>
-                  {summarySelected.size > 0 && <img src="/kcals/assets/checkmark.svg" alt="" className="kcals-summary-checkmark" />}
+                <span className={`kcals-summary-checkbox${summarySelected.size > 0 && summarySelected.size === summaryRows.length ? " is-all" : ""}`}>
+                  {summarySelected.size > 0 && summarySelected.size === summaryRows.length && <img src="/kcals/assets/checkmark.svg" alt="" className="kcals-summary-checkmark" />}
                 </span>
                 <span className="kcals-summary-controls-label">
                   {summarySelected.size > 0 ? `Selected (${summarySelected.size})` : "Items"}
