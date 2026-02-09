@@ -4,6 +4,15 @@ const USDA_API_KEY = process.env.USDA_API_KEY || "DEMO_KEY";
 const USDA_URL = "https://api.nal.usda.gov/fdc/v1/foods/search";
 
 export async function GET(request: NextRequest) {
+  const fdcId = request.nextUrl.searchParams.get("fdcId");
+  if (fdcId) {
+    const url = `https://api.nal.usda.gov/fdc/v1/food/${fdcId}?api_key=${USDA_API_KEY}`;
+    const res = await fetch(url);
+    if (!res.ok) return NextResponse.json({}, { status: res.status });
+    const data = await res.json();
+    return NextResponse.json(data);
+  }
+
   const query = request.nextUrl.searchParams.get("query");
 
   if (!query) {

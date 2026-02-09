@@ -152,6 +152,7 @@ interface USDAFoodMeasure {
 }
 
 interface USDAFood {
+  fdcId: number;
   description: string;
   foodNutrients: USDANutrient[];
   foodMeasures?: USDAFoodMeasure[];
@@ -211,7 +212,7 @@ function pickGramsPerUnit(measures?: USDAFoodMeasure[], size?: FoodSize): number
   return first?.gramWeight;
 }
 
-function pickFood(foods: USDAFood[], size?: FoodSize): { kcal: number; description: string; gramsPerUnit?: number } | null {
+function pickFood(foods: USDAFood[]): { kcal: number; description: string; fdcId: number } | null {
   const hasKcal = (f: USDAFood) => {
     const v = getEnergy(f);
     return v != null && v > 0;
@@ -220,7 +221,7 @@ function pickFood(foods: USDAFood[], size?: FoodSize): { kcal: number; descripti
   const toResult = (f: USDAFood) => ({
     kcal: getEnergy(f)!,
     description: f.description,
-    gramsPerUnit: pickGramsPerUnit(f.foodMeasures, size),
+    fdcId: f.fdcId,
   });
 
   // Prefer raw/fresh: find first result with "raw" in description
@@ -243,18 +244,29 @@ function pickFood(foods: USDAFood[], size?: FoodSize): { kcal: number; descripti
   return null;
 }
 
-function pickTopRankedFood(foods: USDAFood[], size?: FoodSize): { kcal: number; description: string; gramsPerUnit?: number } | null {
+function pickTopRankedFood(foods: USDAFood[]): { kcal: number; description: string; fdcId: number } | null {
   for (const food of foods) {
     const kcal = getEnergy(food);
     if (kcal != null && kcal > 0) {
-      return {
-        kcal,
-        description: food.description,
-        gramsPerUnit: pickGramsPerUnit(food.foodMeasures, size),
-      };
+      return { kcal, description: food.description, fdcId: food.fdcId };
     }
   }
   return null;
+}
+
+async function fetchFoodPortions(fdcId: number): Promise<USDAFoodMeasure[]> {
+  try {
+    const res = await fetch(`${PROXY_URL}?fdcId=${fdcId}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    const portions = data.foodPortions ?? [];
+    return portions.map((p: { portionDescription?: string; modifier?: string; gramWeight?: number }) => ({
+      disseminationText: p.portionDescription || p.modifier || "",
+      gramWeight: p.gramWeight ?? 0,
+    }));
+  } catch {
+    return [];
+  }
 }
 
 export async function fetchKcalPer100g(
@@ -264,13 +276,19 @@ export async function fetchKcalPer100g(
   const aliased = resolveFoodAlias(foodName);
   const normalized = singularize(aliased.queryName);
 
+  async function resolveWithPortions(match: { kcal: number; description: string; fdcId: number }) {
+    const portions = await fetchFoodPortions(match.fdcId);
+    const gramsPerUnit = pickGramsPerUnit(portions, size);
+    return { kcalPer100g: match.kcal, description: match.description, gramsPerUnit };
+  }
+
   if (aliased.matched) {
     try {
       const foods = await fetchFoods(normalized);
       if (!foods) return null;
-      const match = pickTopRankedFood(foods, size);
+      const match = pickTopRankedFood(foods);
       if (!match) return null;
-      return { kcalPer100g: match.kcal, description: match.description, gramsPerUnit: match.gramsPerUnit };
+      return resolveWithPortions(match);
     } catch {
       return null;
     }
@@ -282,15 +300,15 @@ export async function fetchKcalPer100g(
     if (!isCooked) {
       const rawFoods = await fetchFoods(`${normalized} raw`);
       if (rawFoods) {
-        const match = pickFood(rawFoods, size);
-        if (match) return { kcalPer100g: match.kcal, description: match.description, gramsPerUnit: match.gramsPerUnit };
+        const match = pickFood(rawFoods);
+        if (match) return resolveWithPortions(match);
       }
     }
 
     const fallbackFoods = await fetchFoods(normalized);
     if (fallbackFoods) {
-      const match = pickFood(fallbackFoods, size);
-      if (match) return { kcalPer100g: match.kcal, description: match.description, gramsPerUnit: match.gramsPerUnit };
+      const match = pickFood(fallbackFoods);
+      if (match) return resolveWithPortions(match);
     }
 
     return null;
