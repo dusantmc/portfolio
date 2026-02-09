@@ -3443,6 +3443,8 @@ export default function KcalsPage() {
      Drag & Drop
      =========================== */
 
+  const preventTouchMove = (e: TouchEvent) => { e.preventDefault(); };
+
   const startDrag = (itemId: string, x: number, y: number) => {
     // Vibrate if available
     if (navigator.vibrate) navigator.vibrate(50);
@@ -3456,9 +3458,8 @@ export default function KcalsPage() {
     const el = itemRefsMap.current.get(itemId);
     if (!el) return;
 
-    // Prevent page scroll while dragging
-    document.body.style.overflow = "hidden";
-    document.body.style.touchAction = "none";
+    // Prevent page scroll while dragging (non-passive listener required for iOS)
+    document.addEventListener("touchmove", preventTouchMove, { passive: false });
 
     const rect = el.getBoundingClientRect();
     const ghost = document.createElement("div");
@@ -3519,8 +3520,7 @@ export default function KcalsPage() {
     setDropTargetId(null);
 
     // Re-enable page scroll
-    document.body.style.overflow = "";
-    document.body.style.touchAction = "";
+    document.removeEventListener("touchmove", preventTouchMove);
 
     if (!targetId) return;
 
