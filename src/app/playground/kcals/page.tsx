@@ -724,6 +724,8 @@ export default function KcalsPage() {
     active: boolean;
     timer: ReturnType<typeof setTimeout> | null;
   } | null>(null);
+  const dragScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const preventTouchMoveRef = useRef((e: TouchEvent) => { e.preventDefault(); });
 
   const [groupView, setGroupView] = useState<"list" | "portion">("list");
   const [portionTab, setPortionTab] = useState(0);
@@ -3443,8 +3445,6 @@ export default function KcalsPage() {
      Drag & Drop
      =========================== */
 
-  const preventTouchMove = (e: TouchEvent) => { e.preventDefault(); };
-
   const startDrag = (itemId: string, x: number, y: number) => {
     // Vibrate if available
     if (navigator.vibrate) navigator.vibrate(50);
@@ -3458,8 +3458,13 @@ export default function KcalsPage() {
     const el = itemRefsMap.current.get(itemId);
     if (!el) return;
 
-    // Prevent page scroll while dragging (non-passive listener required for iOS)
-    document.addEventListener("touchmove", preventTouchMove, { passive: false });
+    // Block scroll immediately, re-allow after 0.5s so user can scroll while dragging
+    document.addEventListener("touchmove", preventTouchMoveRef.current, { passive: false });
+    if (dragScrollTimerRef.current) clearTimeout(dragScrollTimerRef.current);
+    dragScrollTimerRef.current = setTimeout(() => {
+      document.removeEventListener("touchmove", preventTouchMoveRef.current);
+      dragScrollTimerRef.current = null;
+    }, 500);
 
     const rect = el.getBoundingClientRect();
     const ghost = document.createElement("div");
@@ -3520,7 +3525,11 @@ export default function KcalsPage() {
     setDropTargetId(null);
 
     // Re-enable page scroll
-    document.removeEventListener("touchmove", preventTouchMove);
+    if (dragScrollTimerRef.current) {
+      clearTimeout(dragScrollTimerRef.current);
+      dragScrollTimerRef.current = null;
+    }
+    document.removeEventListener("touchmove", preventTouchMoveRef.current);
 
     if (!targetId) return;
 
