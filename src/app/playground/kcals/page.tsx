@@ -269,6 +269,24 @@ function buildDailyFoodSummary(items: FoodItem[]): Record<string, DailyFoodSumma
       return;
     }
     if (item.loading) return;
+
+    // Per-item foods: "Eggs x5" → name="Eggs", count=5
+    if (item.perItem) {
+      const xMatch = item.name.match(/^(.+?)\s+x(\d+(?:\.\d+)?)\s*$/);
+      const name = xMatch ? xMatch[1].trim() : item.name.trim();
+      const count = xMatch ? parseFloat(xMatch[2]) : 1;
+      if (!name || !Number.isFinite(count) || count <= 0) return;
+      const key = name.toLowerCase();
+      const existing = summary[key];
+      summary[key] = {
+        name,
+        grams: (existing?.grams ?? 0) + count,
+        perItem: true,
+        ...(item.emoji ? { emoji: item.emoji } : existing?.emoji ? { emoji: existing.emoji } : {}),
+      };
+      return;
+    }
+
     const parsed = parseFoodInput(item.name);
     const grams = parsed.unit === "count"
       ? Math.round(parsed.quantity * (item.gramsPerUnit ?? 100))
@@ -288,7 +306,11 @@ function buildDailyFoodSummary(items: FoodItem[]): Record<string, DailyFoodSumma
   return summary;
 }
 
-function formatSummaryAmount(grams: number): string {
+function formatSummaryAmount(grams: number, perItem?: boolean): string {
+  if (perItem) {
+    const count = Math.round(grams * 10) / 10;
+    return `x${Number.isInteger(count) ? count.toFixed(0) : count.toFixed(1)}`;
+  }
   if (grams >= 1000) {
     const kilos = grams / 1000;
     const rounded = Math.round(kilos * 10) / 10;
@@ -1768,6 +1790,7 @@ export default function KcalsPage() {
           totals.set(key, {
             name: value.name,
             grams: (existing?.grams ?? 0) + Math.round(grams),
+            ...(value.perItem ? { perItem: true } : existing?.perItem ? { perItem: true } : {}),
             ...(value.emoji ? { emoji: value.emoji } : existing?.emoji ? { emoji: existing.emoji } : {}),
           });
         }
@@ -2071,8 +2094,8 @@ export default function KcalsPage() {
     const rows = summarySelected.size > 0
       ? summaryRows.filter((r) => summarySelected.has(r.key))
       : summaryRows;
-    const html = `<ul>${rows.map((row) => `<li>${row.name}: ${formatSummaryAmount(row.grams)}</li>`).join("")}</ul>`;
-    const plain = rows.map((row) => `${row.name}: ${formatSummaryAmount(row.grams)}`).join("\n");
+    const html = `<ul>${rows.map((row) => `<li>${row.name}: ${formatSummaryAmount(row.grams, row.perItem)}</li>`).join("")}</ul>`;
+    const plain = rows.map((row) => `${row.name}: ${formatSummaryAmount(row.grams, row.perItem)}`).join("\n");
     try {
       await navigator.clipboard.write([
         new ClipboardItem({
@@ -5205,7 +5228,7 @@ export default function KcalsPage() {
                     )}
                     <span className="kcals-summary-name">{row.name}</span>
                   </div>
-                  <span className="kcals-summary-amount">{formatSummaryAmount(row.grams)}</span>
+                  <span className="kcals-summary-amount">{formatSummaryAmount(row.grams, row.perItem)}</span>
                 </div>
               );
             })}

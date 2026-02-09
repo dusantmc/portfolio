@@ -222,6 +222,7 @@ export interface DailyFoodSummary {
   name: string;
   grams: number;
   emoji?: string;
+  perItem?: boolean;
 }
 
 export function formatDateKey(d: Date): string {
