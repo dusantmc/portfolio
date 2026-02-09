@@ -12,6 +12,7 @@ export interface FoodItem {
   sourceName?: string; // USDA food description or entered name
   kcalPer100g?: number;
   gramsPerUnit?: number; // USDA "medium" portion weight for count-based input
+  perItem?: boolean; // custom food with per-item calorie mode
 }
 
 export function isGroup(item: FoodItem): boolean {

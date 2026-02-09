@@ -2972,6 +2972,7 @@ export default function KcalsPage() {
           sourceName: selectedCustomFood.name,
           kcalPer100g: selectedCustomFood.kcalPer100g,
           ...(selectedCustomFood.imageId ? { imageId: selectedCustomFood.imageId } : {}),
+          ...(selectedCustomFood.perItem ? { perItem: true } : {}),
         },
         ...prev,
       ]);
@@ -3340,11 +3341,19 @@ export default function KcalsPage() {
   const handleEditFood = (food: FoodItem) => {
     setSwipedItemId(null);
     closeSwipe(food.id);
-    const parsed = parseFoodInput(food.name);
-    setEditFoodName(parsed.name);
-    setEditFoodGrams(parsed.quantity.toString());
-    setEditFoodUnit(parsed.unit);
-    setEditFoodSize(parsed.size ?? "medium");
+    if (food.perItem) {
+      const xMatch = food.name.match(/^(.+?)\s+x(\d+(?:\.\d+)?)\s*$/);
+      setEditFoodName(xMatch ? xMatch[1] : food.name);
+      setEditFoodGrams(xMatch ? xMatch[2] : "1");
+      setEditFoodUnit("count");
+      setEditFoodSize("medium");
+    } else {
+      const parsed = parseFoodInput(food.name);
+      setEditFoodName(parsed.name);
+      setEditFoodGrams(parsed.quantity.toString());
+      setEditFoodUnit(parsed.unit);
+      setEditFoodSize(parsed.size ?? "medium");
+    }
     setEditFoodModal(food);
   };
 
@@ -3355,19 +3364,21 @@ export default function KcalsPage() {
     if (!name || isNaN(amount) || amount <= 0) return;
 
     let displayName: string;
-    let grams: number;
-    if (editFoodUnit === "count") {
+    let kcal: number | null;
+    if (editFoodModal.perItem) {
+      displayName = `${name} x${amount}`;
+      const kcalPerItem = editFoodModal.kcalPer100g;
+      kcal = kcalPerItem != null ? Math.round(kcalPerItem * amount) : editFoodModal.kcal;
+    } else if (editFoodUnit === "count") {
       displayName = `${name} ${amount} ${editFoodSize}`;
-      grams = Math.round(amount * (editFoodModal.gramsPerUnit ?? 100));
+      const grams = Math.round(amount * (editFoodModal.gramsPerUnit ?? 100));
+      const kcalPer100g = editFoodModal.kcalPer100g;
+      kcal = kcalPer100g != null ? Math.round((kcalPer100g * grams) / 100) : editFoodModal.kcal;
     } else {
       displayName = `${name} ${amount}g`;
-      grams = amount;
+      const kcalPer100g = editFoodModal.kcalPer100g;
+      kcal = kcalPer100g != null ? Math.round((kcalPer100g * amount) / 100) : editFoodModal.kcal;
     }
-
-    const kcalPer100g = editFoodModal.kcalPer100g;
-    const kcal = kcalPer100g != null
-      ? Math.round((kcalPer100g * grams) / 100)
-      : editFoodModal.kcal;
 
     updateFoods((prev) =>
       prev.map((f) =>
@@ -4224,7 +4235,7 @@ export default function KcalsPage() {
               ref={inputRef}
               className="kcals-input"
               type="text"
-              placeholder={selectedCustomFood || selectedRecentFood ? "100g" : chatboxPlaceholder}
+              placeholder={selectedCustomFood?.perItem ? " " : selectedCustomFood || selectedRecentFood ? "100g" : chatboxPlaceholder}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onFocus={handleInputFocus}
@@ -4552,7 +4563,7 @@ export default function KcalsPage() {
                 placeholder={editFoodUnit === "count" ? "1" : "100"}
                 inputMode="numeric"
               />
-              <span className="kcals-modal-kcal-suffix">{editFoodUnit === "count" ? editFoodSize : "g"}</span>
+              <span className="kcals-modal-kcal-suffix">{editFoodModal?.perItem ? "item" : editFoodUnit === "count" ? editFoodSize : "g"}</span>
             </div>
           </div>
         </div>
@@ -4560,7 +4571,7 @@ export default function KcalsPage() {
           <div className="kcals-modal-source">
             {editFoodModal.source === "usda" ? "USDA" : "Manual"}
             {editFoodModal.sourceName ? ` \u2013 ${editFoodModal.sourceName}` : ""}
-            {` \u2013 ${Math.round(editFoodModal.kcalPer100g)}kcal per 100g`}
+            {` \u2013 ${Math.round(editFoodModal.kcalPer100g)}kcal per ${editFoodModal.perItem ? "item" : "100g"}`}
           </div>
         )}
         <button
