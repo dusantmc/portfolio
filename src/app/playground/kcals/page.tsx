@@ -3456,6 +3456,10 @@ export default function KcalsPage() {
     const el = itemRefsMap.current.get(itemId);
     if (!el) return;
 
+    // Prevent page scroll while dragging
+    document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
+
     const rect = el.getBoundingClientRect();
     const ghost = document.createElement("div");
     ghost.className = "kcals-drag-ghost";
@@ -3513,6 +3517,10 @@ export default function KcalsPage() {
     dragRef.current = null;
     setDragItemId(null);
     setDropTargetId(null);
+
+    // Re-enable page scroll
+    document.body.style.overflow = "";
+    document.body.style.touchAction = "";
 
     if (!targetId) return;
 
