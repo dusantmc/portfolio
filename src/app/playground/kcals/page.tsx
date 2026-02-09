@@ -1696,6 +1696,8 @@ export default function KcalsPage() {
   const [summaryTab, setSummaryTab] = useState<"summary" | "grocery">("summary");
   const [summaryRange, setSummaryRange] = useState<"7d" | "weekly" | "30d">("7d");
   const [summaryRangeOpen, setSummaryRangeOpen] = useState(false);
+  const [summarySelected, setSummarySelected] = useState<Set<string>>(new Set());
+  const [summarySelectOpen, setSummarySelectOpen] = useState(false);
   const [weeklyBurn, setWeeklyBurn] = useState(0);
   const [showWeeklyModal, setShowWeeklyModal] = useState(false);
   const [weeklyBreakdown, setWeeklyBreakdown] = useState<WeeklyEntry[]>([]);
@@ -2064,7 +2066,10 @@ export default function KcalsPage() {
   };
 
   const handleCopyGroceryList = async () => {
-    const lines = summaryRows.map((row) => `- [ ] ${row.name}: ${formatSummaryAmount(row.grams)}`);
+    const rows = summarySelected.size > 0
+      ? summaryRows.filter((r) => summarySelected.has(r.key))
+      : summaryRows;
+    const lines = rows.map((row) => `- [ ] ${row.name}: ${formatSummaryAmount(row.grams)}`);
     await navigator.clipboard.writeText(lines.join("\n"));
   };
 
@@ -5056,7 +5061,7 @@ export default function KcalsPage() {
       {/* Summary Modal */}
       <BottomSheet
         open={showSummaryModal}
-        onClose={() => { setShowSummaryModal(false); setSummaryRangeOpen(false); }}
+        onClose={() => { setShowSummaryModal(false); setSummaryRangeOpen(false); setSummarySelectOpen(false); setSummarySelected(new Set()); }}
         variant="center"
         className="kcals-summary-modal"
       >
@@ -5083,14 +5088,44 @@ export default function KcalsPage() {
         </div>
         <div className="kcals-summary-controls">
           <div className="kcals-summary-controls-left">
-            <span className="kcals-summary-checkbox" />
-            <span className="kcals-summary-controls-label">Items</span>
+            <div className="kcals-summary-select-wrap">
+              <button
+                className="kcals-summary-select-btn"
+                type="button"
+                onClick={() => { setSummarySelectOpen((v) => !v); setSummaryRangeOpen(false); }}
+              >
+                <span className={`kcals-summary-checkbox${summarySelected.size > 0 && summarySelected.size === summaryRows.length ? " is-all" : summarySelected.size > 0 ? " is-partial" : ""}`}>
+                  {summarySelected.size > 0 && <img src="/kcals/assets/checkmark.svg" alt="" className="kcals-summary-checkmark" />}
+                </span>
+                <span className="kcals-summary-controls-label">
+                  {summarySelected.size > 0 ? `Selected (${summarySelected.size})` : "Items"}
+                </span>
+              </button>
+              {summarySelectOpen && (
+                <div className="kcals-summary-dropdown-menu kcals-summary-select-menu">
+                  <button
+                    className="kcals-summary-dropdown-item"
+                    type="button"
+                    onClick={() => { setSummarySelected(new Set(summaryRows.map((r) => r.key))); setSummarySelectOpen(false); }}
+                  >
+                    Select all
+                  </button>
+                  <button
+                    className="kcals-summary-dropdown-item"
+                    type="button"
+                    onClick={() => { setSummarySelected(new Set()); setSummarySelectOpen(false); }}
+                  >
+                    Deselect all
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           <div className="kcals-summary-dropdown-wrap">
             <button
               className="kcals-summary-dropdown-btn"
               type="button"
-              onClick={() => setSummaryRangeOpen((v) => !v)}
+              onClick={() => { setSummaryRangeOpen((v) => !v); setSummarySelectOpen(false); }}
             >
               {summaryRange === "7d" ? "Last 7d" : summaryRange === "weekly" ? "Last week" : "Last 30d"}
               <img src="/kcals/assets/chevron.svg" alt="" className="kcals-summary-dropdown-chevron" />
@@ -5115,20 +5150,38 @@ export default function KcalsPage() {
           <div className="kcals-summary-empty">No foods logged in the selected period.</div>
         ) : (
           <div className="kcals-summary-list">
-            {summaryRows.map((row) => (
-              <div key={row.key} className="kcals-summary-row">
-                <div className="kcals-summary-food">
-                  <span className="kcals-summary-checkbox" />
-                  {row.image ? (
-                    <img src={row.image} alt="" className="kcals-summary-image" />
-                  ) : (
-                    <span className="kcals-summary-emoji">{row.emoji ?? "\u{1F372}"}</span>
-                  )}
-                  <span className="kcals-summary-name">{row.name}</span>
+            {summaryRows.map((row) => {
+              const isSelected = summarySelected.has(row.key);
+              return (
+                <div
+                  key={row.key}
+                  className={`kcals-summary-row${isSelected ? " is-selected" : ""}`}
+                  onClick={() => setSummarySelected((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(row.key)) next.delete(row.key); else next.add(row.key);
+                    return next;
+                  })}
+                >
+                  <div className="kcals-summary-food">
+                    {isSelected ? (
+                      <span className="kcals-summary-checkbox is-checked">
+                        <img src="/kcals/assets/checkmark.svg" alt="" className="kcals-summary-checkmark" />
+                      </span>
+                    ) : (
+                      <>
+                        {row.image ? (
+                          <img src={row.image} alt="" className="kcals-summary-image" />
+                        ) : (
+                          <span className="kcals-summary-emoji">{row.emoji ?? "\u{1F372}"}</span>
+                        )}
+                      </>
+                    )}
+                    <span className="kcals-summary-name">{row.name}</span>
+                  </div>
+                  <span className="kcals-summary-amount">{formatSummaryAmount(row.grams)}</span>
                 </div>
-                <span className="kcals-summary-amount">{formatSummaryAmount(row.grams)}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
         {summaryTab === "summary" ? (

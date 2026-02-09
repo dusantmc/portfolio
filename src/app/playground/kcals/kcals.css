@@ -2449,11 +2449,52 @@ select.kcals-profile-settings-input::-ms-expand {
 }
 
 .kcals-summary-checkbox {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
   border: 1.5px solid var(--border-16);
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.kcals-summary-checkbox.is-checked,
+.kcals-summary-checkbox.is-all {
+  background: #3478F6;
+  border-color: #3478F6;
+}
+
+.kcals-summary-checkbox.is-partial {
+  background: #3478F6;
+  border-color: #3478F6;
+}
+
+.kcals-summary-checkmark {
+  width: 12px;
+  height: 12px;
+  filter: brightness(0) invert(1);
+}
+
+.kcals-summary-select-wrap {
+  position: relative;
+}
+
+.kcals-summary-select-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+
+.kcals-summary-select-menu {
+  left: 0;
+  right: auto;
 }
 
 .kcals-summary-controls-label {
@@ -2545,6 +2586,16 @@ select.kcals-profile-settings-input::-ms-expand {
   padding: 0 10px;
   background: var(--white);
   outline: 0.5px solid var(--border-8);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.kcals-summary-row:active {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.kcals-summary-row.is-selected {
+  outline-color: rgba(52, 120, 246, 0.3);
 }
 
 .kcals-summary-food {
