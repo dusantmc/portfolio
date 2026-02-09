@@ -2379,41 +2379,153 @@ select.kcals-profile-settings-input::-ms-expand {
   font-weight: 700;
 }
 
+/* Tabs */
+.kcals-summary-tabs {
+  display: flex;
+  justify-content: center;
+  margin: 12px 0 4px;
+  gap: 0;
+}
+
+.kcals-summary-tabs-inner {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 999px;
+  background: rgba(145, 144, 142, 0.1);
+}
+
+.kcals-summary-tab {
+  height: 32px;
+  width: 44px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.kcals-summary-tab.is-active {
+  background: var(--white);
+  outline: 1px solid var(--border-8);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.kcals-summary-tab-icon {
+  width: 20px;
+  height: 20px;
+  background-color: var(--black-50);
+}
+
+.kcals-summary-tab.is-active .kcals-summary-tab-icon {
+  background-color: var(--black-100);
+}
+
+.kcals-summary-tab-icon--summary {
+  mask: url("/kcals/assets/summary.svg") no-repeat center / contain;
+  -webkit-mask: url("/kcals/assets/summary.svg") no-repeat center / contain;
+}
+
+.kcals-summary-tab-icon--grocery {
+  mask: url("/kcals/assets/cart.svg") no-repeat center / contain;
+  -webkit-mask: url("/kcals/assets/cart.svg") no-repeat center / contain;
+}
+
+/* Controls row */
 .kcals-summary-controls {
   margin-top: 12px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kcals-summary-controls-left {
+  display: flex;
+  align-items: center;
   gap: 8px;
 }
 
-.kcals-summary-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  border-radius: 12px;
-  padding: 2px;
-  background: rgba(145, 144, 142, 0.12);
+.kcals-summary-checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-16);
+  flex-shrink: 0;
 }
 
-.kcals-summary-toggle-btn {
+.kcals-summary-controls-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--black-70);
+}
+
+/* Dropdown selector */
+.kcals-summary-dropdown-wrap {
+  position: relative;
+}
+
+.kcals-summary-dropdown-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   border: none;
-  background: transparent;
-  border-radius: 10px;
-  height: 32px;
-  flex: 1;
-  font-size: 13px;
+  background: none;
+  font-size: 14px;
   font-weight: 600;
   color: var(--black-70);
   cursor: pointer;
   font-family: inherit;
+  padding: 4px 0;
 }
 
-.kcals-summary-toggle-btn.is-active {
+.kcals-summary-dropdown-chevron {
+  width: 12px;
+  height: 12px;
+  opacity: 0.5;
+}
+
+.kcals-summary-dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 4px;
   background: var(--white);
-  color: var(--black-100);
-  box-shadow: var(--shadow-item);
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.16);
+  min-width: 160px;
+  padding: 4px;
+  z-index: 10;
+  animation: kcals-drop-in 0.2s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
+.kcals-summary-dropdown-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--black-100);
+  cursor: pointer;
+}
+
+.kcals-summary-dropdown-item:active {
+  background: var(--border-8);
+}
+
+.kcals-summary-dropdown-item.is-active {
+  font-weight: 700;
+}
+
+/* Food list */
 .kcals-summary-list {
   margin-top: 12px;
   max-height: min(56vh, 420px);
@@ -2476,6 +2588,37 @@ select.kcals-profile-settings-input::-ms-expand {
   text-align: center;
   font-size: 14px;
   color: var(--black-50);
+}
+
+/* Bottom action button */
+.kcals-summary-action {
+  width: 100%;
+  height: 44px;
+  border-radius: 14px;
+  background: #ffffff;
+  outline: 1px solid var(--border-16);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--black-70);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 16px;
+  font-family: inherit;
+  border: none;
+  transition: transform 0.15s ease-out;
+}
+
+.kcals-summary-action:active {
+  transform: scale(0.97);
+}
+
+.kcals-summary-action-icon {
+  width: 20px;
+  height: 20px;
+  opacity: 0.7;
 }
 
 /* ===========================

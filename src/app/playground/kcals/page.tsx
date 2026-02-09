@@ -1693,8 +1693,9 @@ export default function KcalsPage() {
   }).format(displayDate);
   const [streak, setStreak] = useState(0);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
-  const [summaryRangeDays, setSummaryRangeDays] = useState<7 | 30>(7);
-  const [summarySort, setSummarySort] = useState<"amount" | "name">("amount");
+  const [summaryTab, setSummaryTab] = useState<"summary" | "grocery">("summary");
+  const [summaryRange, setSummaryRange] = useState<"7d" | "weekly" | "30d">("7d");
+  const [summaryRangeOpen, setSummaryRangeOpen] = useState(false);
   const [weeklyBurn, setWeeklyBurn] = useState(0);
   const [showWeeklyModal, setShowWeeklyModal] = useState(false);
   const [weeklyBreakdown, setWeeklyBreakdown] = useState<WeeklyEntry[]>([]);
@@ -1725,9 +1726,33 @@ export default function KcalsPage() {
     const customByName = new Map(
       customFoods.map((food) => [food.name.trim().toLowerCase(), food] as const)
     );
-    const cursor = new Date();
-    for (let i = 0; i < summaryRangeDays; i++) {
-      const dayKey = getDayKey(cursor);
+
+    // Compute date range
+    const dayKeys: string[] = [];
+    if (summaryRange === "weekly") {
+      // Last complete Mon-Sun week
+      const today = new Date();
+      const dow = today.getDay(); // 0=Sun
+      const daysSinceSunday = dow === 0 ? 0 : dow;
+      const lastSunday = new Date(today);
+      lastSunday.setDate(today.getDate() - daysSinceSunday);
+      const monday = new Date(lastSunday);
+      monday.setDate(lastSunday.getDate() - 6);
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        dayKeys.push(getDayKey(d));
+      }
+    } else {
+      const count = summaryRange === "30d" ? 30 : 7;
+      const cursor = new Date();
+      for (let i = 0; i < count; i++) {
+        dayKeys.push(getDayKey(cursor));
+        cursor.setDate(cursor.getDate() - 1);
+      }
+    }
+
+    for (const dayKey of dayKeys) {
       const dayEntry = dailyLog[dayKey];
       const dayFoods = dayEntry?.foods;
       if (dayFoods) {
@@ -1743,7 +1768,6 @@ export default function KcalsPage() {
           });
         }
       }
-      cursor.setDate(cursor.getDate() - 1);
     }
     const rows = Array.from(totals.entries()).map(([key, value]) => {
       const custom = customByName.get(value.name.trim().toLowerCase());
@@ -1756,13 +1780,9 @@ export default function KcalsPage() {
         ...(image ? { image } : {}),
       };
     });
-    if (summarySort === "name") {
-      rows.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
-    } else {
-      rows.sort((a, b) => b.grams - a.grams || a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
-    }
+    rows.sort((a, b) => b.grams - a.grams || a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
     return rows;
-  }, [summaryRangeDays, summarySort, foods, customFoods, imageUrls, dayStartHour, lastSyncAt]);
+  }, [summaryRange, foods, customFoods, imageUrls, dayStartHour, lastSyncAt]);
   const currentAttitude = ATTITUDE_MODES[attitudeMode] ?? ATTITUDE_MODES.standard;
   const getAttitudeString = useCallback((key: string, fallback: string) => {
     const raw = currentAttitude.strings[key] ?? ATTITUDE_MODES.standard.strings[key] ?? fallback;
@@ -2036,6 +2056,16 @@ export default function KcalsPage() {
     setBadgeRotation(0);
     setShowShareModal(true);
     setShowWeeklyModal(false);
+  };
+
+  const handleSummaryShare = () => {
+    setShowSummaryModal(false);
+    handleOpenShare();
+  };
+
+  const handleCopyGroceryList = async () => {
+    const lines = summaryRows.map((row) => `- [ ] ${row.name}: ${formatSummaryAmount(row.grams)}`);
+    await navigator.clipboard.writeText(lines.join("\n"));
   };
 
   const handleShareFile = (file: File) => {
@@ -5026,43 +5056,59 @@ export default function KcalsPage() {
       {/* Summary Modal */}
       <BottomSheet
         open={showSummaryModal}
-        onClose={() => setShowSummaryModal(false)}
+        onClose={() => { setShowSummaryModal(false); setSummaryRangeOpen(false); }}
         variant="center"
         className="kcals-summary-modal"
       >
-        <div className="kcals-summary-title">Summary</div>
-        <div className="kcals-summary-controls">
-          <div className="kcals-summary-toggle">
+        <div className="kcals-summary-title">
+          {summaryTab === "summary" ? "Summary" : "Grocery List"}
+        </div>
+        <div className="kcals-summary-tabs">
+          <div className="kcals-summary-tabs-inner">
             <button
-              className={`kcals-summary-toggle-btn${summaryRangeDays === 7 ? " is-active" : ""}`}
+              className={`kcals-summary-tab${summaryTab === "summary" ? " is-active" : ""}`}
               type="button"
-              onClick={() => setSummaryRangeDays(7)}
+              onClick={() => setSummaryTab("summary")}
             >
-              7 days
+              <span className="kcals-summary-tab-icon kcals-summary-tab-icon--summary" />
             </button>
             <button
-              className={`kcals-summary-toggle-btn${summaryRangeDays === 30 ? " is-active" : ""}`}
+              className={`kcals-summary-tab${summaryTab === "grocery" ? " is-active" : ""}`}
               type="button"
-              onClick={() => setSummaryRangeDays(30)}
+              onClick={() => setSummaryTab("grocery")}
             >
-              30 days
+              <span className="kcals-summary-tab-icon kcals-summary-tab-icon--grocery" />
             </button>
           </div>
-          <div className="kcals-summary-toggle">
+        </div>
+        <div className="kcals-summary-controls">
+          <div className="kcals-summary-controls-left">
+            <span className="kcals-summary-checkbox" />
+            <span className="kcals-summary-controls-label">Items</span>
+          </div>
+          <div className="kcals-summary-dropdown-wrap">
             <button
-              className={`kcals-summary-toggle-btn${summarySort === "amount" ? " is-active" : ""}`}
+              className="kcals-summary-dropdown-btn"
               type="button"
-              onClick={() => setSummarySort("amount")}
+              onClick={() => setSummaryRangeOpen((v) => !v)}
             >
-              Amount
+              {summaryRange === "7d" ? "Last 7d" : summaryRange === "weekly" ? "Last week" : "Last 30d"}
+              <img src="/kcals/assets/chevron.svg" alt="" className="kcals-summary-dropdown-chevron" />
             </button>
-            <button
-              className={`kcals-summary-toggle-btn${summarySort === "name" ? " is-active" : ""}`}
-              type="button"
-              onClick={() => setSummarySort("name")}
-            >
-              Name
-            </button>
+            {summaryRangeOpen && (
+              <div className="kcals-summary-dropdown-menu">
+                {(["7d", "weekly", "30d"] as const).map((opt) => (
+                  <button
+                    key={opt}
+                    className={`kcals-summary-dropdown-item${summaryRange === opt ? " is-active" : ""}`}
+                    type="button"
+                    onClick={() => { setSummaryRange(opt); setSummaryRangeOpen(false); }}
+                  >
+                    {opt === "7d" ? "Last 7d" : opt === "weekly" ? "Last week" : "Last 30d"}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         {summaryRows.length === 0 ? (
@@ -5072,6 +5118,7 @@ export default function KcalsPage() {
             {summaryRows.map((row) => (
               <div key={row.key} className="kcals-summary-row">
                 <div className="kcals-summary-food">
+                  <span className="kcals-summary-checkbox" />
                   {row.image ? (
                     <img src={row.image} alt="" className="kcals-summary-image" />
                   ) : (
@@ -5083,6 +5130,17 @@ export default function KcalsPage() {
               </div>
             ))}
           </div>
+        )}
+        {summaryTab === "summary" ? (
+          <button className="kcals-summary-action" type="button" onClick={handleSummaryShare}>
+            <img src="/kcals/assets/share.svg" alt="" className="kcals-summary-action-icon" />
+            Share
+          </button>
+        ) : (
+          <button className="kcals-summary-action" type="button" onClick={handleCopyGroceryList}>
+            <img src="/kcals/assets/copy.svg" alt="" className="kcals-summary-action-icon" />
+            Copy grocery list
+          </button>
         )}
       </BottomSheet>
 
