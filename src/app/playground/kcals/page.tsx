@@ -631,6 +631,7 @@ export default function KcalsPage() {
   const [editingFood, setEditingFood] = useState<CustomFood | null>(null);
   const [modalName, setModalName] = useState("");
   const [modalKcal, setModalKcal] = useState("");
+  const [modalPerItem, setModalPerItem] = useState(false);
   const [modalImageUrl, setModalImageUrl] = useState<string | null>(null);
   const [modalImageBlob, setModalImageBlob] = useState<Blob | null>(null);
   const [selectedCustomFood, setSelectedCustomFood] = useState<CustomFood | null>(null);
@@ -2535,6 +2536,7 @@ export default function KcalsPage() {
     setEditingFood(null);
     setModalName("");
     setModalKcal("");
+    setModalPerItem(false);
     if (modalImageBlob && modalImageUrl) {
       URL.revokeObjectURL(modalImageUrl);
     }
@@ -2549,6 +2551,7 @@ export default function KcalsPage() {
     setEditingFood(food);
     setModalName(food.name);
     setModalKcal(food.kcalPer100g.toString());
+    setModalPerItem(!!food.perItem);
     setModalImageBlob(null);
     if (food.imageId) {
       const url = await ensureImageUrl(food.imageId);
@@ -2575,6 +2578,7 @@ export default function KcalsPage() {
       name,
       kcalPer100g: kcal,
       ...(imageId ? { imageId } : {}),
+      ...(modalPerItem ? { perItem: true } : {}),
     };
 
     let updated: CustomFood[];
@@ -2936,15 +2940,27 @@ export default function KcalsPage() {
     const recentSelection = selectedRecentFood;
 
     if (selectedCustomFood) {
-      let amountText = text || "100g";
-      const isCount = /^\d+(?:\.\d+)?(?:\s+(?:baby|small|sm|medium|med|large|lg))?\s*$/i.test(amountText);
-      if (!isCount && !/\s*(kg|g|grams?)\s*$/i.test(amountText)) amountText = `${amountText.trim()}g`;
-      const combinedText = `${selectedCustomFood.name} ${amountText}`;
-      const parsed = parseFoodInput(combinedText);
-      const grams = parsed.quantity;
       const itemId = Date.now().toString();
-      const displayName = `${parsed.name} ${grams}g`;
-      const kcal = Math.round((selectedCustomFood.kcalPer100g * grams) / 100);
+      let displayName: string;
+      let kcal: number;
+      let lastAmt: number;
+
+      if (selectedCustomFood.perItem) {
+        const count = parseFloat(text) || 1;
+        displayName = `${selectedCustomFood.name} x${count}`;
+        kcal = Math.round(selectedCustomFood.kcalPer100g * count);
+        lastAmt = count;
+      } else {
+        let amountText = text || "100g";
+        const isCount = /^\d+(?:\.\d+)?(?:\s+(?:baby|small|sm|medium|med|large|lg))?\s*$/i.test(amountText);
+        if (!isCount && !/\s*(kg|g|grams?)\s*$/i.test(amountText)) amountText = `${amountText.trim()}g`;
+        const combinedText = `${selectedCustomFood.name} ${amountText}`;
+        const parsed = parseFoodInput(combinedText);
+        const grams = parsed.quantity;
+        displayName = `${parsed.name} ${grams}g`;
+        kcal = Math.round((selectedCustomFood.kcalPer100g * grams) / 100);
+        lastAmt = grams;
+      }
 
       updateFoods((prev) => [
         {
@@ -2960,6 +2976,13 @@ export default function KcalsPage() {
         ...prev,
       ]);
 
+      setCustomFoods((prev) => {
+        const updated = prev.map((f) =>
+          f.id === selectedCustomFood.id ? { ...f, lastAmount: lastAmt } : f
+        );
+        saveCustomFoods(updated);
+        return updated;
+      });
       setSelectedCustomFood(null);
       setInputValue("");
       setInputFocused(false);
@@ -4100,8 +4123,15 @@ export default function KcalsPage() {
                   {amountCount == null ? (
                     <>
                       {(() => {
-                        const defaults = ["1", "2", "50g", "100g", "150g"];
-                        const last = selectedRecentFood?.lastAmount;
+                        const isCustom = !!selectedCustomFood;
+                        const isPerItem = isCustom && !!selectedCustomFood?.perItem;
+                        const defaults = isPerItem
+                          ? ["0.5", "1", "2", "3", "4"]
+                          : isCustom
+                            ? ["50g", "100g", "150g", "200g"]
+                            : ["1", "2", "50g", "100g", "150g"];
+                        if (isPerItem) return defaults;
+                        const last = isCustom ? selectedCustomFood?.lastAmount : selectedRecentFood?.lastAmount;
                         if (last == null || defaults.includes(`${last}g`)) return defaults;
                         const chip = `${last}g`;
                         const all = [...defaults, chip];
@@ -4120,7 +4150,7 @@ export default function KcalsPage() {
                           type="button"
                           onPointerDown={(e) => e.preventDefault()}
                           onClick={() => {
-                            if (/^\d+$/.test(amt)) {
+                            if (!selectedCustomFood?.perItem && /^\d+$/.test(amt)) {
                               setAmountCount(parseInt(amt, 10));
                               setInputValue(amt + " ");
                             } else {
@@ -4448,15 +4478,24 @@ export default function KcalsPage() {
         />
         <div className="kcals-modal-fields">
           <div className="kcals-modal-field">
+            <label className="kcals-modal-label">Food name</label>
             <input
               className="kcals-modal-input"
               type="text"
               value={modalName}
               onChange={(e) => setModalName(e.target.value)}
-              placeholder="Food name"
+              placeholder="Enter name..."
             />
           </div>
           <div className="kcals-modal-field">
+            <button
+              className="kcals-modal-label kcals-modal-label--dropdown"
+              type="button"
+              onClick={() => setModalPerItem((v) => !v)}
+            >
+              <span>{modalPerItem ? "Calories per item" : "Calories per 100g"}</span>
+              <img src="/kcals/assets/chevron.svg" alt="" className="kcals-modal-label-chevron" />
+            </button>
             <div className="kcals-modal-kcal-row">
               <input
                 className="kcals-modal-input"

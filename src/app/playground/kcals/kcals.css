@@ -1045,6 +1045,28 @@
   margin-bottom: 8px;
 }
 
+.kcals-modal-label--dropdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--black-50);
+  margin-bottom: 8px;
+}
+
+.kcals-modal-label-chevron {
+  width: 12px;
+  height: 12px;
+  opacity: 0.4;
+}
+
 .kcals-modal-input {
   width: 100%;
   height: 48px;

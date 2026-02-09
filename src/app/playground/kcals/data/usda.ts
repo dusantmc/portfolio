@@ -53,6 +53,12 @@ type FoodAlias = {
 
 const FOOD_ALIASES: FoodAlias[] = [
   {
+    aliases: ["egg", "eggs"],
+    usdaQuery: "egg whole raw fresh",
+    displayName: "Eggs",
+    emoji: "\u{1F95A}",
+  },
+  {
     aliases: ["chia", "black chia seeds", "chia seeds", "dried chia seeds"],
     usdaQuery: "dried chia seeds",
     displayName: "Chia seeds",

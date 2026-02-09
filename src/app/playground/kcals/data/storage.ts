@@ -36,6 +36,8 @@ export interface CustomFood {
   kcalPer100g: number;
   imageId?: string;
   image?: string; // legacy base64 data URL or remote URL
+  lastAmount?: number;
+  perItem?: boolean;
 }
 
 export interface RecentFood {
