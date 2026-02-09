@@ -2472,8 +2472,8 @@ select.kcals-profile-settings-input::-ms-expand {
 }
 
 .kcals-summary-checkmark {
-  width: 12px;
-  height: 12px;
+  width: 18px;
+  height: 18px;
   filter: brightness(0) invert(1);
 }
 
@@ -2595,7 +2595,11 @@ select.kcals-profile-settings-input::-ms-expand {
 }
 
 .kcals-summary-row.is-selected {
-  outline-color: rgba(52, 120, 246, 0.3);
+  outline-color: var(--border-8);
+}
+
+.kcals-summary-row.is-selected .kcals-summary-name {
+  font-weight: 600;
 }
 
 .kcals-summary-food {
