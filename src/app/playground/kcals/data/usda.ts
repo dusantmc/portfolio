@@ -64,6 +64,12 @@ const FOOD_ALIASES: FoodAlias[] = [
     displayName: "Chia seeds",
     emoji: "\u{1F331}",
   },
+  {
+    aliases: ["apple", "apples"],
+    usdaQuery: "apples raw with skin",
+    displayName: "Apple",
+    emoji: "\u{1F34E}",
+  },
 ];
 
 function normalizeAliasKey(value: string): string {
