@@ -2697,6 +2697,7 @@ select.kcals-profile-settings-input::-ms-expand {
 }
 
 .kcals-weekly-modal {
+  position: relative;
   width: calc(100% - 64px);
   max-width: 320px;
   background: var(--white);
@@ -2954,33 +2955,43 @@ select.kcals-profile-settings-input::-ms-expand {
 }
 
 /* Over-limit modal */
+.kcals-overlimit-sheet::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--white);
+  border-radius: 32px;
+  z-index: 0;
+}
+
 .kcals-overlimit {
   text-align: center;
-  padding: 8px 8px 4px;
+  padding: 0 8px 8px;
+  position: relative;
+  z-index: 1;
 }
 
 .kcals-overlimit-meme {
-  position: fixed;
-  z-index: 10001;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
   width: 275px;
   height: 107px;
   object-fit: contain;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, calc(-50% - 130px));
-  pointer-events: auto;
   cursor: pointer;
-  animation: kcals-meme-in 0.5s cubic-bezier(0.32, 0.72, 0, 1) both;
+  z-index: -1;
+  animation: kcals-meme-in 1.1s 1.0s cubic-bezier(0.32, 0.72, 0, 1) both;
 }
 
 @keyframes kcals-meme-in {
   from {
     opacity: 0;
-    transform: translateY(-50px);
+    transform: translateX(-50%) translateY(100px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(-50%) translateY(0);
   }
 }
 
@@ -2998,6 +3009,21 @@ select.kcals-profile-settings-input::-ms-expand {
   margin: 0 0 20px;
   white-space: pre-line;
   line-height: 1.4;
+}
+.kcals-overlimit-meme-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--black-100);
+  margin: 0 0 2px;
+}
+.kcals-overlimit-meme-body {
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--black-70);
+  margin: 0 0 2px;
+  white-space: pre-line;
+  line-height: 1.4;
+
 }
 
 /* Standalone PWA: respect safe area inset */

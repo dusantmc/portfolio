@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo, type ChangeEvent, type PointerEvent } from "react";
-import { createPortal } from "react-dom";
 import type { User } from "@supabase/supabase-js";
 import { SmokeRing } from "@paper-design/shaders-react";
 import {
@@ -1715,12 +1714,15 @@ export default function KcalsPage() {
   // Over-limit modal
   const [showOverLimitModal, setShowOverLimitModal] = useState(false);
   const prevTotalKcalRef = useRef(totalKcal);
+  const overLimitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     const prev = prevTotalKcalRef.current;
     prevTotalKcalRef.current = totalKcal;
-    if (attitudeMode === "karen" && prev <= calorieGoal && totalKcal > calorieGoal) {
-      const timer = setTimeout(() => setShowOverLimitModal(true), 1000);
-      return () => clearTimeout(timer);
+    if (attitudeMode === "karen" && prev <= calorieGoal && totalKcal > calorieGoal && !overLimitTimerRef.current) {
+      overLimitTimerRef.current = setTimeout(() => {
+        setShowOverLimitModal(true);
+        overLimitTimerRef.current = null;
+      }, 1000);
     }
   }, [totalKcal, calorieGoal, attitudeMode]);
 
@@ -5294,19 +5296,16 @@ export default function KcalsPage() {
       </BottomSheet>
 
       {/* Over-limit Modal */}
-      <BottomSheet open={showOverLimitModal} onClose={() => setShowOverLimitModal(false)} variant="center">
+      <BottomSheet open={showOverLimitModal} onClose={() => setShowOverLimitModal(false)} variant="center" className="kcals-overlimit-sheet">
+        <img src="/kcals/assets/meme.png" alt="" className="kcals-overlimit-meme" onClick={() => setShowOverLimitModal(false)} />
         <div className="kcals-overlimit">
-          <h3 className="kcals-overlimit-title">We talked about this...</h3>
-          <p className="kcals-overlimit-body">You crossed your calorie limit{"\n"}and ignored the discipline</p>
+          <h3 className="kcals-overlimit-meme-title">We talked about this...</h3>
+          <p className="kcals-overlimit-meme-body">You crossed your calorie limit{"\n"}and ignored the discipline</p>
           <button className="kcals-summary-action" type="button" onClick={() => setShowOverLimitModal(false)}>
             {"😡"} I&apos;ll do better next time
           </button>
         </div>
       </BottomSheet>
-      {showOverLimitModal && createPortal(
-        <img src="/kcals/assets/meme.png" alt="" className="kcals-overlimit-meme" onClick={() => setShowOverLimitModal(false)} />,
-        document.body
-      )}
 
       {showShareModal && (
         <div className="kcals-share-screen">
