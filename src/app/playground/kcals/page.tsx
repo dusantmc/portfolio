@@ -5293,9 +5293,6 @@ export default function KcalsPage() {
       </BottomSheet>
 
       {/* Over-limit Modal */}
-      {showOverLimitModal && (
-        <img src="/kcals/assets/meme.png" alt="" className="kcals-overlimit-meme" onClick={() => setShowOverLimitModal(false)} />
-      )}
       <BottomSheet open={showOverLimitModal} onClose={() => setShowOverLimitModal(false)} variant="center">
         <div className="kcals-overlimit">
           <h3 className="kcals-overlimit-title">We talked about this...</h3>
@@ -5305,6 +5302,9 @@ export default function KcalsPage() {
           </button>
         </div>
       </BottomSheet>
+      {showOverLimitModal && (
+        <img src="/kcals/assets/meme.png" alt="" className="kcals-overlimit-meme" onClick={() => setShowOverLimitModal(false)} />
+      )}
 
       {showShareModal && (
         <div className="kcals-share-screen">
