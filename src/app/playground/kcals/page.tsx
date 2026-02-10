@@ -1710,6 +1710,19 @@ export default function KcalsPage() {
   const shaderColors = totalKcal <= calorieGoal
     ? ["#FF8837", "#FFD537"]
     : ["#5AB3FF", "#6DFFEF"];
+
+  // Over-limit modal
+  const [showOverLimitModal, setShowOverLimitModal] = useState(false);
+  const prevTotalKcalRef = useRef(totalKcal);
+  useEffect(() => {
+    const prev = prevTotalKcalRef.current;
+    prevTotalKcalRef.current = totalKcal;
+    if (attitudeMode === "karen" && prev <= calorieGoal && totalKcal > calorieGoal) {
+      const timer = setTimeout(() => setShowOverLimitModal(true), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [totalKcal, calorieGoal, attitudeMode]);
+
   const displayDate = getDisplayDate(new Date());
   const todayLabel = new Intl.DateTimeFormat("en-US", {
     month: "short",
@@ -3070,6 +3083,25 @@ export default function KcalsPage() {
     }
 
     if (!text) return;
+
+    // Direct kcal entry: "Lorem ipsum 50kcal" or "Lorem ipsum 100g 50kcal"
+    const kcalMatch = text.match(/^(.+?)\s+(\d+(?:\.\d+)?)\s*kcal\s*$/i);
+    if (kcalMatch) {
+      const displayName = kcalMatch[1].trim();
+      const kcal = Math.round(parseFloat(kcalMatch[2]));
+      if (displayName && Number.isFinite(kcal) && kcal > 0) {
+        const itemId = Date.now().toString();
+        const emoji = getFoodEmoji(displayName);
+        setInputValue("");
+        setInputFocused(false);
+        inputRef.current?.blur();
+        updateFoods((prev) => [
+          { id: itemId, emoji, name: displayName, kcal, source: "manual" as const, sourceName: displayName },
+          ...prev,
+        ]);
+        return;
+      }
+    }
 
     const parsed = parseFoodInput(text);
     const embeddedFood = resolveEmbeddedFood(parsed.name);
@@ -5258,6 +5290,18 @@ export default function KcalsPage() {
             </button>
           )}
         </>
+      </BottomSheet>
+
+      {/* Over-limit Modal */}
+      <BottomSheet open={showOverLimitModal} onClose={() => setShowOverLimitModal(false)} variant="center">
+        <div className="kcals-overlimit">
+          <img src="/kcals/assets/meme.png" alt="" className="kcals-overlimit-meme" onClick={() => setShowOverLimitModal(false)} />
+          <h3 className="kcals-overlimit-title">We talked about this...</h3>
+          <p className="kcals-overlimit-body">You crossed your calorie limit{"\n"}and ignored the discipline</p>
+          <button className="kcals-summary-action" type="button" onClick={() => setShowOverLimitModal(false)}>
+            {"😡"} I&apos;ll do better next time
+          </button>
+        </div>
       </BottomSheet>
 
       {showShareModal && (

@@ -2947,6 +2947,48 @@ select.kcals-profile-settings-input::-ms-expand {
   padding-bottom: 0;
 }
 
+/* Over-limit modal */
+.kcals-overlimit {
+  text-align: center;
+  padding: 0 8px 4px;
+}
+
+.kcals-overlimit-meme {
+  width: 180px;
+  height: auto;
+  border-radius: 16px;
+  margin: 0 auto 16px;
+  display: block;
+  animation: kcals-meme-in 0.5s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+@keyframes kcals-meme-in {
+  from {
+    opacity: 0;
+    transform: translateY(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.kcals-overlimit-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--black-100);
+  margin: 0 0 6px;
+}
+
+.kcals-overlimit-body {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--black-50);
+  margin: 0 0 20px;
+  white-space: pre-line;
+  line-height: 1.4;
+}
+
 /* Standalone PWA: respect safe area inset */
 @media all and (display-mode: standalone) {
   .kcals-topbar {
