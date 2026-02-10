@@ -905,11 +905,21 @@
 }
 
 @keyframes kcals-drop-in {
-  from { transform: translateY(40px); opacity: 0; }
+  from { transform: translateY(-40px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 
 @keyframes kcals-drop-out {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(-40px); opacity: 0; }
+}
+
+@keyframes kcals-mememodal-in {
+  from { transform: translateY(40px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes kcals-mememodal-out {
   from { transform: translateY(0); opacity: 1; }
   to { transform: translateY(40px); opacity: 0; }
 }
@@ -2711,6 +2721,10 @@ select.kcals-profile-settings-input::-ms-expand {
   animation: kcals-drop-out 0.25s ease-in forwards;
 }
 
+.kcals-closing .kcals-weekly-modal.kcals-overlimit-sheet {
+  animation: kcals-mememodal-out 0.25s ease-in forwards;
+}
+
 .kcals-weekly-emoji {
   font-size: 44px;
   line-height: 1;
@@ -2955,6 +2969,10 @@ select.kcals-profile-settings-input::-ms-expand {
 }
 
 /* Over-limit modal */
+.kcals-weekly-modal.kcals-overlimit-sheet {
+  animation: kcals-mememodal-in 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
 .kcals-overlimit-sheet::before {
   content: "";
   position: absolute;
