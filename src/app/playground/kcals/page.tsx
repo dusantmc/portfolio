@@ -1715,10 +1715,17 @@ export default function KcalsPage() {
   const [showOverLimitModal, setShowOverLimitModal] = useState(false);
   const prevTotalKcalRef = useRef(totalKcal);
   const overLimitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const overLimitShownRef = useRef(true); // true on mount → skip initial load crossing
   useEffect(() => {
     const prev = prevTotalKcalRef.current;
     prevTotalKcalRef.current = totalKcal;
-    if (attitudeMode === "karen" && prev <= calorieGoal && totalKcal > calorieGoal && !overLimitTimerRef.current) {
+    // Reset when user goes back under the limit (allows next crossing to trigger)
+    if (totalKcal <= calorieGoal) {
+      overLimitShownRef.current = false;
+      return;
+    }
+    if (attitudeMode === "karen" && prev <= calorieGoal && totalKcal > calorieGoal && !overLimitTimerRef.current && !overLimitShownRef.current) {
+      overLimitShownRef.current = true;
       overLimitTimerRef.current = setTimeout(() => {
         setShowOverLimitModal(true);
         overLimitTimerRef.current = null;
