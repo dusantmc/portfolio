@@ -2047,6 +2047,12 @@ select.kcals-profile-settings-input::-ms-expand {
   height: 28px;
 }
 
+.kcals-group-list-item .kcals-food-image {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
 .kcals-group-list-item .kcals-food-name {
   font-size: 15px;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo, type ChangeEvent, type PointerEvent } from "react";
+import { createPortal } from "react-dom";
 import type { User } from "@supabase/supabase-js";
 import { SmokeRing } from "@paper-design/shaders-react";
 import {
@@ -5302,8 +5303,9 @@ export default function KcalsPage() {
           </button>
         </div>
       </BottomSheet>
-      {showOverLimitModal && (
-        <img src="/kcals/assets/meme.png" alt="" className="kcals-overlimit-meme" onClick={() => setShowOverLimitModal(false)} />
+      {showOverLimitModal && createPortal(
+        <img src="/kcals/assets/meme.png" alt="" className="kcals-overlimit-meme" onClick={() => setShowOverLimitModal(false)} />,
+        document.body
       )}
 
       {showShareModal && (
