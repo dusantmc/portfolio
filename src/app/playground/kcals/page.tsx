@@ -5293,9 +5293,11 @@ export default function KcalsPage() {
       </BottomSheet>
 
       {/* Over-limit Modal */}
+      {showOverLimitModal && (
+        <img src="/kcals/assets/meme.png" alt="" className="kcals-overlimit-meme" onClick={() => setShowOverLimitModal(false)} />
+      )}
       <BottomSheet open={showOverLimitModal} onClose={() => setShowOverLimitModal(false)} variant="center">
         <div className="kcals-overlimit">
-          <img src="/kcals/assets/meme.png" alt="" className="kcals-overlimit-meme" onClick={() => setShowOverLimitModal(false)} />
           <h3 className="kcals-overlimit-title">We talked about this...</h3>
           <p className="kcals-overlimit-body">You crossed your calorie limit{"\n"}and ignored the discipline</p>
           <button className="kcals-summary-action" type="button" onClick={() => setShowOverLimitModal(false)}>

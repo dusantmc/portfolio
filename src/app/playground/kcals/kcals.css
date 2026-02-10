@@ -2950,15 +2950,20 @@ select.kcals-profile-settings-input::-ms-expand {
 /* Over-limit modal */
 .kcals-overlimit {
   text-align: center;
-  padding: 0 8px 4px;
+  padding: 8px 8px 4px;
 }
 
 .kcals-overlimit-meme {
-  width: 180px;
-  height: auto;
-  border-radius: 16px;
-  margin: 0 auto 16px;
-  display: block;
+  position: fixed;
+  z-index: 10001;
+  width: 275px;
+  height: 107px;
+  object-fit: contain;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, calc(-50% - 130px));
+  pointer-events: auto;
+  cursor: pointer;
   animation: kcals-meme-in 0.5s cubic-bezier(0.32, 0.72, 0, 1) both;
 }
 
