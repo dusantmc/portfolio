@@ -1715,23 +1715,33 @@ export default function KcalsPage() {
   const [showOverLimitModal, setShowOverLimitModal] = useState(false);
   const prevTotalKcalRef = useRef(totalKcal);
   const overLimitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const overLimitShownRef = useRef(true); // true on mount → skip initial load crossing
+  const overLimitFiredRef = useRef(false);
   useEffect(() => {
     const prev = prevTotalKcalRef.current;
     prevTotalKcalRef.current = totalKcal;
-    // Reset when user goes back under the limit (allows next crossing to trigger)
-    if (totalKcal <= calorieGoal) {
-      overLimitShownRef.current = false;
+    // When user goes back under the limit: clear persisted flag so next crossing can trigger
+    if (totalKcal <= calorieGoal && foods.length > 0) {
+      overLimitFiredRef.current = false;
+      try { localStorage.removeItem("kcals-overlimit-shown"); } catch {}
       return;
     }
-    if (attitudeMode === "karen" && prev <= calorieGoal && totalKcal > calorieGoal && !overLimitTimerRef.current && !overLimitShownRef.current) {
-      overLimitShownRef.current = true;
+    // Skip if already fired (in-memory or persisted across app reopen)
+    if (overLimitFiredRef.current) return;
+    try {
+      if (localStorage.getItem("kcals-overlimit-shown") === "1") {
+        overLimitFiredRef.current = true;
+        return;
+      }
+    } catch {}
+    if (attitudeMode === "karen" && prev <= calorieGoal && totalKcal > calorieGoal && !overLimitTimerRef.current) {
+      overLimitFiredRef.current = true;
+      try { localStorage.setItem("kcals-overlimit-shown", "1"); } catch {}
       overLimitTimerRef.current = setTimeout(() => {
         setShowOverLimitModal(true);
         overLimitTimerRef.current = null;
       }, 1000);
     }
-  }, [totalKcal, calorieGoal, attitudeMode]);
+  }, [totalKcal, calorieGoal, attitudeMode, foods.length]);
 
   const displayDate = getDisplayDate(new Date());
   const todayLabel = new Intl.DateTimeFormat("en-US", {

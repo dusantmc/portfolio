@@ -2722,7 +2722,7 @@ select.kcals-profile-settings-input::-ms-expand {
 }
 
 .kcals-closing .kcals-weekly-modal.kcals-overlimit-sheet {
-  animation: kcals-mememodal-out 0.25s ease-in forwards;
+  animation: kcals-mememodal-out 0.15s ease-in forwards;
 }
 
 .kcals-weekly-emoji {
