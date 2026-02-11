@@ -1775,9 +1775,7 @@ export default function KcalsPage() {
     (entry: WeeklyEntry) => (entry.goal ?? DEFAULT_CALORIE_GOAL) - entry.remaining,
     []
   );
-  const weeklyVisibleEntries = weeklyBreakdown.filter(
-    (e) => getWeeklyEntryConsumed(e) >= 800
-  );
+  const weeklyVisibleEntries = weeklyBreakdown;
   const weeklyHasData = weeklyVisibleEntries.length > 0;
   const weeklyIsOnTrack = weeklyBurn >= 0;
   const weeklyAbsTotal = Math.abs(weeklyBurn);

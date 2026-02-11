@@ -394,7 +394,8 @@ export function getWeeklyBreakdown(): WeeklyEntry[] {
   const log = loadDailyLog();
   const entries: WeeklyEntry[] = [];
   const d = new Date();
-  for (let i = 0; i < 7; i++) {
+  // Search back up to 30 days to find 7 logged entries
+  for (let i = 0; i < 30 && entries.length < 7; i++) {
     const dateKey = getDayKey(d);
     const entry = log[dateKey];
     if (entry?.logged) {
