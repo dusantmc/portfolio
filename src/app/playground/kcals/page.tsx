@@ -776,6 +776,10 @@ export default function KcalsPage() {
   const [portionTooltipX, setPortionTooltipX] = useState<number | null>(null);
   const portionSnapPoints = [10, 25, 33, 50, 80, 100];
   const PORTION_SNAP_THRESHOLD = 2;
+  const [pieceTotal, setPieceTotal] = useState(2);
+  const [pieceEaten, setPieceEaten] = useState(2);
+  const [exitingPieces, setExitingPieces] = useState(0);
+  const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const itemRefsMap = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Group modal state
@@ -3687,12 +3691,20 @@ export default function KcalsPage() {
     setGroupName(group.name);
     setGroupModal(group);
     setPortionValue(group.portionPercent ?? 100);
+    setPortionTab(group.portionTab ?? 0);
+    const total = group.pieceTotal ?? 2;
+    setPieceTotal(total);
+    setPieceEaten(Math.round(((group.portionPercent ?? 100) / 100) * total));
   };
 
   useEffect(() => {
     if (groupModal) {
       setGroupView("list");
       setPortionValue(groupModal.portionPercent ?? 100);
+      setPortionTab(groupModal.portionTab ?? 0);
+      const total = groupModal.pieceTotal ?? 2;
+      setPieceTotal(total);
+      setPieceEaten(Math.round(((groupModal.portionPercent ?? 100) / 100) * total));
     }
   }, [groupModal?.id]);
 
@@ -3766,11 +3778,11 @@ export default function KcalsPage() {
     updateFoods((prev) =>
       prev.map((f) =>
         f.id === groupModal.id
-          ? { ...f, portionPercent: percent }
+          ? { ...f, portionPercent: percent, portionTab, pieceTotal }
           : f
       )
     );
-    setGroupModal((g) => (g ? { ...g, portionPercent: percent } : g));
+    setGroupModal((g) => (g ? { ...g, portionPercent: percent, portionTab, pieceTotal } : g));
     setGroupView("list");
   };
 
@@ -3855,6 +3867,8 @@ export default function KcalsPage() {
         emoji: groupModal.emoji,
         items: groupModal.items ?? [],
         portionPercent: groupModal.portionPercent,
+        portionTab: groupModal.portionTab,
+        pieceTotal: groupModal.pieceTotal,
       };
       const updated = [...savedGroups, group];
       setSavedGroups(updated);
@@ -3879,6 +3893,8 @@ export default function KcalsPage() {
       kcal: newItems.reduce((s, i) => s + (i.kcal ?? 0), 0),
       items: newItems,
       portionPercent: group.portionPercent,
+      portionTab: group.portionTab,
+      pieceTotal: group.pieceTotal,
     };
     updateFoods((prev) => [newGroup, ...prev]);
     dismissSuggestions();
@@ -3914,17 +3930,47 @@ export default function KcalsPage() {
     return () => clearTimeout(timer);
   }, [portionTab, portionHero]);
 
+  // Piece mode: when entering piece tab, derive eaten from current percentage
+  useEffect(() => {
+    if (portionTab === 3) {
+      setPieceEaten(Math.min(Math.round((portionValue / 100) * pieceTotal), pieceTotal));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [portionTab]);
+
+  // Piece mode: sync pieceEaten → portionValue
+  useEffect(() => {
+    if (portionTab === 3) {
+      setPortionValue(pieceTotal > 0 ? Math.round((pieceEaten / pieceTotal) * 100) : 100);
+    }
+  }, [pieceEaten, pieceTotal, portionTab]);
+
+  const getPieceGridLayout = (total: number) => {
+    let rows: number;
+    if (total <= 3) rows = 1;
+    else if (total <= 8) rows = 2;
+    else if (total <= 16) rows = 3;
+    else if (total <= 28) rows = 4;
+    else rows = 5;
+    return { rows, cols: Math.ceil(total / rows) };
+  };
+
   const updatePortionFromPointer = (clientX: number) => {
     const el = portionSliderRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
     const x = Math.min(Math.max(clientX - rect.left, 0), rect.width);
-    const nextValue = Math.round((x / rect.width) * 100);
-    const nearest = portionSnapPoints.reduce((best, point) =>
-      Math.abs(point - nextValue) < Math.abs(best - nextValue) ? point : best
-    , portionSnapPoints[0]);
-    const snapped = Math.abs(nearest - nextValue) <= PORTION_SNAP_THRESHOLD ? nearest : nextValue;
-    setPortionValue(snapped);
+    if (portionTab === 3) {
+      const raw = (x / rect.width) * pieceTotal;
+      setPieceEaten(Math.min(Math.max(Math.round(raw), 0), pieceTotal));
+    } else {
+      const nextValue = Math.round((x / rect.width) * 100);
+      const nearest = portionSnapPoints.reduce((best, point) =>
+        Math.abs(point - nextValue) < Math.abs(best - nextValue) ? point : best
+      , portionSnapPoints[0]);
+      const snapped = Math.abs(nearest - nextValue) <= PORTION_SNAP_THRESHOLD ? nearest : nextValue;
+      setPortionValue(snapped);
+    }
   };
 
   const updatePortionTooltipPosition = useCallback(() => {
@@ -3935,13 +3981,16 @@ export default function KcalsPage() {
     const sliderRect = sliderEl.getBoundingClientRect();
     const rangeRect = rangeEl.getBoundingClientRect();
     const tooltipRect = tooltipEl.getBoundingClientRect();
-    const centerX = rangeRect.left + (rangeRect.width * (portionValue / 100));
+    const fraction = portionTab === 3
+      ? (pieceTotal > 0 ? pieceEaten / pieceTotal : 1)
+      : portionValue / 100;
+    const centerX = rangeRect.left + (rangeRect.width * fraction);
     let left = centerX - sliderRect.left;
     const min = tooltipRect.width / 2;
     const max = sliderRect.width - tooltipRect.width / 2;
     left = Math.min(Math.max(left, min), max);
     setPortionTooltipX((prev) => (prev != null && Math.abs(prev - left) < 0.5 ? prev : left));
-  }, [portionValue]);
+  }, [portionValue, portionTab, pieceEaten, pieceTotal]);
 
   useEffect(() => {
     if (groupView !== "portion") return;
@@ -5030,28 +5079,82 @@ export default function KcalsPage() {
               <div className="kcals-portion-title">How much did you eat?</div>
               <div className="kcals-portion-spacer" />
             </div>
-            <div className="kcals-portion-hero">
-              {portionHeroPrev && (
+            {portionTab === 3 ? (
+              <div className="kcals-piece-grid-container">
                 <div
-                  key={`prev-${portionHeroAnimKey}`}
-                  className={`kcals-portion-hero-image is-prev${portionHeroAnimating ? " is-exiting" : ""}`}
+                  className="kcals-piece-grid"
+                  style={{ ["--piece-cols" as never]: getPieceGridLayout(pieceTotal + exitingPieces).cols }}
+                >
+                  {Array.from({ length: pieceTotal + exitingPieces }, (_, i) => {
+                    const isExiting = i >= pieceTotal;
+                    const isEaten = !isExiting && i < pieceEaten;
+                    return (
+                      <div
+                        key={`${i}-${isExiting ? "x" : isEaten ? "f" : "e"}`}
+                        className={`kcals-piece-item${isExiting ? " is-exiting" : ""}`}
+                        style={{
+                          backgroundImage: "url(/kcals/assets/piece-sprite.webp)",
+                          backgroundPosition: isEaten ? "0% 0%" : "100% 0%",
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="kcals-portion-hero">
+                {portionHeroPrev && (
+                  <div
+                    key={`prev-${portionHeroAnimKey}`}
+                    className={`kcals-portion-hero-image is-prev${portionHeroAnimating ? " is-exiting" : ""}`}
+                    aria-hidden="true"
+                    style={{
+                      backgroundImage: `url(${portionHeroPrev})`,
+                      ["--sprite-x" as never]: `${-(getPortionSpriteIndex(portionValue) - 1) * 224}px`,
+                    }}
+                  />
+                )}
+                <div
+                  key={`curr-${portionHeroAnimKey}`}
+                  className={`kcals-portion-hero-image${portionHeroAnimating ? " is-entering" : ""}${portionHero ? "" : " is-placeholder"}`}
                   aria-hidden="true"
                   style={{
-                    backgroundImage: `url(${portionHeroPrev})`,
+                    backgroundImage: portionHero ? `url(${portionHero})` : "none",
                     ["--sprite-x" as never]: `${-(getPortionSpriteIndex(portionValue) - 1) * 224}px`,
                   }}
                 />
-              )}
-              <div
-                key={`curr-${portionHeroAnimKey}`}
-                className={`kcals-portion-hero-image${portionHeroAnimating ? " is-entering" : ""}${portionHero ? "" : " is-placeholder"}`}
-                aria-hidden="true"
-                style={{
-                  backgroundImage: portionHero ? `url(${portionHero})` : "none",
-                  ["--sprite-x" as never]: `${-(getPortionSpriteIndex(portionValue) - 1) * 224}px`,
-                }}
-              />
-            </div>
+              </div>
+            )}
+            {portionTab === 3 && (
+              <div className="kcals-piece-stepper">
+                <button
+                  className="kcals-piece-stepper-btn"
+                  type="button"
+                  disabled={pieceTotal <= 2}
+                  onClick={() => {
+                    const newTotal = Math.max(2, pieceTotal - 1);
+                    setExitingPieces((prev) => prev + 1);
+                    if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+                    exitTimerRef.current = setTimeout(() => setExitingPieces(0), 200);
+                    setPieceTotal(newTotal);
+                    setPieceEaten((prev) => Math.min(prev, newTotal));
+                  }}
+                >
+                  <img src="/kcals/assets/minus.svg" alt="" />
+                </button>
+                <span className="kcals-piece-stepper-value">{pieceTotal}</span>
+                <button
+                  className="kcals-piece-stepper-btn"
+                  type="button"
+                  disabled={pieceTotal >= 50}
+                  onClick={() => {
+                    setPieceTotal((prev) => Math.min(50, prev + 1));
+                  }}
+                >
+                  <img src="/kcals/assets/plus.svg" alt="" />
+                </button>
+              </div>
+            )}
             <div className="kcals-portion-tabs">
               {[
                 "/kcals/assets/plate.png",
@@ -5076,7 +5179,9 @@ export default function KcalsPage() {
             <div
               className="kcals-portion-slider"
               ref={portionSliderRef}
-              style={{ ["--portion" as never]: `${portionValue}%` }}
+              style={{ ["--portion" as never]: portionTab === 3
+                ? `${pieceTotal > 0 ? (pieceEaten / pieceTotal) * 100 : 100}%`
+                : `${portionValue}%` }}
               onPointerDown={(e) => {
                 portionDraggingRef.current = true;
                 updatePortionFromPointer(e.clientX);
@@ -5101,22 +5206,28 @@ export default function KcalsPage() {
                 ref={portionTooltipRef}
                 style={{ left: portionTooltipX != null ? `${portionTooltipX}px` : undefined }}
               >
-                {getPortionLabel(portionValue)}
+                {portionTab === 3
+                  ? (pieceEaten === pieceTotal ? "All" : `${pieceEaten}`)
+                  : getPortionLabel(portionValue)}
               </div>
               <input
                 className="kcals-portion-range"
                 ref={portionRangeRef}
                 type="range"
                 min={0}
-                max={100}
-                value={portionValue}
+                max={portionTab === 3 ? pieceTotal : 100}
+                value={portionTab === 3 ? pieceEaten : portionValue}
                 onChange={(e) => {
                   const raw = Number(e.target.value);
-                  const nearest = portionSnapPoints.reduce((best, point) =>
-                    Math.abs(point - raw) < Math.abs(best - raw) ? point : best
-                  , portionSnapPoints[0]);
-                  const snapped = Math.abs(nearest - raw) <= PORTION_SNAP_THRESHOLD ? nearest : raw;
-                  setPortionValue(snapped);
+                  if (portionTab === 3) {
+                    setPieceEaten(Math.min(Math.max(Math.round(raw), 0), pieceTotal));
+                  } else {
+                    const nearest = portionSnapPoints.reduce((best, point) =>
+                      Math.abs(point - raw) < Math.abs(best - raw) ? point : best
+                    , portionSnapPoints[0]);
+                    const snapped = Math.abs(nearest - raw) <= PORTION_SNAP_THRESHOLD ? nearest : raw;
+                    setPortionValue(snapped);
+                  }
                 }}
               />
             </div>

@@ -7,6 +7,8 @@ export interface FoodItem {
   loading?: boolean;
   items?: FoodItem[]; // present = this is a group
   portionPercent?: number; // group-only: portion of total calories applied
+  portionTab?: number; // which portion tab was last used (0-3)
+  pieceTotal?: number; // piece mode: total number of pieces
   imageId?: string;
   image?: string; // legacy base64 data URL or remote URL for custom food avatars
   source?: "usda" | "manual";
@@ -57,6 +59,8 @@ export interface SavedGroup {
   emoji: string;
   items: FoodItem[];
   portionPercent?: number;
+  portionTab?: number;
+  pieceTotal?: number;
 }
 
 const FOOD_LIST_KEY = "kcals-food-list";
