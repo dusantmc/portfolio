@@ -4934,14 +4934,27 @@ export default function KcalsPage() {
         <div className="kcals-modal-handle" />
         {groupView === "list" ? (
           <>
-            <button
-              className={`kcals-portion-back${savedGroups.some((g) => g.id === (groupModal?.savedGroupId ?? groupModal?.id)) ? " is-bookmarked" : ""}`}
-              type="button"
-              onClick={handleBookmarkGroup}
-              aria-label="Bookmark"
-            >
-              <img src="/kcals/assets/bookmark.svg" alt="" />
-            </button>
+            {(() => {
+              const isBookmarked = savedGroups.some((g) => g.id === (groupModal?.savedGroupId ?? groupModal?.id));
+              return (
+                <button
+                  className={`kcals-portion-back${isBookmarked ? " is-bookmarked" : ""}`}
+                  type="button"
+                  onClick={handleBookmarkGroup}
+                  aria-label="Bookmark"
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M5 20.1683V6C5 4.89543 5.89543 4 7 4H17C18.1046 4 19 4.89543 19 6V20.1683C19 20.9595 18.1248 21.4373 17.4592 21.0095L12.8111 18.0214C12.317 17.7038 11.683 17.7038 11.1889 18.0214L6.54076 21.0095C5.87525 21.4373 5 20.9595 5 20.1683Z"
+                      fill={isBookmarked ? "var(--black-100)" : "white"}
+                      stroke={isBookmarked ? "var(--black-100)" : "#676663"}
+                      strokeWidth="2"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              );
+            })()}
             <div className="kcals-group-emoji">
               {groupModal?.emoji}
             </div>

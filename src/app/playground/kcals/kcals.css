@@ -1812,14 +1812,10 @@ select.kcals-profile-settings-input::-ms-expand {
   margin-left: -6px;
 }
 
-.kcals-portion-back img {
+.kcals-portion-back img,
+.kcals-portion-back svg {
   width: 24px;
   height: 24px;
-}
-
-.kcals-portion-back.is-bookmarked img {
-  opacity: 1;
-  filter: invert(5%) sepia(10%) saturate(1000%) hue-rotate(30deg) brightness(96%) contrast(93%);
 }
 
 .kcals-portion-title {
