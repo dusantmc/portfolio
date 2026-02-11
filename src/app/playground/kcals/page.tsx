@@ -661,6 +661,7 @@ export default function KcalsPage() {
   const [modalImageUrl, setModalImageUrl] = useState<string | null>(null);
   const [modalImageBlob, setModalImageBlob] = useState<Blob | null>(null);
   const [selectedCustomFood, setSelectedCustomFood] = useState<CustomFood | null>(null);
+  const [showAllCustomPills, setShowAllCustomPills] = useState(false);
   const [amountCount, setAmountCount] = useState<number | null>(null);
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
   const inputRef = useRef<HTMLInputElement>(null);
@@ -1768,6 +1769,7 @@ export default function KcalsPage() {
   const [summarySelectOpen, setSummarySelectOpen] = useState(false);
   const [weeklyBurn, setWeeklyBurn] = useState(0);
   const [showWeeklyModal, setShowWeeklyModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [weeklyBreakdown, setWeeklyBreakdown] = useState<WeeklyEntry[]>([]);
   const [lastCustomMatch, setLastCustomMatch] = useState<CustomFood | null>(null);
   const [lastRecentMatch, setLastRecentMatch] = useState<RecentFood | null>(null);
@@ -1992,6 +1994,7 @@ export default function KcalsPage() {
     clearTimeout(blurTimeout.current);
     setInputFocused(true);
     setSwipedItemId(null);
+    setRecentFoods(loadRecentFoods());
   };
 
   const handleInputBlur = () => {
@@ -2007,6 +2010,7 @@ export default function KcalsPage() {
     setSelectedCustomFood(null);
     setSelectedRecentFood(null);
     setAmountCount(null);
+    setShowAllCustomPills(false);
     setInputFocused(false);
     inputRef.current?.blur();
   };
@@ -4237,6 +4241,9 @@ export default function KcalsPage() {
                 </span>
                 {weeklyChipValue}
               </button>
+              <button className="kcals-settings-btn" type="button" onClick={() => setShowSettingsModal(true)} aria-label="Settings">
+                <img src="/kcals/assets/settings.svg" alt="" />
+              </button>
             </div>
             <div className="kcals-topbar-compact">
               <span className="kcals-topbar-compact-value">{totalKcal} kcal</span>
@@ -4367,10 +4374,11 @@ export default function KcalsPage() {
                   type="button"
                 >
                   <PlusIcon />
+                  <span>Add</span>
                 </button>
               </div>
               {customFoods.length > 0 && (
-                <div className="kcals-pills">
+                <div className={`kcals-pills${!showAllCustomPills && !queryActive ? " kcals-pills--collapsed" : ""}`}>
                   {customPillsToShow.map((food) => (
                     <button
                       key={food.id}
@@ -4401,6 +4409,19 @@ export default function KcalsPage() {
 	                      <span className="kcals-pill-label">{food.name}</span>
 	                    </button>
 	                  ))}
+                  {!showAllCustomPills && !queryActive && customPillsToShow.length > 3 && (
+                    <button
+                      className="kcals-pill kcals-pill--show-all"
+                      type="button"
+                      onPointerDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setShowAllCustomPills(true);
+                        inputRef.current?.blur();
+                      }}
+                    >
+                      <span className="kcals-pill-label">Show all</span>
+                    </button>
+                  )}
 	                </div>
               )}
             </div>
@@ -5780,6 +5801,104 @@ export default function KcalsPage() {
           />
         </div>
       )}
+
+      {/* Settings Modal */}
+      <BottomSheet open={showSettingsModal} onClose={() => setShowSettingsModal(false)} className="kcals-settings-modal">
+        <div className="kcals-modal-handle" />
+        <div className="kcals-settings-title">Settings</div>
+
+        {customFoods.length > 0 && (
+          <div className="kcals-settings-section">
+            <div className="kcals-settings-section-title">Custom Food</div>
+            <div className="kcals-settings-list">
+              {customFoods.map((food) => (
+                <div
+                  key={food.id}
+                  className="kcals-settings-row"
+                  onClick={() => {
+                    setShowSettingsModal(false);
+                    setEditingFood(food);
+                    setModalName(food.name);
+                    setModalKcal(food.kcalPer100g.toString());
+                    setModalPerItem(!!food.perItem);
+                    const imgSrc = food.imageId ? (imageUrls[food.imageId] ?? food.image) : food.image;
+                    setModalImageUrl(imgSrc ?? null);
+                    setShowModal(true);
+                  }}
+                >
+                  <div className="kcals-settings-row-icon">
+                    {(food.imageId ? (imageUrls[food.imageId] ?? food.image) : food.image) ? (
+                      <img
+                        src={food.imageId ? (imageUrls[food.imageId] ?? food.image) : food.image}
+                        alt=""
+                        className="kcals-settings-row-image"
+                      />
+                    ) : (
+                      "\u{1F372}"
+                    )}
+                  </div>
+                  <div className="kcals-settings-row-name">{food.name}</div>
+                  <div className="kcals-settings-row-meta">
+                    {food.kcalPer100g} kcal{food.perItem ? "/item" : "/100g"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {savedGroups.length > 0 && (
+          <div className="kcals-settings-section">
+            <div className="kcals-settings-section-title">Saved Groups</div>
+            <div className="kcals-settings-list">
+              {savedGroups.map((group) => (
+                <div
+                  key={group.id}
+                  className="kcals-settings-row"
+                  onClick={() => {
+                    setShowSettingsModal(false);
+                    const foodItem: FoodItem = {
+                      id: Date.now().toString(),
+                      savedGroupId: group.id,
+                      emoji: group.emoji,
+                      name: group.name,
+                      kcal: null,
+                      items: group.items.map((item) => ({ ...item, id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}` })),
+                      portionPercent: group.portionPercent,
+                      portionTab: group.portionTab,
+                      pieceTotal: group.pieceTotal,
+                    };
+                    openGroupModal(foodItem);
+                  }}
+                >
+                  <div className="kcals-settings-row-icon">{group.emoji}</div>
+                  <div className="kcals-settings-row-name">{group.name}</div>
+                  <div className="kcals-settings-row-meta">
+                    {group.items.length} item{group.items.length !== 1 ? "s" : ""}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {recentFoods.length > 0 && (
+          <div className="kcals-settings-section">
+            <div className="kcals-settings-section-title">Frequently Used</div>
+            <div className="kcals-settings-list">
+              {recentFoods.map((food) => (
+                <div key={food.name} className="kcals-settings-row">
+                  <div className="kcals-settings-row-icon">{food.emoji}</div>
+                  <div className="kcals-settings-row-name">{food.name}</div>
+                  <div className="kcals-settings-row-meta">
+                    {food.kcalPer100g} kcal/100g
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </BottomSheet>
     </>
   );
 }

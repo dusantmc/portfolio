@@ -136,6 +136,29 @@
   align-items: center;
 }
 
+.kcals-settings-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: var(--white);
+  outline: 0.5px solid var(--border-8);
+  border-radius: var(--radius-chip);
+  box-shadow: var(--shadow-item);
+  cursor: pointer;
+  transition: transform 0.15s ease-out;
+  touch-action: manipulation;
+}
+.kcals-settings-btn:active {
+  transform: scale(0.92);
+}
+.kcals-settings-btn img {
+  width: 20px;
+  height: 20px;
+}
+
 .kcals-chip {
   display: flex;
   align-items: center;
@@ -808,22 +831,27 @@
 }
 
 .kcals-add-btn {
-  width: 28px;
   height: 28px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 4px;
   border: none;
   background: none;
   cursor: pointer;
   color: var(--black-50);
-  opacity: 1;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 0 4px;
 }
 
 .kcals-pills {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+.kcals-pills--collapsed {
+  max-height: 124px;
+  overflow: hidden;
 }
 
 .kcals-pill {
@@ -878,6 +906,11 @@
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
+}
+
+.kcals-pill--show-all {
+  color: var(--black-50);
+  font-weight: 500;
 }
 
 /* ===========================
@@ -1810,6 +1843,11 @@ select.kcals-profile-settings-input::-ms-expand {
   background: none;
   cursor: pointer;
   margin-left: -6px;
+  transition: transform 0.15s ease-out;
+  touch-action: manipulation;
+}
+.kcals-portion-back:active {
+  transform: scale(0.9);
 }
 
 .kcals-portion-back img,
@@ -2168,6 +2206,9 @@ select.kcals-profile-settings-input::-ms-expand {
 
 .kcals-group-list-item .kcals-food-name {
   font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .kcals-group-list-item .kcals-food-kcal {
@@ -3145,6 +3186,87 @@ select.kcals-profile-settings-input::-ms-expand {
   white-space: pre-line;
   line-height: 1.4;
 
+}
+
+/* ===========================
+   Settings Modal
+   =========================== */
+
+.kcals-settings-modal {
+  max-height: 85dvh;
+  overflow-y: auto;
+}
+
+.kcals-settings-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--black-100);
+  text-align: center;
+  padding: 4px 0 16px;
+}
+
+.kcals-settings-section {
+  padding: 0 0 20px;
+}
+
+.kcals-settings-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--black-50);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 0 4px 8px;
+}
+
+.kcals-settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kcals-settings-row {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  align-items: center;
+  height: 48px;
+  background: var(--white);
+  outline: 0.5px solid var(--border-16);
+  box-shadow: var(--shadow-item);
+  border-radius: 14px;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.kcals-settings-row-icon {
+  font-size: 20px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kcals-settings-row-image {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.kcals-settings-row-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--black-100);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kcals-settings-row-meta {
+  font-size: 13px;
+  color: var(--black-50);
+  padding-left: 8px;
+  white-space: nowrap;
 }
 
 /* Standalone PWA: respect safe area inset */
