@@ -1,5 +1,6 @@
 export interface FoodItem {
   id: string;
+  savedGroupId?: string;
   emoji: string;
   name: string;
   kcal: number | null;
@@ -50,9 +51,18 @@ export interface RecentFood {
   lastAmount?: number;
 }
 
+export interface SavedGroup {
+  id: string;
+  name: string;
+  emoji: string;
+  items: FoodItem[];
+  portionPercent?: number;
+}
+
 const FOOD_LIST_KEY = "kcals-food-list";
 const CUSTOM_KEY = "kcals-custom-foods";
 const RECENT_KEY = "kcals-recent-foods";
+const SAVED_GROUPS_KEY = "kcals-saved-groups";
 
 const IMAGE_DB = "kcals-image-db";
 const IMAGE_STORE = "custom-food-images";
@@ -163,6 +173,24 @@ export function removeRecentFood(name: string): void {
   const recent = loadRecentFoods();
   const filtered = recent.filter((f) => f.name.toLowerCase() !== name.toLowerCase());
   localStorage.setItem(RECENT_KEY, JSON.stringify(filtered));
+}
+
+export function loadSavedGroups(): SavedGroup[] {
+  if (typeof window === "undefined") return [];
+  try {
+    return JSON.parse(localStorage.getItem(SAVED_GROUPS_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+export function saveSavedGroups(groups: SavedGroup[]): void {
+  localStorage.setItem(SAVED_GROUPS_KEY, JSON.stringify(groups));
+}
+
+export function removeSavedGroup(id: string): void {
+  const groups = loadSavedGroups().filter((g) => g.id !== id);
+  localStorage.setItem(SAVED_GROUPS_KEY, JSON.stringify(groups));
 }
 
 export function findCachedFood(query: string): RecentFood | undefined {

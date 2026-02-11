@@ -9,6 +9,7 @@ import {
   type FoodItem,
   type CustomFood,
   type RecentFood,
+  type SavedGroup,
   type WeeklyEntry,
   isGroup,
   groupKcal,
@@ -21,6 +22,8 @@ import {
   trackRecentFood,
   removeRecentFood,
   findCachedFood,
+  loadSavedGroups,
+  saveSavedGroups,
   saveCustomFoodImage,
   loadCustomFoodImage,
   deleteCustomFoodImage,
@@ -616,6 +619,7 @@ export default function KcalsPage() {
   const [isDictating, setIsDictating] = useState(false);
   const [dictationSupported, setDictationSupported] = useState(false);
   const [customFoods, setCustomFoods] = useState<CustomFood[]>([]);
+  const [savedGroups, setSavedGroups] = useState<SavedGroup[]>([]);
   const [recentFoods, setRecentFoods] = useState<RecentFood[]>([]);
   const [selectedRecentFood, setSelectedRecentFood] = useState<RecentFood | null>(null);
   const [incomingShares, setIncomingShares] = useState<IncomingFoodShare[]>([]);
@@ -684,9 +688,10 @@ export default function KcalsPage() {
 
   // Chip context menu state
   const [chipMenu, setChipMenu] = useState<{
-    type: "custom" | "recent";
+    type: "custom" | "recent" | "savedGroup";
     customFood?: CustomFood;
     recentFood?: RecentFood;
+    savedGroup?: SavedGroup;
     x: number;
     y: number;
   } | null>(null);
@@ -749,7 +754,7 @@ export default function KcalsPage() {
   const dragScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const preventTouchMoveRef = useRef((e: TouchEvent) => { e.preventDefault(); });
 
-  const [groupView, setGroupView] = useState<"list" | "portion">("list");
+  const [groupView, setGroupView] = useState<"list" | "portion" | "edit">("list");
   const [portionTab, setPortionTab] = useState(0);
   const [portionValue, setPortionValue] = useState(100);
   const [portionCtaPressed, setPortionCtaPressed] = useState(false);
@@ -776,6 +781,7 @@ export default function KcalsPage() {
   // Group modal state
   const [groupModal, setGroupModal] = useState<FoodItem | null>(null);
   const [groupName, setGroupName] = useState("");
+  const [groupEditItem, setGroupEditItem] = useState<FoodItem | null>(null);
   const [isCompact, setIsCompact] = useState(false);
   const imageUrlsRef = useRef<Record<string, string>>({});
   const hasMigratedImagesRef = useRef(false);
@@ -816,6 +822,7 @@ export default function KcalsPage() {
     let cancelled = false;
     setFoods(loadFoodList());
     setCustomFoods(loadCustomFoods());
+    setSavedGroups(loadSavedGroups());
     setRecentFoods(loadRecentFoods());
     setShareRecipients(loadShareRecipients());
     if (typeof window !== "undefined") {
@@ -2791,8 +2798,8 @@ export default function KcalsPage() {
   };
 
   const handlePillPointerDown = (
-    type: "custom" | "recent",
-    food: CustomFood | RecentFood,
+    type: "custom" | "recent" | "savedGroup",
+    food: CustomFood | RecentFood | SavedGroup,
     e: React.PointerEvent
   ) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
@@ -2812,7 +2819,9 @@ export default function KcalsPage() {
       setChipMenu(
         type === "custom"
           ? { type: "custom", customFood: food as CustomFood, x, y }
-          : { type: "recent", recentFood: food as RecentFood, x, y }
+          : type === "savedGroup"
+            ? { type: "savedGroup", savedGroup: food as SavedGroup, x, y }
+            : { type: "recent", recentFood: food as RecentFood, x, y }
       );
     }, LONG_PRESS_MS);
   };
@@ -2942,6 +2951,8 @@ export default function KcalsPage() {
     if (!chipMenu) return;
     if (chipMenu.type === "custom" && chipMenu.customFood) {
       handleCustomPillTap(chipMenu.customFood);
+    } else if (chipMenu.type === "savedGroup" && chipMenu.savedGroup) {
+      handleSavedGroupTap(chipMenu.savedGroup);
     } else if (chipMenu.type === "recent" && chipMenu.recentFood) {
       handlePillTap(chipMenu.recentFood);
     }
@@ -2976,6 +2987,14 @@ export default function KcalsPage() {
     if (!chipMenu?.recentFood) return;
     removeRecentFood(chipMenu.recentFood.name);
     setRecentFoods(loadRecentFoods());
+    clearChipMenuImmediate();
+  };
+
+  const handleChipMenuRemoveSavedGroup = () => {
+    if (!chipMenu?.savedGroup) return;
+    const updated = savedGroups.filter((g) => g.id !== chipMenu.savedGroup!.id);
+    setSavedGroups(updated);
+    saveSavedGroups(updated);
     clearChipMenuImmediate();
   };
 
@@ -3702,7 +3721,6 @@ export default function KcalsPage() {
       const remaining = group.items.filter((i) => i.id !== childId);
 
       if (remaining.length <= 1) {
-        // Ungroup: replace group with remaining item(s) + removed item
         const result = [...prev];
         result.splice(idx, 1, ...remaining, ...(removed ? [removed] : []));
         shouldClose = true;
@@ -3711,13 +3729,13 @@ export default function KcalsPage() {
 
       const updatedGroup: FoodItem = {
         ...group,
+        savedGroupId: undefined,
         items: remaining,
         emoji: remaining[0].emoji,
         kcal: remaining.reduce((s, i) => s + (i.kcal ?? 0), 0),
       };
       const result = [...prev];
       result[idx] = updatedGroup;
-      // Put removed item back in list
       if (removed) result.push(removed);
       setGroupModal(updatedGroup);
       return result;
@@ -3754,6 +3772,116 @@ export default function KcalsPage() {
     );
     setGroupModal((g) => (g ? { ...g, portionPercent: percent } : g));
     setGroupView("list");
+  };
+
+  const handleEditGroupItem = (item: FoodItem) => {
+    setGroupEditItem(item);
+    if (item.perItem) {
+      const xMatch = item.name.match(/^(.+?)\s+x(\d+(?:\.\d+)?)\s*$/);
+      setEditFoodName(xMatch ? xMatch[1] : item.name);
+      setEditFoodGrams(xMatch ? xMatch[2] : "1");
+      setEditFoodUnit("count");
+      setEditFoodSize("medium");
+    } else {
+      const parsed = parseFoodInput(item.name);
+      setEditFoodName(parsed.name);
+      setEditFoodGrams(parsed.quantity.toString());
+      setEditFoodUnit(parsed.unit);
+      setEditFoodSize(parsed.size ?? "medium");
+    }
+    setGroupView("edit");
+  };
+
+  const handleSaveGroupItemEdit = () => {
+    if (!groupModal || !groupEditItem) return;
+    const name = editFoodName.trim();
+    const amount = Number(editFoodGrams);
+    if (!name || isNaN(amount) || amount <= 0) return;
+
+    let displayName: string;
+    let kcal: number | null;
+    if (groupEditItem.perItem) {
+      displayName = `${name} x${amount}`;
+      const kcalPerItem = groupEditItem.kcalPer100g;
+      kcal = kcalPerItem != null ? Math.round(kcalPerItem * amount) : groupEditItem.kcal;
+    } else if (editFoodUnit === "count") {
+      displayName = `${name} ${amount} ${editFoodSize}`;
+      const grams = Math.round(amount * (groupEditItem.gramsPerUnit ?? 100));
+      const kcalPer100g = groupEditItem.kcalPer100g;
+      kcal = kcalPer100g != null ? Math.round((kcalPer100g * grams) / 100) : groupEditItem.kcal;
+    } else {
+      displayName = `${name} ${amount}g`;
+      const kcalPer100g = groupEditItem.kcalPer100g;
+      kcal = kcalPer100g != null ? Math.round((kcalPer100g * amount) / 100) : groupEditItem.kcal;
+    }
+
+    updateFoods((prev) =>
+      prev.map((f) => {
+        if (f.id !== groupModal.id) return f;
+        const updatedItems = (f.items ?? []).map((i) =>
+          i.id === groupEditItem.id ? { ...i, name: displayName, kcal } : i
+        );
+        return { ...f, savedGroupId: undefined, items: updatedItems, kcal: updatedItems.reduce((s, i) => s + (i.kcal ?? 0), 0) };
+      })
+    );
+    setGroupModal((g) => {
+      if (!g) return null;
+      const updatedItems = (g.items ?? []).map((i) =>
+        i.id === groupEditItem.id ? { ...i, name: displayName, kcal } : i
+      );
+      return { ...g, savedGroupId: undefined, items: updatedItems, kcal: updatedItems.reduce((s, i) => s + (i.kcal ?? 0), 0) };
+    });
+    setGroupEditItem(null);
+    setGroupView("list");
+  };
+
+  const handleBookmarkGroup = () => {
+    if (!groupModal) return;
+    const savedId = groupModal.savedGroupId ?? groupModal.id;
+    const exists = savedGroups.some((g) => g.id === savedId);
+    if (exists) {
+      const updated = savedGroups.filter((g) => g.id !== savedId);
+      setSavedGroups(updated);
+      saveSavedGroups(updated);
+      updateFoods((prev) =>
+        prev.map((f) => (f.id === groupModal.id ? { ...f, savedGroupId: undefined } : f))
+      );
+      setGroupModal((g) => (g ? { ...g, savedGroupId: undefined } : g));
+    } else {
+      const newSavedId = Date.now().toString() + Math.random().toString(36).slice(2, 6);
+      const group: SavedGroup = {
+        id: newSavedId,
+        name: groupModal.name,
+        emoji: groupModal.emoji,
+        items: groupModal.items ?? [],
+        portionPercent: groupModal.portionPercent,
+      };
+      const updated = [...savedGroups, group];
+      setSavedGroups(updated);
+      saveSavedGroups(updated);
+      updateFoods((prev) =>
+        prev.map((f) => (f.id === groupModal.id ? { ...f, savedGroupId: newSavedId } : f))
+      );
+      setGroupModal((g) => (g ? { ...g, savedGroupId: newSavedId } : g));
+    }
+  };
+
+  const handleSavedGroupTap = (group: SavedGroup) => {
+    const newItems = group.items.map((item) => ({
+      ...item,
+      id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
+    }));
+    const newGroup: FoodItem = {
+      id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
+      savedGroupId: group.id,
+      emoji: group.emoji,
+      name: group.name,
+      kcal: newItems.reduce((s, i) => s + (i.kcal ?? 0), 0),
+      items: newItems,
+      portionPercent: group.portionPercent,
+    };
+    updateFoods((prev) => [newGroup, ...prev]);
+    dismissSuggestions();
   };
 
   const getPortionLabel = (value: number) => {
@@ -4230,6 +4358,38 @@ export default function KcalsPage() {
               )}
             </div>
 
+            {savedGroups.length > 0 && (
+              <div className="kcals-suggestion-section">
+                <div className="kcals-suggestion-header">
+                  <span>Saved Groups</span>
+                </div>
+                <div className="kcals-pills">
+                  {savedGroups.map((group) => (
+                    <button
+                      key={group.id}
+                      className="kcals-pill"
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        handlePillPointerDown("savedGroup", group, e);
+                      }}
+                      onPointerMove={handlePillPointerMove}
+                      onPointerUp={handlePillPointerEnd}
+                      onPointerCancel={handlePillPointerEnd}
+                      onClick={() => {
+                        if (!pillLongPressRef.current.triggered) {
+                          handleSavedGroupTap(group);
+                        }
+                      }}
+                      type="button"
+                    >
+                      <span className="kcals-pill-emoji">{group.emoji}</span>
+                      <span className="kcals-pill-label">{group.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {baseRecentFoods.length > 0 && (
               <div className="kcals-suggestion-section">
                 <div className="kcals-suggestion-header">
@@ -4427,7 +4587,7 @@ export default function KcalsPage() {
             )}
             <button
               className="kcals-chip-menu-item kcals-chip-menu-danger"
-              onClick={chipMenu?.type === "custom" ? handleChipMenuRemoveCustom : handleChipMenuRemoveRecent}
+              onClick={chipMenu?.type === "custom" ? handleChipMenuRemoveCustom : chipMenu?.type === "savedGroup" ? handleChipMenuRemoveSavedGroup : handleChipMenuRemoveRecent}
               type="button"
             >
               Remove
@@ -4725,6 +4885,14 @@ export default function KcalsPage() {
         <div className="kcals-modal-handle" />
         {groupView === "list" ? (
           <>
+            <button
+              className={`kcals-portion-back${savedGroups.some((g) => g.id === (groupModal?.savedGroupId ?? groupModal?.id)) ? " is-bookmarked" : ""}`}
+              type="button"
+              onClick={handleBookmarkGroup}
+              aria-label="Bookmark"
+            >
+              <img src="/kcals/assets/bookmark.svg" alt="" />
+            </button>
             <div className="kcals-group-emoji">
               {groupModal?.emoji}
             </div>
@@ -4749,7 +4917,7 @@ export default function KcalsPage() {
             </div>
             <div className="kcals-group-list">
               {groupModal?.items?.map((item) => (
-                <div key={item.id} className="kcals-group-list-item">
+                <div key={item.id} className="kcals-group-list-item" onClick={() => handleEditGroupItem(item)}>
                   <div className="kcals-food-emoji">
                     {(item.imageId ? (imageUrls[item.imageId] ?? item.image) : item.image) ? (
                       <img
@@ -4767,7 +4935,7 @@ export default function KcalsPage() {
                   </div>
                   <button
                     className="kcals-group-remove-btn"
-                    onClick={() => handleRemoveFromGroup(item.id)}
+                    onClick={(e) => { e.stopPropagation(); handleRemoveFromGroup(item.id); }}
                     type="button"
                   >
                     &times;
@@ -4776,6 +4944,78 @@ export default function KcalsPage() {
               ))}
             </div>
           </>
+        ) : groupView === "edit" ? (
+          <div className="kcals-portion-view">
+            <button
+              className="kcals-portion-back"
+              type="button"
+              onClick={() => { setGroupView("list"); setGroupEditItem(null); }}
+              aria-label="Back"
+            >
+              <img src="/kcals/assets/back.svg" alt="" />
+            </button>
+            <div className={
+              (groupEditItem?.imageId
+                ? (imageUrls[groupEditItem.imageId] ?? groupEditItem?.image)
+                : groupEditItem?.image)
+                ? "kcals-modal-image-wrapper"
+                : "kcals-modal-camera"
+            }>
+              {(groupEditItem?.imageId
+                ? (imageUrls[groupEditItem.imageId] ?? groupEditItem?.image)
+                : groupEditItem?.image) ? (
+                <img
+                  src={groupEditItem?.imageId
+                    ? (imageUrls[groupEditItem.imageId] ?? groupEditItem?.image)
+                    : groupEditItem?.image}
+                  alt=""
+                  className="kcals-modal-camera-image"
+                />
+              ) : (
+                <span style={{ fontSize: 60 }}>{groupEditItem?.emoji}</span>
+              )}
+            </div>
+            <div className="kcals-modal-fields">
+              <div className="kcals-modal-field">
+                <input
+                  className="kcals-modal-input"
+                  type="text"
+                  value={editFoodName}
+                  onChange={(e) => setEditFoodName(e.target.value)}
+                  placeholder="Food name"
+                />
+              </div>
+              <div className="kcals-modal-field">
+                <div className="kcals-modal-kcal-row">
+                  <input
+                    className="kcals-modal-input"
+                    type="number"
+                    value={editFoodGrams}
+                    onChange={(e) => setEditFoodGrams(e.target.value)}
+                    placeholder={editFoodUnit === "count" ? "1" : "100"}
+                    inputMode="numeric"
+                  />
+                  <span className="kcals-modal-kcal-suffix">
+                    {groupEditItem?.perItem ? "item" : editFoodUnit === "count" ? editFoodSize : "g"}
+                  </span>
+                </div>
+              </div>
+            </div>
+            {groupEditItem?.source && groupEditItem.kcalPer100g != null && (
+              <div className="kcals-modal-source">
+                {groupEditItem.source === "usda" ? "USDA" : "Manual"}
+                {groupEditItem.sourceName ? ` \u2013 ${groupEditItem.sourceName}` : ""}
+                {` \u2013 ${Math.round(groupEditItem.kcalPer100g)}kcal per ${groupEditItem.perItem ? "item" : "100g"}`}
+              </div>
+            )}
+            <button
+              className="kcals-modal-submit"
+              onClick={handleSaveGroupItemEdit}
+              type="button"
+            >
+              Update
+            </button>
+          </div>
         ) : (
           <div className="kcals-portion-view">
             <div className="kcals-portion-header">

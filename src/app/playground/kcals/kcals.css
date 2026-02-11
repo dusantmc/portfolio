@@ -963,7 +963,7 @@
   max-width: 390px;
   background: var(--white);
   border-radius: var(--radius-modal) var(--radius-modal) 0 0;
-  padding: 12px 24px 32px;
+  padding: 0px 24px 32px;
   padding-bottom: max(40px, env(safe-area-inset-bottom));
   position: relative;
   animation: kcals-slide-up 0.35s cubic-bezier(0.32, 0.72, 0, 1);
@@ -1798,7 +1798,6 @@ select.kcals-profile-settings-input::-ms-expand {
   display: grid;
   grid-template-columns: 44px 1fr 44px;
   align-items: center;
-  margin-top: -16px;
 }
 
 .kcals-portion-back {
@@ -1810,12 +1809,17 @@ select.kcals-profile-settings-input::-ms-expand {
   border: none;
   background: none;
   cursor: pointer;
-  margin-left: -4px;
+  margin-left: -6px;
 }
 
 .kcals-portion-back img {
   width: 24px;
   height: 24px;
+}
+
+.kcals-portion-back.is-bookmarked img {
+  opacity: 1;
+  filter: invert(42%) sepia(93%) saturate(1352%) hue-rotate(196deg) brightness(100%) contrast(101%);
 }
 
 .kcals-portion-title {
@@ -2049,6 +2053,7 @@ select.kcals-profile-settings-input::-ms-expand {
   box-shadow: var(--shadow-item);
   border-radius: 16px;
   padding: 0 8px 0 12px;
+  cursor: pointer;
 }
 
 .kcals-group-list-item .kcals-food-emoji {
