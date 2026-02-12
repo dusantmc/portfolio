@@ -4363,7 +4363,10 @@ export default function KcalsPage() {
               className="kcals-settings-btn"
               type="button"
               onPointerDown={(e) => e.preventDefault()}
-              onClick={() => setShowSettingsModal(true)}
+              onClick={() => {
+                dismissSuggestions();
+                setShowSettingsModal(true);
+              }}
               aria-label="Settings"
             >
               <img src="/kcals/assets/settings.svg" alt="" />
@@ -5815,7 +5818,10 @@ export default function KcalsPage() {
             <button
               className="kcals-settings-back-btn"
               type="button"
-              onClick={() => setShowSettingsModal(false)}
+              onClick={() => {
+                setShowSettingsModal(false);
+                setTimeout(() => inputRef.current?.focus(), 50);
+              }}
             >
               <img src="/kcals/assets/back.svg" alt="" />
             </button>
