@@ -29,8 +29,8 @@ export function groupKcalRaw(item: FoodItem): number {
 
 export function groupKcal(item: FoodItem): number {
   const raw = groupKcalRaw(item);
-  if (!item.items) return raw;
   const percent = item.portionPercent ?? 100;
+  if (percent === 100) return raw;
   return Math.round((raw * percent) / 100);
 }
 

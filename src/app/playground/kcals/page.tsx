@@ -506,8 +506,8 @@ function CameraIcon() {
 function PlusIcon() {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round">
-      <path d="M12 7V17" strokeWidth="2.5" />
-      <path d="M7 12L17 12" strokeWidth="2.5" />
+      <path d="M12 7V17" strokeWidth="2" />
+      <path d="M7 12L17 12" strokeWidth="2" />
     </svg>
   );
 }
@@ -738,6 +738,7 @@ export default function KcalsPage() {
   const [editFoodGrams, setEditFoodGrams] = useState("");
   const [editFoodUnit, setEditFoodUnit] = useState<"g" | "count">("g");
   const [editFoodSize, setEditFoodSize] = useState("medium");
+  const [editFoodView, setEditFoodView] = useState<"form" | "portion">("form");
 
   // Drag state
   const [dragItemId, setDragItemId] = useState<string | null>(null);
@@ -3501,7 +3502,27 @@ export default function KcalsPage() {
       setEditFoodUnit(parsed.unit);
       setEditFoodSize(parsed.size ?? "medium");
     }
+    setEditFoodView("form");
+    setPortionValue(food.portionPercent ?? 100);
+    setPortionTab(food.portionTab ?? 0);
+    const total = food.pieceTotal ?? 2;
+    setPieceTotal(total);
+    setPieceEaten(Math.round(((food.portionPercent ?? 100) / 100) * total));
     setEditFoodModal(food);
+  };
+
+  const handleUpdateFoodPortion = () => {
+    if (!editFoodModal) return;
+    const percent = portionValue;
+    updateFoods((prev) =>
+      prev.map((f) =>
+        f.id === editFoodModal.id
+          ? { ...f, portionPercent: percent, portionTab, pieceTotal }
+          : f
+      )
+    );
+    setEditFoodModal((m) => (m ? { ...m, portionPercent: percent, portionTab, pieceTotal } : m));
+    setEditFoodView("form");
   };
 
   const handleSaveEditFood = () => {
@@ -4024,8 +4045,8 @@ export default function KcalsPage() {
     const group = isGroup(food);
     const kcal = groupKcal(food);
     const rawGroupKcal = group ? groupKcalRaw(food) : 0;
-    const groupPercent = group ? (food.portionPercent ?? 100) : 100;
-    const showGroupPercent = group && groupPercent !== 100;
+    const foodPercent = food.portionPercent ?? 100;
+    const showPercent = foodPercent !== 100;
     const imageUrl = food.imageId ? (imageUrls[food.imageId] ?? food.image) : food.image;
 
     return (
@@ -4062,8 +4083,8 @@ export default function KcalsPage() {
               <div className="kcals-food-loading-dots">
                 <span /><span /><span />
               </div>
-            ) : !group && food.kcal == null ? "? kcal" : group && showGroupPercent
-              ? `+ ${kcal.toLocaleString()}kcal (${groupPercent}%)`
+            ) : !group && food.kcal == null ? "? kcal" : showPercent
+              ? `+ ${kcal.toLocaleString()}kcal (${foodPercent}%)`
               : `+ ${kcal.toLocaleString()}kcal`}
           </div>
         </div>
@@ -4906,55 +4927,252 @@ export default function KcalsPage() {
       {/* Edit Food Modal */}
       <BottomSheet open={!!editFoodModal} onClose={() => setEditFoodModal(null)}>
         <div className="kcals-modal-handle" />
-        <div className={(editFoodModal?.imageId ? (imageUrls[editFoodModal.imageId] ?? editFoodModal?.image) : editFoodModal?.image) ? "kcals-modal-image-wrapper" : "kcals-modal-camera"}>
-          {(editFoodModal?.imageId ? (imageUrls[editFoodModal.imageId] ?? editFoodModal?.image) : editFoodModal?.image) ? (
-            <img
-              src={editFoodModal?.imageId ? (imageUrls[editFoodModal.imageId] ?? editFoodModal?.image) : editFoodModal?.image}
-              alt=""
-              className="kcals-modal-camera-image"
-            />
-          ) : (
-            <span style={{ fontSize: 60 }}>{editFoodModal?.emoji}</span>
-          )}
-        </div>
-        <div className="kcals-modal-fields">
-          <div className="kcals-modal-field">
-            <input
-              className="kcals-modal-input"
-              type="text"
-              value={editFoodName}
-              onChange={(e) => setEditFoodName(e.target.value)}
-              placeholder="Food name"
-            />
-          </div>
-          <div className="kcals-modal-field">
-            <div className="kcals-modal-kcal-row">
-              <input
-                className="kcals-modal-input"
-                type="number"
-                value={editFoodGrams}
-                onChange={(e) => setEditFoodGrams(e.target.value)}
-                placeholder={editFoodUnit === "count" ? "1" : "100"}
-                inputMode="numeric"
-              />
-              <span className="kcals-modal-kcal-suffix">{editFoodModal?.perItem ? "item" : editFoodUnit === "count" ? editFoodSize : "g"}</span>
+        {editFoodView === "form" ? (
+          <>
+            {editFoodModal?.source === "manual" && (
+              <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
+                <button
+                  className="kcals-portion-back kcals-split-btn"
+                  type="button"
+                  onClick={() => setEditFoodView("portion")}
+                  aria-label="Split portion"
+                >
+                  <img src="/kcals/assets/split.svg" alt="" />
+                  {(editFoodModal?.portionPercent ?? 100) < 100 && (
+                    <span className="kcals-split-label">{editFoodModal?.portionPercent}%</span>
+                  )}
+                </button>
+              </div>
+            )}
+            <div className={(editFoodModal?.imageId ? (imageUrls[editFoodModal.imageId] ?? editFoodModal?.image) : editFoodModal?.image) ? "kcals-modal-image-wrapper" : "kcals-modal-camera"}>
+              {(editFoodModal?.imageId ? (imageUrls[editFoodModal.imageId] ?? editFoodModal?.image) : editFoodModal?.image) ? (
+                <img
+                  src={editFoodModal?.imageId ? (imageUrls[editFoodModal.imageId] ?? editFoodModal?.image) : editFoodModal?.image}
+                  alt=""
+                  className="kcals-modal-camera-image"
+                />
+              ) : (
+                <span style={{ fontSize: 60 }}>{editFoodModal?.emoji}</span>
+              )}
             </div>
-          </div>
-        </div>
-        {editFoodModal?.source && editFoodModal.kcalPer100g != null && (
-          <div className="kcals-modal-source">
-            {editFoodModal.source === "usda" ? "USDA" : "Manual"}
-            {editFoodModal.sourceName ? ` \u2013 ${editFoodModal.sourceName}` : ""}
-            {` \u2013 ${Math.round(editFoodModal.kcalPer100g)}kcal per ${editFoodModal.perItem ? "item" : "100g"}`}
+            <div className="kcals-modal-fields">
+              <div className="kcals-modal-field">
+                <input
+                  className="kcals-modal-input"
+                  type="text"
+                  value={editFoodName}
+                  onChange={(e) => setEditFoodName(e.target.value)}
+                  placeholder="Food name"
+                />
+              </div>
+              <div className="kcals-modal-field">
+                <div className="kcals-modal-kcal-row">
+                  <input
+                    className="kcals-modal-input"
+                    type="number"
+                    value={editFoodGrams}
+                    onChange={(e) => setEditFoodGrams(e.target.value)}
+                    placeholder={editFoodUnit === "count" ? "1" : "100"}
+                    inputMode="numeric"
+                  />
+                  <span className="kcals-modal-kcal-suffix">{editFoodModal?.perItem ? "item" : editFoodUnit === "count" ? editFoodSize : "g"}</span>
+                </div>
+              </div>
+            </div>
+            {editFoodModal?.source && editFoodModal.kcalPer100g != null && (
+              <div className="kcals-modal-source">
+                {editFoodModal.source === "usda" ? "USDA" : "Manual"}
+                {editFoodModal.sourceName ? ` \u2013 ${editFoodModal.sourceName}` : ""}
+                {` \u2013 ${Math.round(editFoodModal.kcalPer100g)}kcal per ${editFoodModal.perItem ? "item" : "100g"}`}
+              </div>
+            )}
+            <button
+              className="kcals-modal-submit"
+              onClick={handleSaveEditFood}
+              type="button"
+            >
+              Update
+            </button>
+          </>
+        ) : (
+          <div className="kcals-portion-view">
+            <div className="kcals-portion-header">
+              <button
+                className="kcals-portion-back"
+                type="button"
+                onClick={() => setEditFoodView("form")}
+                aria-label="Back"
+              >
+                <img src="/kcals/assets/back.svg" alt="" />
+              </button>
+              <div className="kcals-portion-title">How much did you eat?</div>
+              <div className="kcals-portion-spacer" />
+            </div>
+            {portionTab === 3 ? (
+              <div className="kcals-piece-grid-container">
+                <div
+                  className="kcals-piece-grid"
+                  style={{ ["--piece-cols" as never]: getPieceGridLayout(pieceTotal + exitingPieces).cols }}
+                >
+                  {Array.from({ length: pieceTotal + exitingPieces }, (_, i) => {
+                    const isExiting = i >= pieceTotal;
+                    const isEaten = !isExiting && i < pieceEaten;
+                    return (
+                      <div
+                        key={`${i}-${isExiting ? "x" : isEaten ? "f" : "e"}`}
+                        className={`kcals-piece-item${isExiting ? " is-exiting" : ""}`}
+                        style={{
+                          backgroundImage: "url(/kcals/assets/piece-sprite.webp)",
+                          backgroundPosition: isEaten ? "0% 0%" : "100% 0%",
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="kcals-portion-hero">
+                {portionHeroPrev && (
+                  <div
+                    key={`prev-${portionHeroAnimKey}`}
+                    className={`kcals-portion-hero-image is-prev${portionHeroAnimating ? " is-exiting" : ""}`}
+                    aria-hidden="true"
+                    style={{
+                      backgroundImage: `url(${portionHeroPrev})`,
+                      ["--sprite-x" as never]: `${-(getPortionSpriteIndex(portionValue) - 1) * 224}px`,
+                    }}
+                  />
+                )}
+                <div
+                  key={`curr-${portionHeroAnimKey}`}
+                  className={`kcals-portion-hero-image${portionHeroAnimating ? " is-entering" : ""}${portionHero ? "" : " is-placeholder"}`}
+                  aria-hidden="true"
+                  style={{
+                    backgroundImage: portionHero ? `url(${portionHero})` : "none",
+                    ["--sprite-x" as never]: `${-(getPortionSpriteIndex(portionValue) - 1) * 224}px`,
+                  }}
+                />
+              </div>
+            )}
+            {portionTab === 3 && (
+              <div className="kcals-piece-stepper">
+                <button
+                  className="kcals-piece-stepper-btn"
+                  type="button"
+                  disabled={pieceTotal <= 2}
+                  onClick={() => {
+                    const newTotal = Math.max(2, pieceTotal - 1);
+                    setExitingPieces((prev) => prev + 1);
+                    if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+                    exitTimerRef.current = setTimeout(() => setExitingPieces(0), 200);
+                    setPieceTotal(newTotal);
+                    setPieceEaten((prev) => Math.min(prev, newTotal));
+                  }}
+                >
+                  <img src="/kcals/assets/minus.svg" alt="" />
+                </button>
+                <span className="kcals-piece-stepper-value">{pieceTotal}</span>
+                <button
+                  className="kcals-piece-stepper-btn"
+                  type="button"
+                  disabled={pieceTotal >= 50}
+                  onClick={() => {
+                    setPieceTotal((prev) => Math.min(50, prev + 1));
+                  }}
+                >
+                  <img src="/kcals/assets/plus.svg" alt="" />
+                </button>
+              </div>
+            )}
+            <div className="kcals-portion-tabs">
+              {[
+                "/kcals/assets/plate.png",
+                "/kcals/assets/pot.png",
+                "/kcals/assets/bakeware.png",
+                "/kcals/assets/piece.png",
+              ].map((src, index) => (
+                <button
+                  key={src}
+                  className={`kcals-portion-tab${portionTab === index ? " is-active" : ""}${portionTabPressed === index ? " is-pressed" : ""}`}
+                  type="button"
+                  onClick={() => setPortionTab(index)}
+                  onPointerDown={() => setPortionTabPressed(index)}
+                  onPointerUp={() => setPortionTabPressed(null)}
+                  onPointerCancel={() => setPortionTabPressed(null)}
+                  onPointerLeave={() => setPortionTabPressed(null)}
+                >
+                  <img src={src} alt="" />
+                </button>
+              ))}
+            </div>
+            <div
+              className="kcals-portion-slider"
+              ref={portionSliderRef}
+              style={{ ["--portion" as never]: portionTab === 3
+                ? `${pieceTotal > 0 ? (pieceEaten / pieceTotal) * 100 : 100}%`
+                : `${portionValue}%` }}
+              onPointerDown={(e) => {
+                portionDraggingRef.current = true;
+                updatePortionFromPointer(e.clientX);
+                e.currentTarget.setPointerCapture(e.pointerId);
+                e.preventDefault();
+              }}
+              onPointerMove={(e) => {
+                if (!portionDraggingRef.current) return;
+                updatePortionFromPointer(e.clientX);
+              }}
+              onPointerUp={(e) => {
+                portionDraggingRef.current = false;
+                e.currentTarget.releasePointerCapture(e.pointerId);
+              }}
+              onPointerCancel={(e) => {
+                portionDraggingRef.current = false;
+                e.currentTarget.releasePointerCapture(e.pointerId);
+              }}
+            >
+              <div
+                className="kcals-portion-tooltip"
+                ref={portionTooltipRef}
+                style={{ left: portionTooltipX != null ? `${portionTooltipX}px` : undefined }}
+              >
+                {portionTab === 3
+                  ? (pieceEaten === pieceTotal ? "All" : `${pieceEaten}`)
+                  : getPortionLabel(portionValue)}
+              </div>
+              <input
+                className="kcals-portion-range"
+                ref={portionRangeRef}
+                type="range"
+                min={0}
+                max={portionTab === 3 ? pieceTotal : 100}
+                value={portionTab === 3 ? pieceEaten : portionValue}
+                onChange={(e) => {
+                  const raw = Number(e.target.value);
+                  if (portionTab === 3) {
+                    setPieceEaten(Math.min(Math.max(Math.round(raw), 0), pieceTotal));
+                  } else {
+                    const nearest = portionSnapPoints.reduce((best, point) =>
+                      Math.abs(point - raw) < Math.abs(best - raw) ? point : best
+                    , portionSnapPoints[0]);
+                    const snapped = Math.abs(nearest - raw) <= PORTION_SNAP_THRESHOLD ? nearest : raw;
+                    setPortionValue(snapped);
+                  }
+                }}
+              />
+            </div>
+            <button
+              className={`kcals-portion-cta${portionCtaPressed ? " is-pressed" : ""}`}
+              type="button"
+              onPointerDown={() => setPortionCtaPressed(true)}
+              onPointerUp={() => setPortionCtaPressed(false)}
+              onPointerCancel={() => setPortionCtaPressed(false)}
+              onPointerLeave={() => setPortionCtaPressed(false)}
+              onClick={handleUpdateFoodPortion}
+            >
+              Update
+            </button>
           </div>
         )}
-        <button
-          className="kcals-modal-submit"
-          onClick={handleSaveEditFood}
-          type="button"
-        >
-          Update
-        </button>
       </BottomSheet>
 
       {/* Group Modal */}
@@ -4965,22 +5183,35 @@ export default function KcalsPage() {
             {(() => {
               const isBookmarked = savedGroups.some((g) => g.id === (groupModal?.savedGroupId ?? groupModal?.id));
               return (
-                <button
-                  className={`kcals-portion-back${isBookmarked ? " is-bookmarked" : ""}`}
-                  type="button"
-                  onClick={handleBookmarkGroup}
-                  aria-label="Bookmark"
-                >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M5 20.1683V6C5 4.89543 5.89543 4 7 4H17C18.1046 4 19 4.89543 19 6V20.1683C19 20.9595 18.1248 21.4373 17.4592 21.0095L12.8111 18.0214C12.317 17.7038 11.683 17.7038 11.1889 18.0214L6.54076 21.0095C5.87525 21.4373 5 20.9595 5 20.1683Z"
-                      fill={isBookmarked ? "var(--black-100)" : "white"}
-                      stroke={isBookmarked ? "var(--black-100)" : "#676663"}
-                      strokeWidth="2"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </button>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <button
+                    className={`kcals-portion-back${isBookmarked ? " is-bookmarked" : ""}`}
+                    type="button"
+                    onClick={handleBookmarkGroup}
+                    aria-label="Bookmark"
+                  >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M5 20.1683V6C5 4.89543 5.89543 4 7 4H17C18.1046 4 19 4.89543 19 6V20.1683C19 20.9595 18.1248 21.4373 17.4592 21.0095L12.8111 18.0214C12.317 17.7038 11.683 17.7038 11.1889 18.0214L6.54076 21.0095C5.87525 21.4373 5 20.9595 5 20.1683Z"
+                        fill={isBookmarked ? "var(--black-100)" : "white"}
+                        stroke={isBookmarked ? "var(--black-100)" : "#676663"}
+                        strokeWidth="2"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    className="kcals-portion-back kcals-split-btn"
+                    type="button"
+                    onClick={() => setGroupView("portion")}
+                    aria-label="Split portion"
+                  >
+                    <img src="/kcals/assets/split.svg" alt="" />
+                    {(groupModal?.portionPercent ?? 100) < 100 && (
+                      <span className="kcals-split-label">{groupModal?.portionPercent}%</span>
+                    )}
+                  </button>
+                </div>
               );
             })()}
             <div className="kcals-group-emoji">
@@ -4996,14 +5227,11 @@ export default function KcalsPage() {
             <div className="kcals-group-header">
               <span className="kcals-group-header-title">Group items ({groupModal?.items?.length ?? 0})</span>
               <span className="kcals-group-header-total">
-                +{groupModal ? groupKcal(groupModal).toLocaleString() : 0}kcal
+                +{groupModal ? groupKcal(groupModal).toLocaleString() : 0}Kcal
                 {groupModal && (groupModal.portionPercent ?? 100) !== 100
-                  ? ` (of ${groupKcalRaw(groupModal).toLocaleString()}kcal)`
+                  ? ` (${groupModal.portionPercent}%)`
                   : ""}
               </span>
-              <button className="kcals-group-header-link" type="button" onClick={() => setGroupView("portion")}>
-                {(groupModal?.portionPercent ?? 100).toString()}%
-              </button>
             </div>
             <div className="kcals-group-list">
               {groupModal?.items?.map((item) => (
@@ -5826,6 +6054,18 @@ export default function KcalsPage() {
               <img src="/kcals/assets/back.svg" alt="" />
             </button>
             <div className="kcals-settings-topbar-title">Settings</div>
+            <button
+              className="kcals-settings-back-btn"
+              type="button"
+              style={{ marginLeft: "auto", color: "var(--black-70)" }}
+              onClick={() => {
+                setShowSettingsModal(false);
+                handleAddCustomFood();
+              }}
+              aria-label="Add custom food"
+            >
+              <PlusIcon />
+            </button>
           </div>
           <div className="kcals-settings-content">
             {customFoods.length > 0 && (

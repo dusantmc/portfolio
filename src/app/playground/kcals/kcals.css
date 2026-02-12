@@ -9,6 +9,7 @@
   --black-100: #191815;
   --black-70: #676663;
   --black-50: #91908e;
+  --black-25: #b1b0ae;
   --border-8: rgba(25, 24, 21, 0.08);
   --border-16: rgba(25, 24, 21, 0.12);
   --green: #28908e;
@@ -824,7 +825,7 @@
   font-size: 13px;
   font-weight: 600;
   text-transform: uppercase;
-  opacity: 0.4;
+  color: var(--black-25);
   padding: 0;
   margin-bottom:6px;
   margin-top:28px;
@@ -834,13 +835,14 @@
   height: 28px;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   border: none;
   background: none;
   cursor: pointer;
-  color: var(--black-50);
+  color: var(--black-25);
   font-size: 13px;
-  font-weight: 500;
+  line-height: 13px;
+  font-weight: 700;
   padding: 0 4px;
 }
 
@@ -909,9 +911,9 @@
 }
 
 .kcals-pill--show-all {
-  color: var(--black-50);
   font-weight: 500;
   margin-top: 8px;
+  padding-left: 14px;
 }
 
 /* ===========================
@@ -1017,6 +1019,7 @@
   background: var(--border-8);
   border-radius: 2px;
   margin: 0 auto 20px;
+  transform: translateY(8px);
 }
 
 .kcals-modal-delete {
@@ -1855,6 +1858,18 @@ select.kcals-profile-settings-input::-ms-expand {
 .kcals-portion-back svg {
   width: 24px;
   height: 24px;
+}
+
+.kcals-split-btn {
+  margin-left: auto;
+  margin-right: -6px;
+  gap: 4px;
+}
+
+.kcals-split-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--black-50);
 }
 
 .kcals-portion-title {
@@ -3197,7 +3212,7 @@ select.kcals-profile-settings-input::-ms-expand {
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: var(--bg);
+  background: var(--background);
   display: flex;
   flex-direction: column;
   animation: kcals-settings-in 0.25s ease-out;
@@ -3209,15 +3224,20 @@ select.kcals-profile-settings-input::-ms-expand {
 }
 
 .kcals-settings-topbar {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   height: calc(68px + env(safe-area-inset-top));
   padding: env(safe-area-inset-top) 16px 0;
   flex-shrink: 0;
 }
 
 .kcals-settings-topbar-title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  pointer-events: none;
   font-size: 20px;
   font-weight: 700;
   color: var(--black-100);
