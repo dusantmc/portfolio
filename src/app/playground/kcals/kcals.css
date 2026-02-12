@@ -2096,9 +2096,8 @@ select.kcals-profile-settings-input::-ms-expand {
 
 .kcals-piece-grid {
   display: grid;
-  grid-template-columns: repeat(var(--piece-cols, 2), 1fr);
-  width: 100%;
-  max-width: 320px;
+  grid-template-columns: repeat(var(--piece-cols, 2), 80px);
+  justify-content: center;
   justify-items: center;
 }
 
