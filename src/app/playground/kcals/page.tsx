@@ -774,8 +774,6 @@ export default function KcalsPage() {
   const portionSliderRef = useRef<HTMLDivElement | null>(null);
   const portionDraggingRef = useRef(false);
   const portionRangeRef = useRef<HTMLInputElement | null>(null);
-  const portionTooltipRef = useRef<HTMLDivElement | null>(null);
-  const [portionTooltipX, setPortionTooltipX] = useState<number | null>(null);
   const portionSnapPoints = [10, 25, 33, 50, 80, 100];
   const PORTION_SNAP_THRESHOLD = 2;
   const [pieceTotal, setPieceTotal] = useState(2);
@@ -3996,36 +3994,6 @@ export default function KcalsPage() {
     }
   };
 
-  const updatePortionTooltipPosition = useCallback(() => {
-    const sliderEl = portionSliderRef.current;
-    const rangeEl = portionRangeRef.current;
-    const tooltipEl = portionTooltipRef.current;
-    if (!sliderEl || !rangeEl || !tooltipEl) return;
-    const sliderRect = sliderEl.getBoundingClientRect();
-    const rangeRect = rangeEl.getBoundingClientRect();
-    const tooltipRect = tooltipEl.getBoundingClientRect();
-    const fraction = portionTab === 3
-      ? (pieceTotal > 0 ? pieceEaten / pieceTotal : 1)
-      : portionValue / 100;
-    const centerX = rangeRect.left + (rangeRect.width * fraction);
-    let left = centerX - sliderRect.left;
-    const min = tooltipRect.width / 2;
-    const max = sliderRect.width - tooltipRect.width / 2;
-    left = Math.min(Math.max(left, min), max);
-    setPortionTooltipX((prev) => (prev != null && Math.abs(prev - left) < 0.5 ? prev : left));
-  }, [portionValue, portionTab, pieceEaten, pieceTotal]);
-
-  useEffect(() => {
-    if (groupView !== "portion") return;
-    const raf = requestAnimationFrame(updatePortionTooltipPosition);
-    const handleResize = () => updatePortionTooltipPosition();
-    window.addEventListener("resize", handleResize);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", handleResize);
-    };
-  }, [groupView, portionValue, updatePortionTooltipPosition]);
-
   /* ===========================
      Close swipe on tap outside
      =========================== */
@@ -5108,9 +5076,14 @@ export default function KcalsPage() {
             <div
               className="kcals-portion-slider"
               ref={portionSliderRef}
-              style={{ ["--portion" as never]: portionTab === 3
-                ? `${pieceTotal > 0 ? (pieceEaten / pieceTotal) * 100 : 100}%`
-                : `${portionValue}%` }}
+              style={{
+                ["--portion" as never]: portionTab === 3
+                  ? `${pieceTotal > 0 ? (pieceEaten / pieceTotal) * 100 : 100}%`
+                  : `${portionValue}%`,
+                ["--portion-frac" as never]: portionTab === 3
+                  ? (pieceTotal > 0 ? pieceEaten / pieceTotal : 1)
+                  : portionValue / 100,
+              }}
               onPointerDown={(e) => {
                 portionDraggingRef.current = true;
                 updatePortionFromPointer(e.clientX);
@@ -5130,11 +5103,7 @@ export default function KcalsPage() {
                 e.currentTarget.releasePointerCapture(e.pointerId);
               }}
             >
-              <div
-                className="kcals-portion-tooltip"
-                ref={portionTooltipRef}
-                style={{ left: portionTooltipX != null ? `${portionTooltipX}px` : undefined }}
-              >
+              <div className="kcals-portion-tooltip">
                 {portionTab === 3
                   ? (pieceEaten === pieceTotal ? "All" : `${pieceEaten}`)
                   : getPortionLabel(portionValue)}
@@ -5448,9 +5417,14 @@ export default function KcalsPage() {
             <div
               className="kcals-portion-slider"
               ref={portionSliderRef}
-              style={{ ["--portion" as never]: portionTab === 3
-                ? `${pieceTotal > 0 ? (pieceEaten / pieceTotal) * 100 : 100}%`
-                : `${portionValue}%` }}
+              style={{
+                ["--portion" as never]: portionTab === 3
+                  ? `${pieceTotal > 0 ? (pieceEaten / pieceTotal) * 100 : 100}%`
+                  : `${portionValue}%`,
+                ["--portion-frac" as never]: portionTab === 3
+                  ? (pieceTotal > 0 ? pieceEaten / pieceTotal : 1)
+                  : portionValue / 100,
+              }}
               onPointerDown={(e) => {
                 portionDraggingRef.current = true;
                 updatePortionFromPointer(e.clientX);
@@ -5470,11 +5444,7 @@ export default function KcalsPage() {
                 e.currentTarget.releasePointerCapture(e.pointerId);
               }}
             >
-              <div
-                className="kcals-portion-tooltip"
-                ref={portionTooltipRef}
-                style={{ left: portionTooltipX != null ? `${portionTooltipX}px` : undefined }}
-              >
+              <div className="kcals-portion-tooltip">
                 {portionTab === 3
                   ? (pieceEaten === pieceTotal ? "All" : `${pieceEaten}`)
                   : getPortionLabel(portionValue)}
