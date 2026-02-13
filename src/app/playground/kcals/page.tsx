@@ -3317,8 +3317,10 @@ export default function KcalsPage() {
     : null;
 
   const customPillsToShow = queryActive
-    ? (customMatches.length ? customMatches : fallbackCustom ? [fallbackCustom] : [])
+    ? customMatches
     : customFoods;
+  const savedGroupMatches = savedGroups.filter((g) => matchesFoodName(g.name, inputValue));
+  const savedGroupsToShow = queryActive ? savedGroupMatches : savedGroups;
   const recentPillsToShow = queryActive
     ? (recentMatches.length ? recentMatches : fallbackRecent ? [fallbackRecent] : [])
     : baseRecentFoods;
@@ -4362,6 +4364,7 @@ export default function KcalsPage() {
             </button>
           </div>
           <div className="kcals-suggestions-content">
+            {(!queryActive || customPillsToShow.length > 0) && (
             <div className="kcals-suggestion-section">
               <div className="kcals-suggestion-header">
                 <span>Custom Food</span>
@@ -4423,14 +4426,15 @@ export default function KcalsPage() {
                 </button>
               )}
             </div>
+            )}
 
-            {savedGroups.length > 0 && (
+            {savedGroupsToShow.length > 0 && (
               <div className="kcals-suggestion-section">
                 <div className="kcals-suggestion-header">
                   <span>Saved Groups</span>
                 </div>
                 <div className="kcals-pills">
-                  {savedGroups.map((group) => (
+                  {savedGroupsToShow.map((group) => (
                     <button
                       key={group.id}
                       className="kcals-pill"
