@@ -4422,7 +4422,7 @@ export default function KcalsPage() {
                     inputRef.current?.blur();
                   }}
                 >
-                  <span className="kcals-pill-label">Show all</span>
+                  <span className="kcals-pill-label">Show all...</span>
                 </button>
               )}
             </div>
