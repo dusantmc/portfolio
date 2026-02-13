@@ -492,7 +492,9 @@
 .kcals-food-name {
   font-size: 16px;
   font-weight: 500;
-  margin-left: 12px;
+  margin-left: 8px;
+  margin-right: 12px;
+  line-height: 18px;
   flex: 1;
 }
 
@@ -502,6 +504,7 @@
 
 .kcals-food-kcal {
   font-size: 16px;
+  line-height: 18px;
   font-weight: 400;
   text-align: right;
   flex-shrink: 0;
