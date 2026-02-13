@@ -16,6 +16,7 @@ export interface FoodItem {
   kcalPer100g?: number;
   gramsPerUnit?: number; // USDA "medium" portion weight for count-based input
   perItem?: boolean; // custom food with per-item calorie mode
+  addedAt?: number; // epoch ms when item was added
 }
 
 export function isGroup(item: FoodItem): boolean {
@@ -404,4 +405,19 @@ export function getWeeklyBreakdown(): WeeklyEntry[] {
     d.setDate(d.getDate() - 1);
   }
   return entries.reverse(); // oldest first
+}
+
+/* ===========================
+   Timer (time since last meal)
+   =========================== */
+
+const TIMER_ENABLED_KEY = "kcals-timer-enabled";
+
+export function getTimerEnabled(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(TIMER_ENABLED_KEY) === "true";
+}
+
+export function setTimerEnabled(enabled: boolean): void {
+  localStorage.setItem(TIMER_ENABLED_KEY, enabled ? "true" : "false");
 }

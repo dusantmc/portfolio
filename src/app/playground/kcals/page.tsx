@@ -36,6 +36,8 @@ import {
   getDisplayDate,
   getStreak,
   getWeeklyBreakdown,
+  getTimerEnabled,
+  setTimerEnabled as setTimerEnabledStorage,
 } from "./data/storage";
 import { parseFoodInput, fetchKcalPer100g, getFoodEmoji, resolveEmbeddedFood, resolveFoodAlias } from "./data/usda";
 import { BottomSheet } from "./BottomSheet";
@@ -652,6 +654,8 @@ export default function KcalsPage() {
   const [calorieGoal, setCalorieGoal] = useState(DEFAULT_CALORIE_GOAL);
   const [calorieGoalInput, setCalorieGoalInput] = useState(DEFAULT_CALORIE_GOAL.toString());
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(false);
+  const [timerEnabled, setTimerEnabled] = useState(false);
+  const [timerTick, setTimerTick] = useState(0);
   const [dayStartHour, setDayStartHourState] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [editingFood, setEditingFood] = useState<CustomFood | null>(null);
@@ -841,6 +845,7 @@ export default function KcalsPage() {
       }
       const autoSync = localStorage.getItem(AUTO_SYNC_KEY);
       setAutoSyncEnabled(autoSync === "true");
+      setTimerEnabled(getTimerEnabled());
       const storedMode = localStorage.getItem(AVATAR_MODE_KEY);
       if (storedMode === "emoji" || storedMode === "photo") {
         setAvatarMode(storedMode);
@@ -2037,6 +2042,44 @@ export default function KcalsPage() {
     });
   };
 
+  const toggleTimer = () => {
+    setTimerEnabled((prev) => {
+      const next = !prev;
+      setTimerEnabledStorage(next);
+      return next;
+    });
+  };
+
+  // Tick the timer every 30s so the label updates
+  useEffect(() => {
+    if (!timerEnabled) return;
+    const id = setInterval(() => setTimerTick((t) => t + 1), 30_000);
+    return () => clearInterval(id);
+  }, [timerEnabled]);
+
+  const lastMealLabel = useMemo(() => {
+    void timerTick; // subscribe to ticks
+    let latest = 0;
+    for (const f of foods) {
+      if (f.addedAt && f.addedAt > latest) latest = f.addedAt;
+      if (f.items) {
+        for (const c of f.items) {
+          if (c.addedAt && c.addedAt > latest) latest = c.addedAt;
+        }
+      }
+    }
+    if (!latest) return null;
+    const diffMs = Date.now() - latest;
+    if (diffMs < 0) return null;
+    const totalMin = Math.floor(diffMs / 60_000);
+    if (totalMin < 2) return "\u23F1\uFE0F A moment ago";
+    const hours = Math.floor(totalMin / 60);
+    const mins = totalMin % 60;
+    if (hours > 72) return "\uD83D\uDE35 It\u2019s been a few days";
+    if (hours === 0) return `\u23F1\uFE0F ${mins}m ago`;
+    return `\u23F1\uFE0F ${hours}h ${mins}m ago`;
+  }, [foods, timerTick]);
+
   const handleDayStartHourChange = (value: number) => {
     setDayStartHourState(value);
     setDayStartHour(value);
@@ -3095,6 +3138,7 @@ export default function KcalsPage() {
           emoji: "\u{1F372}",
           name: displayName,
           kcal,
+          addedAt: Date.now(),
           source: "manual",
           sourceName: selectedCustomFood.name,
           kcalPer100g: selectedCustomFood.kcalPer100g,
@@ -3140,7 +3184,7 @@ export default function KcalsPage() {
         setInputFocused(false);
         inputRef.current?.blur();
         updateFoods((prev) => [
-          { id: itemId, emoji, name: displayName, kcal, source: "manual" as const, sourceName: displayName },
+          { id: itemId, emoji, name: displayName, kcal, addedAt: Date.now(), source: "manual" as const, sourceName: displayName },
           ...prev,
         ]);
         return;
@@ -3183,6 +3227,7 @@ export default function KcalsPage() {
           emoji: embeddedFood.emoji,
           name: displayName,
           kcal,
+          addedAt: Date.now(),
           source: "manual" as const,
           sourceName: embeddedFood.name,
           kcalPer100g: embeddedFood.kcalPer100g,
@@ -3215,6 +3260,7 @@ export default function KcalsPage() {
           emoji,
           name: displayName,
           kcal,
+          addedAt: Date.now(),
           source: isCustom ? "manual" as const : "usda" as const,
           sourceName: isCustom ? customMatch.name : (cached?.name ?? canonicalName),
           kcalPer100g: cachedKcalPer100g,
@@ -3231,7 +3277,7 @@ export default function KcalsPage() {
         ? `${canonicalName} ${parsed.quantity} ${parsed.size ?? "medium"}`
         : `${canonicalName} ${parsed.quantity}g`;
       updateFoods((prev) => [
-        { id: itemId, emoji, name: loadingName, kcal: null, loading: true },
+        { id: itemId, emoji, name: loadingName, kcal: null, loading: true, addedAt: Date.now() },
         ...prev,
       ]);
 
@@ -3915,6 +3961,7 @@ export default function KcalsPage() {
       name: group.name,
       kcal: newItems.reduce((s, i) => s + (i.kcal ?? 0), 0),
       items: newItems,
+      addedAt: Date.now(),
       portionPercent: group.portionPercent,
       portionTab: group.portionTab,
       pieceTotal: group.pieceTotal,
@@ -4282,7 +4329,7 @@ export default function KcalsPage() {
 		                <div className="kcals-empty-state-emoji">{emptyStateVariant.emoji}</div>
 		                <div className="kcals-empty-state-title">{emptyStateVariant.title}</div>
 		                <div className="kcals-empty-state-text">
-		                  {emptyStateVariant.text}
+		                  {timerEnabled && lastMealLabel ? lastMealLabel : emptyStateVariant.text}
 		                </div>
 		              </div>
 	              <div className="kcals-empty-chip-list kcals-pills">
@@ -4319,9 +4366,11 @@ export default function KcalsPage() {
                         </button>
 		                  )}
 		                </div>
-		                {foods.some((f) => f.loading) && (
+		                {foods.some((f) => f.loading) ? (
 		                  <span className="kcals-status-text">Fetching from USDA</span>
-		                )}
+		                ) : timerEnabled && lastMealLabel ? (
+		                  <span className="kcals-status-text">{lastMealLabel}</span>
+		                ) : null}
 		              </div>
 	              <div className="kcals-food-list">
 	                {foods.map(renderFoodRow)}
@@ -5604,6 +5653,17 @@ export default function KcalsPage() {
                 </div>
               </div>
               <div className="kcals-profile-settings-row">
+                <span className="kcals-profile-settings-label">Timer</span>
+                <button
+                  className={`kcals-toggle${timerEnabled ? " is-on" : ""}`}
+                  type="button"
+                  onClick={toggleTimer}
+                  aria-pressed={timerEnabled}
+                >
+                  <span className="kcals-toggle-thumb" />
+                </button>
+              </div>
+              <div className="kcals-profile-settings-row">
                 <span className="kcals-profile-settings-label">{profileSyncAutomaticallyLabel}</span>
                 <button
                   className={`kcals-toggle${autoSyncEnabled ? " is-on" : ""}`}
@@ -6098,6 +6158,7 @@ export default function KcalsPage() {
                           emoji: group.emoji,
                           name: group.name,
                           kcal: null,
+                          addedAt: Date.now(),
                           items: group.items.map((item) => ({ ...item, id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}` })),
                           portionPercent: group.portionPercent,
                           portionTab: group.portionTab,
