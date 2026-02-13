@@ -170,7 +170,7 @@ export function trackRecentFood(name: string, emoji: string, kcalPer100g: number
     recent.push({ name, emoji, count: 1, kcalPer100g, ...(gramsPerUnit != null ? { gramsPerUnit } : {}), ...(lastAmount != null ? { lastAmount } : {}) });
   }
   recent.sort((a, b) => b.count - a.count);
-  localStorage.setItem(RECENT_KEY, JSON.stringify(recent.slice(0, 10)));
+  localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
 }
 
 export function removeRecentFood(name: string): void {
