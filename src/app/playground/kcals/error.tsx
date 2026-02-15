@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+
 export default function KcalsError({
   error,
   reset,
@@ -7,6 +9,13 @@ export default function KcalsError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    // Stale chunk after deployment — auto-reload to fetch fresh assets
+    if (error.message?.includes("Failed to load chunk") || error.message?.includes("Loading chunk")) {
+      window.location.reload();
+    }
+  }, [error]);
+
   return (
     <div style={{ padding: 32, fontFamily: "system-ui, sans-serif", textAlign: "center" }}>
       <h2 style={{ fontSize: 20, marginBottom: 12 }}>Something went wrong</h2>
@@ -23,9 +32,7 @@ export default function KcalsError({
         {error.message}
       </pre>
       <button
-        onClick={() => {
-          try { reset(); } catch { window.location.reload(); }
-        }}
+        onClick={() => window.location.reload()}
         style={{
           padding: "10px 24px",
           fontSize: 16,
