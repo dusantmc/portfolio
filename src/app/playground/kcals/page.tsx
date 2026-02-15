@@ -4291,7 +4291,7 @@ export default function KcalsPage() {
           ? (imageUrls[item.imageId] ?? item.image)
           : item.image;
         const sharableImage = await resolveSharableImage(item.imageId, resolvedImage ?? null);
-        return buildGroupShareLine(item, percent, sharableImage ?? undefined);
+        return buildGroupShareLine(item, percent, sharableImage && isDataUrl(sharableImage) ? sharableImage : undefined);
       })
     );
     const payload: GroupSharePayload = {
