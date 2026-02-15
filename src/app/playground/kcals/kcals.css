@@ -1823,6 +1823,19 @@ select.kcals-profile-settings-input::-ms-expand {
   opacity: 1;
 }
 
+.kcals-group-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: -4px;
+}
+
+.kcals-group-topbar-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
 /* ===========================
    Portion View (Group Modal)
    =========================== */
@@ -3039,6 +3052,10 @@ select.kcals-profile-settings-input::-ms-expand {
   user-select: none;
 }
 
+.kcals-share-badge.is-fixed {
+  touch-action: auto;
+}
+
 .kcals-share-topbar {
   position: absolute;
   top: max(16px, env(safe-area-inset-top));
@@ -3048,6 +3065,34 @@ select.kcals-profile-settings-input::-ms-expand {
   align-items: center;
   justify-content: space-between;
   z-index: 2;
+}
+
+.kcals-share-topicons {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.kcals-share-topicon-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0.95;
+}
+
+.kcals-share-topicon-sprite {
+  display: block;
+  width: 24px;
+  height: 24px;
+  background-image: url("/kcals/assets/sharesprite.svg");
+  background-size: 144px 24px;
+  background-repeat: no-repeat;
 }
 
 .kcals-share-topbtn {
@@ -3100,6 +3145,100 @@ select.kcals-profile-settings-input::-ms-expand {
 
 .kcals-share-pill.is-active {
   background: #fff;
+}
+
+.kcals-group-share-card {
+  width: 320px;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kcals-group-share-card--gradient {
+  padding: 0;
+  background: transparent;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.24);
+}
+
+.kcals-group-share-card--block {
+  background: rgba(8, 35, 76, 0.72);
+  border-radius: 20px;
+  padding: 16px;
+}
+
+.kcals-group-share-card--left {
+  text-align: left;
+  align-items: flex-start;
+}
+
+.kcals-group-share-card--right {
+  text-align: right;
+  align-items: flex-end;
+}
+
+.kcals-group-share-card--top,
+.kcals-group-share-card--bottom,
+.kcals-group-share-card--center {
+  text-align: center;
+  align-items: center;
+}
+
+.kcals-group-share-name {
+  font-size: 34px;
+  line-height: 38px;
+  font-weight: 500;
+  letter-spacing: -0.5px;
+}
+
+.kcals-group-share-kcal {
+  font-size: 58px;
+  line-height: 58px;
+  font-weight: 700;
+  letter-spacing: -1.8px;
+}
+
+.kcals-group-share-lines {
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 100%;
+}
+
+.kcals-group-share-line {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 28px;
+  line-height: 34px;
+  font-weight: 500;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.kcals-group-share-line-emoji {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.kcals-group-share-card--block .kcals-group-share-name {
+  font-size: 34px;
+  line-height: 38px;
+}
+
+.kcals-group-share-card--block .kcals-group-share-kcal {
+  font-size: 58px;
+  line-height: 58px;
+}
+
+.kcals-group-share-card--block .kcals-group-share-line {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+.kcals-group-share-card--block .kcals-group-share-line-emoji {
+  font-size: 18px;
 }
 
 .kcals-share-error {

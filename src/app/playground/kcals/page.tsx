@@ -444,6 +444,22 @@ interface ShareRecipientAvatar {
   photo?: string | null;
 }
 
+type ShareMode = "weekly" | "group";
+type GroupShareWrapper = "gradient" | "block";
+type GroupShareAlignment = "left" | "top" | "right" | "bottom" | "center";
+
+interface GroupShareLine {
+  id: string;
+  emoji: string;
+  text: string;
+}
+
+interface GroupSharePayload {
+  name: string;
+  kcal: number;
+  lines: GroupShareLine[];
+}
+
 function normalizeEmail(value: string): string {
   return value.trim().toLowerCase();
 }
@@ -587,6 +603,52 @@ function isDataUrl(value?: string | null): boolean {
 
 function isBlobUrl(value?: string | null): boolean {
   return !!value && value.startsWith("blob:");
+}
+
+function formatGroupShareCount(value: number): string {
+  const rounded = Math.round(value);
+  return Number.isFinite(rounded) ? String(Math.max(0, rounded)) : "0";
+}
+
+function buildGroupShareLine(item: FoodItem, percent: number): GroupShareLine {
+  const factor = Math.max(0, percent) / 100;
+  const rawName = item.name.trim();
+  const emoji = item.emoji || getFoodEmoji(rawName || "food");
+
+  const xMatch = rawName.match(/^(.+?)\s+x(\d+(?:\.\d+)?)\s*$/i);
+  if (xMatch) {
+    const scaled = Number(xMatch[2]) * factor;
+    return { id: item.id, emoji, text: `${xMatch[1].trim()} x${formatGroupShareCount(scaled)}` };
+  }
+
+  const gramMatch = rawName.match(/^(.+?)\s+(\d+(?:\.\d+)?)\s*g\s*$/i);
+  if (gramMatch) {
+    const scaled = Number(gramMatch[2]) * factor;
+    return { id: item.id, emoji, text: `${gramMatch[1].trim()} ${formatGroupShareCount(scaled)}g` };
+  }
+
+  if (/\d/.test(rawName)) {
+    const parsed = parseFoodInput(rawName);
+    if (parsed.unit === "g") {
+      return { id: item.id, emoji, text: `${parsed.name} ${formatGroupShareCount(parsed.quantity * factor)}g` };
+    }
+    if (parsed.unit === "count") {
+      if (item.gramsPerUnit) {
+        const grams = parsed.quantity * item.gramsPerUnit * factor;
+        return { id: item.id, emoji, text: `${parsed.name} ${formatGroupShareCount(grams)}g` };
+      }
+      return { id: item.id, emoji, text: `${parsed.name} x${formatGroupShareCount(parsed.quantity * factor)}` };
+    }
+  }
+
+  if (!item.perItem && item.kcalPer100g && item.kcal != null && item.kcalPer100g > 0) {
+    const grams = ((item.kcal * 100) / item.kcalPer100g) * factor;
+    if (Number.isFinite(grams) && grams > 0) {
+      return { id: item.id, emoji, text: `${rawName} ${formatGroupShareCount(grams)}g` };
+    }
+  }
+
+  return { id: item.id, emoji, text: rawName };
 }
 
 function getLastGrapheme(value: string): string {
@@ -1781,13 +1843,23 @@ export default function KcalsPage() {
     (entry: WeeklyEntry) => (entry.goal ?? DEFAULT_CALORIE_GOAL) - entry.remaining,
     []
   );
-  const weeklyVisibleEntries = weeklyBreakdown;
+  const todayWeekKey = getDayKey(new Date());
+  const shouldIncludeInWeeklySummary = useCallback(
+    (entry: WeeklyEntry) => {
+      const consumed = getWeeklyEntryConsumed(entry);
+      if (entry.dateKey === todayWeekKey) {
+        const goal = entry.goal ?? DEFAULT_CALORIE_GOAL;
+        return consumed > goal * 0.5;
+      }
+      return true;
+    },
+    [getWeeklyEntryConsumed, todayWeekKey]
+  );
+  const weeklyVisibleEntries = weeklyBreakdown.filter(shouldIncludeInWeeklySummary);
   const weeklyHasData = weeklyVisibleEntries.length > 0;
   const weeklyIsOnTrack = weeklyBurn >= 0;
   const weeklyAbsTotal = Math.abs(weeklyBurn);
-  const weeklyChipHasData = weeklyBreakdown.some(
-    (e) => getWeeklyEntryConsumed(e) >= 800
-  );
+  const weeklyChipHasData = weeklyVisibleEntries.length > 0;
   const weeklyChipIcon = weeklyChipHasData
     ? (weeklyIsOnTrack ? "\u{1F525}" : "\u{1F437}")
     : "\u231B\uFE0F";
@@ -1919,7 +1991,11 @@ export default function KcalsPage() {
   );
   const canSendSharedFood = shareRecipientEmail.trim().length > 0 && shareFoodStatus !== "sending";
   const [showShareModal, setShowShareModal] = useState(false);
+  const [shareMode, setShareMode] = useState<ShareMode>("weekly");
   const [shareBgType, setShareBgType] = useState<"gradient" | "image">("gradient");
+  const [groupShareWrapper, setGroupShareWrapper] = useState<GroupShareWrapper>("gradient");
+  const [groupShareAlignment, setGroupShareAlignment] = useState<GroupShareAlignment>("bottom");
+  const [groupSharePayload, setGroupSharePayload] = useState<GroupSharePayload | null>(null);
   const [shareImage, setShareImage] = useState<string | null>(null);
   const [shareImageLoaded, setShareImageLoaded] = useState(false);
   const [shareStatus, setShareStatus] = useState<"idle" | "rendering" | "error">("idle");
@@ -1962,11 +2038,9 @@ export default function KcalsPage() {
     setStreak(getStreak());
     const breakdown = getWeeklyBreakdown();
     setWeeklyBreakdown(breakdown);
-    const qualifying = breakdown.filter(
-      (e) => getWeeklyEntryConsumed(e) >= 800
-    );
+    const qualifying = breakdown.filter(shouldIncludeInWeeklySummary);
     setWeeklyBurn(qualifying.reduce((sum, e) => sum + e.remaining, 0));
-  }, [foods, remaining, calorieGoal, dayStartHour, isBootstrapping, getWeeklyEntryConsumed]);
+  }, [foods, remaining, calorieGoal, dayStartHour, isBootstrapping, shouldIncludeInWeeklySummary]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -2160,7 +2234,47 @@ export default function KcalsPage() {
     return () => clearTimeout(timer);
   }, [dayStartHour, resetDailyFoods, autoSyncEnabled, runAutoSync]);
 
-  const handleOpenShare = () => {
+  const gradientAlignCycle: GroupShareAlignment[] = ["left", "top", "right", "bottom"];
+  const blockAlignCycle: GroupShareAlignment[] = ["left", "center", "right"];
+
+  const getGroupShareAlignIconIndex = () => {
+    if (groupShareWrapper === "block") {
+      if (groupShareAlignment === "left") return 2;
+      if (groupShareAlignment === "center") return 3;
+      return 4;
+    }
+    if (groupShareAlignment === "left") return 2;
+    if (groupShareAlignment === "top") return 3;
+    if (groupShareAlignment === "right") return 4;
+    return 5;
+  };
+
+  const getGroupShareWrapperIconIndex = () =>
+    groupShareWrapper === "gradient" ? 1 : 0;
+
+  const cycleGroupShareWrapper = () => {
+    setGroupShareWrapper((prev) => {
+      const next = prev === "gradient" ? "block" : "gradient";
+      setGroupShareAlignment((current) => {
+        if (next === "block") {
+          if (current === "top" || current === "bottom") return "center";
+          return current;
+        }
+        if (current === "center") return "bottom";
+        return current;
+      });
+      return next;
+    });
+  };
+
+  const cycleGroupShareAlignment = () => {
+    const cycle = groupShareWrapper === "block" ? blockAlignCycle : gradientAlignCycle;
+    const currentIndex = cycle.indexOf(groupShareAlignment);
+    const nextIndex = (currentIndex + 1) % cycle.length;
+    setGroupShareAlignment(cycle[nextIndex]);
+  };
+
+  const handleOpenShare = (mode: ShareMode = "weekly", payload: GroupSharePayload | null = null) => {
     badgeMovedRef.current = false;
     badgePointersRef.current.clear();
     badgeGestureRef.current = null;
@@ -2169,6 +2283,12 @@ export default function KcalsPage() {
     setShareStatus("idle");
     setBadgeScale(1);
     setBadgeRotation(0);
+    setShareMode(mode);
+    setGroupSharePayload(mode === "group" ? payload : null);
+    if (mode === "group") {
+      setGroupShareWrapper("gradient");
+      setGroupShareAlignment("bottom");
+    }
     setShowShareModal(true);
     setShowWeeklyModal(false);
   };
@@ -2226,22 +2346,84 @@ export default function KcalsPage() {
     });
   }, []);
 
+  const positionGroupShareBadge = useCallback(() => {
+    if (shareMode !== "group") return;
+    const preview = sharePreviewRef.current;
+    const badge = shareBadgeRef.current;
+    if (!preview || !badge) return;
+    const pw = preview.clientWidth;
+    const ph = preview.clientHeight;
+    const bw = badge.clientWidth;
+    const bh = badge.clientHeight;
+    const minX = 16;
+    const maxX = Math.max(minX, pw - bw - 16);
+    const minY = 88;
+    const maxY = Math.max(minY, ph - bh - 92);
+
+    let x = (pw - bw) / 2;
+    let y = (ph - bh) / 2;
+
+    if (groupShareWrapper === "block") {
+      if (groupShareAlignment === "left") x = minX;
+      if (groupShareAlignment === "right") x = maxX;
+      if (groupShareAlignment === "center") x = (pw - bw) / 2;
+      y = Math.max(minY, Math.min(maxY, (ph - bh) / 2));
+    } else {
+      if (groupShareAlignment === "left") {
+        x = minX;
+        y = (ph - bh) / 2;
+      } else if (groupShareAlignment === "top") {
+        x = (pw - bw) / 2;
+        y = minY + 24;
+      } else if (groupShareAlignment === "right") {
+        x = maxX;
+        y = (ph - bh) / 2;
+      } else {
+        x = (pw - bw) / 2;
+        y = maxY - 8;
+      }
+    }
+
+    setBadgePos({
+      x: Math.min(maxX, Math.max(minX, x)),
+      y: Math.min(maxY, Math.max(minY, y)),
+    });
+  }, [shareMode, groupShareWrapper, groupShareAlignment]);
+
   useEffect(() => {
     if (!showShareModal) return;
     const raf = requestAnimationFrame(() => {
-      if (!badgeMovedRef.current) centerBadge();
+      if (shareMode === "group") {
+        positionGroupShareBadge();
+      } else if (!badgeMovedRef.current) {
+        centerBadge();
+      }
     });
     const handleResize = () => {
-      if (!badgeMovedRef.current) centerBadge();
+      if (shareMode === "group") {
+        positionGroupShareBadge();
+      } else if (!badgeMovedRef.current) {
+        centerBadge();
+      }
     };
     window.addEventListener("resize", handleResize);
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", handleResize);
     };
-  }, [showShareModal, shareBgType, shareImage, centerBadge]);
+  }, [
+    showShareModal,
+    shareMode,
+    shareBgType,
+    shareImage,
+    groupShareWrapper,
+    groupShareAlignment,
+    centerBadge,
+    positionGroupShareBadge,
+  ]);
 
   const handleShareBadgePointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    if (shareMode !== "weekly") return;
     const preview = sharePreviewRef.current;
     const badge = shareBadgeRef.current;
     if (!preview || !badge) return;
@@ -2269,6 +2451,7 @@ export default function KcalsPage() {
   };
 
   const handleShareBadgePointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    if (shareMode !== "weekly") return;
     if (!badgePointersRef.current.has(e.pointerId)) return;
     badgePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     const preview = sharePreviewRef.current;
@@ -2302,6 +2485,7 @@ export default function KcalsPage() {
   };
 
   const handleShareBadgePointerEnd = (e: PointerEvent<HTMLDivElement>) => {
+    if (shareMode !== "weekly") return;
     if (badgePointersRef.current.has(e.pointerId)) {
       badgePointersRef.current.delete(e.pointerId);
     }
@@ -2330,9 +2514,8 @@ export default function KcalsPage() {
     try {
       const preview = sharePreviewRef.current;
       const badge = shareBadgeRef.current;
-      const badgeCard = shareBadgeCardRef.current;
       const badgeExport = shareBadgeExportRef.current;
-      if (!badge || !badgeCard || !badgeExport) throw new Error("Badge missing.");
+      if (!badge || !badgeExport) throw new Error("Badge missing.");
       const previewRect = preview.getBoundingClientRect();
       const scale = 3;
       const width = Math.max(1, Math.round(previewRect.width * scale));
@@ -2390,10 +2573,12 @@ export default function KcalsPage() {
       });
       const centerX = (badgePos.x + baseW / 2) * scale;
       const centerY = (badgePos.y + baseH / 2) * scale;
+      const effectiveRotation = shareMode === "weekly" ? badgeRotation : 0;
+      const effectiveScale = shareMode === "weekly" ? badgeScale : 1;
       ctx.save();
       ctx.translate(centerX, centerY);
-      ctx.rotate((badgeRotation * Math.PI) / 180);
-      ctx.scale(badgeScale, badgeScale);
+      ctx.rotate((effectiveRotation * Math.PI) / 180);
+      ctx.scale(effectiveScale, effectiveScale);
       ctx.drawImage(
         badgeImg,
         (-baseW / 2) * scale,
@@ -3949,6 +4134,18 @@ export default function KcalsPage() {
     }
   };
 
+  const handleOpenGroupShare = () => {
+    if (!groupModal) return;
+    const percent = groupModal.portionPercent ?? 100;
+    const payload: GroupSharePayload = {
+      name: groupModal.name.trim() || "My group",
+      kcal: groupKcal(groupModal),
+      lines: (groupModal.items ?? []).map((item) => buildGroupShareLine(item, percent)),
+    };
+    setGroupModal(null);
+    handleOpenShare("group", payload);
+  };
+
   const handleSavedGroupTap = (group: SavedGroup) => {
     const newItems = group.items.map((item) => ({
       ...item,
@@ -4173,6 +4370,31 @@ export default function KcalsPage() {
           )}
         </div>
       </>
+    );
+  };
+
+  const renderGroupShareCardContent = () => {
+    if (!groupSharePayload) return null;
+
+    const cardClassName = [
+      "kcals-group-share-card",
+      `kcals-group-share-card--${groupShareWrapper}`,
+      `kcals-group-share-card--${groupShareAlignment}`,
+    ].join(" ");
+
+    return (
+      <div className={cardClassName}>
+        <div className="kcals-group-share-name">{groupSharePayload.name}</div>
+        <div className="kcals-group-share-kcal">{groupSharePayload.kcal.toLocaleString()}kcal</div>
+        <div className="kcals-group-share-lines">
+          {groupSharePayload.lines.map((line) => (
+            <div key={line.id} className="kcals-group-share-line">
+              <span className="kcals-group-share-line-emoji">{line.emoji}</span>
+              <span>{line.text}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     );
   };
 
@@ -5205,23 +5427,33 @@ export default function KcalsPage() {
             {(() => {
               const isBookmarked = savedGroups.some((g) => g.id === (groupModal?.savedGroupId ?? groupModal?.id));
               return (
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <button
-                    className={`kcals-portion-back${isBookmarked ? " is-bookmarked" : ""}`}
-                    type="button"
-                    onClick={handleBookmarkGroup}
-                    aria-label="Bookmark"
-                  >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M5 20.1683V6C5 4.89543 5.89543 4 7 4H17C18.1046 4 19 4.89543 19 6V20.1683C19 20.9595 18.1248 21.4373 17.4592 21.0095L12.8111 18.0214C12.317 17.7038 11.683 17.7038 11.1889 18.0214L6.54076 21.0095C5.87525 21.4373 5 20.9595 5 20.1683Z"
-                        fill={isBookmarked ? "var(--black-100)" : "white"}
-                        stroke={isBookmarked ? "var(--black-100)" : "#676663"}
-                        strokeWidth="2"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </button>
+                <div className="kcals-group-topbar">
+                  <div className="kcals-group-topbar-left">
+                    <button
+                      className={`kcals-portion-back${isBookmarked ? " is-bookmarked" : ""}`}
+                      type="button"
+                      onClick={handleBookmarkGroup}
+                      aria-label="Bookmark"
+                    >
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path
+                          d="M5 20.1683V6C5 4.89543 5.89543 4 7 4H17C18.1046 4 19 4.89543 19 6V20.1683C19 20.9595 18.1248 21.4373 17.4592 21.0095L12.8111 18.0214C12.317 17.7038 11.683 17.7038 11.1889 18.0214L6.54076 21.0095C5.87525 21.4373 5 20.9595 5 20.1683Z"
+                          fill={isBookmarked ? "var(--black-100)" : "white"}
+                          stroke={isBookmarked ? "var(--black-100)" : "#676663"}
+                          strokeWidth="2"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      className="kcals-portion-back"
+                      type="button"
+                      onClick={handleOpenGroupShare}
+                      aria-label="Share group"
+                    >
+                      <img src="/kcals/assets/share.svg" alt="" />
+                    </button>
+                  </div>
                   <button
                     className="kcals-portion-back kcals-split-btn"
                     type="button"
@@ -5958,7 +6190,7 @@ export default function KcalsPage() {
         <>
           {renderWeeklyCardContent()}
           {weeklyHasData && (
-            <button className="kcals-weekly-share" type="button" onClick={handleOpenShare}>
+            <button className="kcals-weekly-share" type="button" onClick={() => handleOpenShare("weekly")}>
               <img src="/kcals/assets/share.svg" alt="" className="kcals-weekly-share-icon" />
               {shareLabel}
             </button>
@@ -5981,9 +6213,13 @@ export default function KcalsPage() {
       {showShareModal && (
         <div className="kcals-share-screen">
           <div className="kcals-share-export">
-            <div className="kcals-weekly-modal kcals-weekly-card" ref={shareBadgeExportRef}>
-              {renderWeeklyCardContent()}
-            </div>
+            {shareMode === "group" ? (
+              <div ref={shareBadgeExportRef}>{renderGroupShareCardContent()}</div>
+            ) : (
+              <div className="kcals-weekly-modal kcals-weekly-card" ref={shareBadgeExportRef}>
+                {renderWeeklyCardContent()}
+              </div>
+            )}
           </div>
           <div
             className="kcals-share-canvas"
@@ -6001,7 +6237,7 @@ export default function KcalsPage() {
               />
             )}
             <div
-              className="kcals-share-badge"
+              className={`kcals-share-badge${shareMode === "group" ? " is-fixed" : ""}`}
               ref={shareBadgeRef}
               style={{
                 left: badgePos.x,
@@ -6013,9 +6249,13 @@ export default function KcalsPage() {
               onPointerUp={handleShareBadgePointerEnd}
               onPointerCancel={handleShareBadgePointerEnd}
             >
-              <div className="kcals-weekly-modal kcals-weekly-card" ref={shareBadgeCardRef}>
-                {renderWeeklyCardContent()}
-              </div>
+              {shareMode === "group" ? (
+                <div ref={shareBadgeCardRef}>{renderGroupShareCardContent()}</div>
+              ) : (
+                <div className="kcals-weekly-modal kcals-weekly-card" ref={shareBadgeCardRef}>
+                  {renderWeeklyCardContent()}
+                </div>
+              )}
             </div>
           </div>
           <div className="kcals-share-topbar" data-share-ui>
@@ -6037,6 +6277,38 @@ export default function KcalsPage() {
                 <path d="M16.9999 7L6.99994 17" stroke="#191815" strokeWidth="2" strokeLinecap="round" />
               </svg>
             </button>
+            {shareMode === "group" && (
+              <div className="kcals-share-topicons">
+                <button
+                  className="kcals-share-topicon-btn"
+                  type="button"
+                  onClick={cycleGroupShareWrapper}
+                  aria-label="Toggle wrapper style"
+                >
+                  <span
+                    className="kcals-share-topicon-sprite"
+                    style={{
+                      backgroundPosition: `-${getGroupShareWrapperIconIndex() * 24}px 0`,
+                    }}
+                    aria-hidden="true"
+                  />
+                </button>
+                <button
+                  className="kcals-share-topicon-btn"
+                  type="button"
+                  onClick={cycleGroupShareAlignment}
+                  aria-label="Change alignment"
+                >
+                  <span
+                    className="kcals-share-topicon-sprite"
+                    style={{
+                      backgroundPosition: `-${getGroupShareAlignIconIndex() * 24}px 0`,
+                    }}
+                    aria-hidden="true"
+                  />
+                </button>
+              </div>
+            )}
             <button
               className="kcals-share-topbtn kcals-share-topbtn--primary"
               type="button"

@@ -1,0 +1,58 @@
+<svg width="144" height="24" viewBox="0 0 144 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_490_6462)">
+<path d="M138 17H126" stroke="white" stroke-width="2" stroke-linecap="round"/>
+<path d="M136 7H128" stroke="white" stroke-width="2" stroke-linecap="round"/>
+<rect x="120.75" y="0.75" width="22.5" height="22.5" rx="6.25" stroke="white" stroke-width="1.5"/>
+<path d="M134.5 12H129.5" stroke="white" stroke-width="2" stroke-linecap="round"/>
+</g>
+<g clip-path="url(#clip1_490_6462)">
+<path d="M114 7H102" stroke="white" stroke-width="2" stroke-linecap="round"/>
+<path d="M114 17H106" stroke="white" stroke-width="2" stroke-linecap="round"/>
+<path d="M114 12H109" stroke="white" stroke-width="2" stroke-linecap="round"/>
+<rect x="96.75" y="0.75" width="22.5" height="22.5" rx="6.25" stroke="white" stroke-width="1.5"/>
+</g>
+<g clip-path="url(#clip2_490_6462)">
+<path d="M90 7H78" stroke="white" stroke-width="2" stroke-linecap="round"/>
+<path d="M88 17H80" stroke="white" stroke-width="2" stroke-linecap="round"/>
+<path d="M86.5 12H81.5" stroke="white" stroke-width="2" stroke-linecap="round"/>
+<rect x="72.75" y="0.75" width="22.5" height="22.5" rx="6.25" stroke="white" stroke-width="1.5"/>
+</g>
+<g clip-path="url(#clip3_490_6462)">
+<path d="M66 7H54" stroke="white" stroke-width="2" stroke-linecap="round"/>
+<path d="M62 17H54" stroke="white" stroke-width="2" stroke-linecap="round"/>
+<path d="M59 12H54" stroke="white" stroke-width="2" stroke-linecap="round"/>
+<rect x="48.75" y="0.75" width="22.5" height="22.5" rx="6.25" stroke="white" stroke-width="1.5"/>
+</g>
+<g clip-path="url(#clip4_490_6462)">
+<rect x="24.75" y="0.75" width="22.5" height="22.5" rx="6.25" stroke="white" stroke-width="1.5"/>
+<rect x="28" y="4" width="16" height="16" rx="4" fill="url(#paint0_linear_490_6462)"/>
+</g>
+<g clip-path="url(#clip5_490_6462)">
+<rect x="0.75" y="0.75" width="22.5" height="22.5" rx="6.25" stroke="white" stroke-width="1.5"/>
+<rect x="4.75" y="4.75" width="14.5" height="14.5" rx="3.25" stroke="white" stroke-width="1.5"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_490_6462" x1="28" y1="12" x2="44" y2="12" gradientUnits="userSpaceOnUse">
+<stop stop-color="white"/>
+<stop offset="1" stop-color="white" stop-opacity="0"/>
+</linearGradient>
+<clipPath id="clip0_490_6462">
+<rect width="24" height="24" fill="white" transform="translate(120)"/>
+</clipPath>
+<clipPath id="clip1_490_6462">
+<rect width="24" height="24" fill="white" transform="translate(96)"/>
+</clipPath>
+<clipPath id="clip2_490_6462">
+<rect width="24" height="24" fill="white" transform="translate(72)"/>
+</clipPath>
+<clipPath id="clip3_490_6462">
+<rect width="24" height="24" fill="white" transform="translate(48)"/>
+</clipPath>
+<clipPath id="clip4_490_6462">
+<rect width="24" height="24" fill="white" transform="translate(24)"/>
+</clipPath>
+<clipPath id="clip5_490_6462">
+<rect width="24" height="24" fill="white"/>
+</clipPath>
+</defs>
+</svg>
