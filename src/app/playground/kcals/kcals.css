@@ -3287,6 +3287,14 @@ select.kcals-profile-settings-input::-ms-expand {
   line-height: 1;
 }
 
+.kcals-group-share-line-image {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
 .kcals-group-share-card--block .kcals-group-share-name {
   font-size: 16px;
   line-height: 20px;
@@ -3304,6 +3312,11 @@ select.kcals-profile-settings-input::-ms-expand {
 
 .kcals-group-share-card--block .kcals-group-share-line-emoji {
   font-size: 14px;
+}
+
+.kcals-group-share-card--block .kcals-group-share-line-image {
+  width: 14px;
+  height: 14px;
 }
 
 .kcals-share-error {

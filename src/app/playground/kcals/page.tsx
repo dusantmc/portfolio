@@ -452,6 +452,7 @@ interface GroupShareLine {
   id: string;
   emoji: string;
   text: string;
+  image?: string;
 }
 
 interface GroupSharePayload {
@@ -626,45 +627,47 @@ function formatGroupShareCount(value: number): string {
   return Number.isFinite(rounded) ? String(Math.max(0, rounded)) : "0";
 }
 
-function buildGroupShareLine(item: FoodItem, percent: number): GroupShareLine {
+function buildGroupShareLine(item: FoodItem, percent: number, image?: string): GroupShareLine {
   const factor = Math.max(0, percent) / 100;
   const rawName = item.name.trim();
   const emoji = item.emoji || getFoodEmoji(rawName || "food");
+  const withVisual = (line: Omit<GroupShareLine, "image">): GroupShareLine =>
+    image ? { ...line, image } : line;
 
   const xMatch = rawName.match(/^(.+?)\s+x(\d+(?:\.\d+)?)\s*$/i);
   if (xMatch) {
     const scaled = Number(xMatch[2]) * factor;
-    return { id: item.id, emoji, text: `${xMatch[1].trim()} x${formatGroupShareCount(scaled)}` };
+    return withVisual({ id: item.id, emoji, text: `${xMatch[1].trim()} x${formatGroupShareCount(scaled)}` });
   }
 
   const gramMatch = rawName.match(/^(.+?)\s+(\d+(?:\.\d+)?)\s*g\s*$/i);
   if (gramMatch) {
     const scaled = Number(gramMatch[2]) * factor;
-    return { id: item.id, emoji, text: `${gramMatch[1].trim()} ${formatGroupShareCount(scaled)}g` };
+    return withVisual({ id: item.id, emoji, text: `${gramMatch[1].trim()} ${formatGroupShareCount(scaled)}g` });
   }
 
   if (/\d/.test(rawName)) {
     const parsed = parseFoodInput(rawName);
     if (parsed.unit === "g") {
-      return { id: item.id, emoji, text: `${parsed.name} ${formatGroupShareCount(parsed.quantity * factor)}g` };
+      return withVisual({ id: item.id, emoji, text: `${parsed.name} ${formatGroupShareCount(parsed.quantity * factor)}g` });
     }
     if (parsed.unit === "count") {
       if (item.gramsPerUnit) {
         const grams = parsed.quantity * item.gramsPerUnit * factor;
-        return { id: item.id, emoji, text: `${parsed.name} ${formatGroupShareCount(grams)}g` };
+        return withVisual({ id: item.id, emoji, text: `${parsed.name} ${formatGroupShareCount(grams)}g` });
       }
-      return { id: item.id, emoji, text: `${parsed.name} x${formatGroupShareCount(parsed.quantity * factor)}` };
+      return withVisual({ id: item.id, emoji, text: `${parsed.name} x${formatGroupShareCount(parsed.quantity * factor)}` });
     }
   }
 
   if (!item.perItem && item.kcalPer100g && item.kcal != null && item.kcalPer100g > 0) {
     const grams = ((item.kcal * 100) / item.kcalPer100g) * factor;
     if (Number.isFinite(grams) && grams > 0) {
-      return { id: item.id, emoji, text: `${rawName} ${formatGroupShareCount(grams)}g` };
+      return withVisual({ id: item.id, emoji, text: `${rawName} ${formatGroupShareCount(grams)}g` });
     }
   }
 
-  return { id: item.id, emoji, text: rawName };
+  return withVisual({ id: item.id, emoji, text: rawName });
 }
 
 function drawGroupShareOverlay(
@@ -4134,6 +4137,7 @@ export default function KcalsPage() {
 
   const handleEditGroupItem = (item: FoodItem) => {
     setGroupEditItem(item);
+    setEditFoodEmoji(item.emoji || "");
     if (item.perItem) {
       const xMatch = item.name.match(/^(.+?)\s+x(\d+(?:\.\d+)?)\s*$/);
       setEditFoodName(xMatch ? xMatch[1] : item.name);
@@ -4154,6 +4158,7 @@ export default function KcalsPage() {
     if (!groupModal || !groupEditItem) return;
     const name = editFoodName.trim();
     const amount = Number(editFoodGrams);
+    const emoji = editFoodEmojiDisplay;
     if (!name || isNaN(amount) || amount <= 0) return;
 
     let displayName: string;
@@ -4177,7 +4182,7 @@ export default function KcalsPage() {
       prev.map((f) => {
         if (f.id !== groupModal.id) return f;
         const updatedItems = (f.items ?? []).map((i) =>
-          i.id === groupEditItem.id ? { ...i, name: displayName, kcal } : i
+          i.id === groupEditItem.id ? { ...i, name: displayName, kcal, emoji } : i
         );
         return { ...f, savedGroupId: undefined, items: updatedItems, kcal: updatedItems.reduce((s, i) => s + (i.kcal ?? 0), 0) };
       })
@@ -4185,7 +4190,7 @@ export default function KcalsPage() {
     setGroupModal((g) => {
       if (!g) return null;
       const updatedItems = (g.items ?? []).map((i) =>
-        i.id === groupEditItem.id ? { ...i, name: displayName, kcal } : i
+        i.id === groupEditItem.id ? { ...i, name: displayName, kcal, emoji } : i
       );
       return { ...g, savedGroupId: undefined, items: updatedItems, kcal: updatedItems.reduce((s, i) => s + (i.kcal ?? 0), 0) };
     });
@@ -4232,7 +4237,12 @@ export default function KcalsPage() {
     const payload: GroupSharePayload = {
       name: groupModal.name.trim() || "My group",
       kcal: groupKcal(groupModal),
-      lines: (groupModal.items ?? []).map((item) => buildGroupShareLine(item, percent)),
+      lines: (groupModal.items ?? []).map((item) => {
+        const resolvedImage = item.imageId
+          ? (imageUrls[item.imageId] ?? item.image)
+          : item.image;
+        return buildGroupShareLine(item, percent, resolvedImage ?? undefined);
+      }),
     };
     setGroupModal(null);
     handleOpenShare("group", payload);
@@ -4481,7 +4491,11 @@ export default function KcalsPage() {
         <div className="kcals-group-share-lines">
           {groupSharePayload.lines.map((line) => (
             <div key={line.id} className="kcals-group-share-line">
-              <span className="kcals-group-share-line-emoji">{line.emoji}</span>
+              {line.image ? (
+                <img src={line.image} alt="" className="kcals-group-share-line-image" />
+              ) : (
+                <span className="kcals-group-share-line-emoji">{line.emoji}</span>
+              )}
               <span>{line.text}</span>
             </div>
           ))}
@@ -5644,7 +5658,15 @@ export default function KcalsPage() {
                   className="kcals-modal-camera-image"
                 />
               ) : (
-                <span style={{ fontSize: 60 }}>{groupEditItem?.emoji}</span>
+                <input
+                  className="kcals-modal-emoji-input"
+                  type="text"
+                  value={editFoodEmojiDisplay}
+                  onChange={handleEditFoodEmojiChange}
+                  onFocus={(e) => e.currentTarget.select()}
+                  inputMode="text"
+                  aria-label="Food emoji"
+                />
               )}
             </div>
             <div className="kcals-modal-fields">
