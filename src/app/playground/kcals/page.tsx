@@ -2435,15 +2435,19 @@ export default function KcalsPage() {
     });
   }, [shareMode, groupShareWrapper, groupShareAlignment]);
 
-  const getGroupShareYBounds = useCallback(() => {
+  const getGroupShareBounds = useCallback(() => {
     const preview = sharePreviewRef.current;
     const badge = shareBadgeRef.current;
     if (!preview || !badge) return null;
+    const pw = preview.clientWidth;
     const ph = preview.clientHeight;
+    const bw = badge.clientWidth;
     const bh = badge.clientHeight;
+    const minX = 16;
+    const maxX = Math.max(minX, pw - bw - 16);
     const minY = 88;
     const maxY = Math.max(minY, ph - bh - 92);
-    return { minY, maxY };
+    return { minX, maxX, minY, maxY };
   }, []);
 
   useEffect(() => {
@@ -2482,7 +2486,9 @@ export default function KcalsPage() {
     if (shareMode === "group") {
       if (badgeDragRef.current.pointerId != null) return;
       badgeDragRef.current.pointerId = e.pointerId;
+      badgeDragRef.current.startX = e.clientX;
       badgeDragRef.current.startY = e.clientY;
+      badgeDragRef.current.originX = badgePos.x;
       badgeDragRef.current.originY = badgePos.y;
       e.currentTarget.setPointerCapture(e.pointerId);
       return;
@@ -2517,11 +2523,18 @@ export default function KcalsPage() {
   const handleShareBadgePointerMove = (e: PointerEvent<HTMLDivElement>) => {
     if (shareMode === "group") {
       if (badgeDragRef.current.pointerId !== e.pointerId) return;
-      const bounds = getGroupShareYBounds();
+      const bounds = getGroupShareBounds();
       if (!bounds) return;
+      const dx = e.clientX - badgeDragRef.current.startX;
       const dy = e.clientY - badgeDragRef.current.startY;
+      const localMinX = badgeDragRef.current.originX - 20;
+      const localMaxX = badgeDragRef.current.originX + 20;
+      const nextX = Math.min(
+        Math.max(bounds.minX, localMinX, badgeDragRef.current.originX + dx),
+        Math.min(bounds.maxX, localMaxX)
+      );
       const nextY = Math.min(Math.max(bounds.minY, badgeDragRef.current.originY + dy), bounds.maxY);
-      setBadgePos((prev) => ({ ...prev, y: nextY }));
+      setBadgePos({ x: nextX, y: nextY });
       return;
     }
     if (shareMode !== "weekly") return;
@@ -3210,14 +3223,29 @@ export default function KcalsPage() {
     imageId?: string,
     imageValue?: string | null
   ): Promise<string | null> => {
-    if (imageValue && !isBlobUrl(imageValue)) return imageValue;
-    if (!imageId) return null;
+    if (imageValue && isDataUrl(imageValue)) return imageValue;
+
+    if (imageId) {
+      try {
+        const blob = await loadCustomFoodImage(imageId);
+        if (blob) {
+          return await blobToDataUrl(blob);
+        }
+      } catch {
+        // continue to URL fetch fallback
+      }
+    }
+
+    if (!imageValue) return null;
+
     try {
-      const blob = await loadCustomFoodImage(imageId);
-      if (!blob) return null;
+      const response = await fetch(imageValue, { mode: "cors" });
+      if (!response.ok) return imageValue;
+      const blob = await response.blob();
+      if (!blob) return imageValue;
       return await blobToDataUrl(blob);
     } catch {
-      return null;
+      return imageValue;
     }
   }, []);
 
