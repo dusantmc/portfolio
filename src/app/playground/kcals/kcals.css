@@ -3238,8 +3238,8 @@ select.kcals-profile-settings-input::-ms-expand {
 }
 
 .kcals-group-share-name {
-  font-size: 14px;
-  line-height: 16px;
+  font-size: 15px;
+  line-height: 17px;
   font-weight: 600;
   letter-spacing: -0.2px;
 }
@@ -3284,7 +3284,7 @@ select.kcals-profile-settings-input::-ms-expand {
 
 .kcals-group-share-line-emoji {
   font-size: 16px;
-  line-height: 1;
+  line-height: 16px;
 }
 
 .kcals-group-share-line-image {
@@ -3293,20 +3293,24 @@ select.kcals-profile-settings-input::-ms-expand {
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
+  align-self: center;
+  margin-right:2px;
 }
 
 .kcals-group-share-card--block .kcals-group-share-name {
-  font-size: 16px;
-  line-height: 20px;
+  font-size: 14px;
+  line-height: 16px;
+  margin-top:4px;
 }
 
 .kcals-group-share-card--block .kcals-group-share-kcal {
   font-size: 22px;
   line-height: 24px;
+  margin-bottom:2px;
 }
 
 .kcals-group-share-card--block .kcals-group-share-line {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 16px;
 }
 
@@ -3317,6 +3321,7 @@ select.kcals-profile-settings-input::-ms-expand {
 .kcals-group-share-card--block .kcals-group-share-line-image {
   width: 14px;
   height: 14px;
+  margin-right: 2px;
 }
 
 .kcals-share-error {

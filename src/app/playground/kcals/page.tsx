@@ -2651,6 +2651,8 @@ export default function KcalsPage() {
       const badgeDataUrl = await toPng(badgeExport, {
         cacheBust: true,
         pixelRatio: scale,
+        imagePlaceholder:
+          "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==",
       });
       const badgeImg = await new Promise<HTMLImageElement>((resolve, reject) => {
         const image = new Image();
