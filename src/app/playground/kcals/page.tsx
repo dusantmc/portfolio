@@ -692,6 +692,28 @@ function drawGroupShareOverlay(
   ctx.fillRect(0, 0, width, height);
 }
 
+async function waitForNodeImages(node: HTMLElement, timeoutMs = 1800): Promise<void> {
+  const images = Array.from(node.querySelectorAll("img"));
+  if (images.length === 0) return;
+  const waits = images.map((img) => new Promise<void>((resolve) => {
+    const finish = () => resolve();
+    if (img.complete) {
+      if (img.naturalWidth > 0 && typeof img.decode === "function") {
+        img.decode().then(finish).catch(finish);
+      } else {
+        finish();
+      }
+      return;
+    }
+    img.addEventListener("load", finish, { once: true });
+    img.addEventListener("error", finish, { once: true });
+  }));
+  await Promise.race([
+    Promise.all(waits).then(() => undefined),
+    new Promise<void>((resolve) => setTimeout(resolve, timeoutMs)),
+  ]);
+}
+
 function getLastGrapheme(value: string): string {
   if (typeof Intl !== "undefined" && "Segmenter" in Intl) {
     const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
@@ -2680,6 +2702,7 @@ export default function KcalsPage() {
 
       const baseW = badgeExport.offsetWidth;
       const baseH = badgeExport.offsetHeight;
+      await waitForNodeImages(badgeExport);
 
       const { toPng } = await import("html-to-image");
       const badgeDataUrl = await toPng(badgeExport, {
@@ -4547,7 +4570,18 @@ export default function KcalsPage() {
           {groupSharePayload.lines.map((line) => (
             <div key={line.id} className="kcals-group-share-line">
               {line.image ? (
-                <img src={line.image} alt="" className="kcals-group-share-line-image" />
+                <span className="kcals-group-share-line-visual">
+                  <span className="kcals-group-share-line-emoji">{line.emoji}</span>
+                  <img
+                    src={line.image}
+                    alt=""
+                    className="kcals-group-share-line-image"
+                    loading="eager"
+                    decoding="sync"
+                    crossOrigin="anonymous"
+                    referrerPolicy="no-referrer"
+                  />
+                </span>
               ) : (
                 <span className="kcals-group-share-line-emoji">{line.emoji}</span>
               )}

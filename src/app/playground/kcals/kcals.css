@@ -3288,14 +3288,34 @@ select.kcals-profile-settings-input::-ms-expand {
   width: 18px;
 }
 
+.kcals-group-share-line-visual {
+  width: 16px;
+  height: 16px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 2px;
+}
+
+.kcals-group-share-line-visual .kcals-group-share-line-emoji {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+}
+
 .kcals-group-share-line-image {
   width: 16px;
   height: 16px;
   border-radius: 50%;
   object-fit: cover;
+  position: absolute;
+  inset: 0;
   flex-shrink: 0;
-  align-self: center;
-  margin-right:2px;
 }
 
 .kcals-group-share-card--block .kcals-group-share-name {
@@ -3323,7 +3343,11 @@ select.kcals-profile-settings-input::-ms-expand {
 .kcals-group-share-card--block .kcals-group-share-line-image {
   width: 14px;
   height: 14px;
-  margin-right: 2px;
+}
+
+.kcals-group-share-card--block .kcals-group-share-line-visual {
+  width: 14px;
+  height: 14px;
 }
 
 .kcals-share-error {
