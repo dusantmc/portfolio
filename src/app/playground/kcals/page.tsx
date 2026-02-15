@@ -4233,18 +4233,22 @@ export default function KcalsPage() {
     }
   };
 
-  const handleOpenGroupShare = () => {
+  const handleOpenGroupShare = async () => {
     if (!groupModal) return;
     const percent = groupModal.portionPercent ?? 100;
-    const payload: GroupSharePayload = {
-      name: groupModal.name.trim() || "My group",
-      kcal: groupKcal(groupModal),
-      lines: (groupModal.items ?? []).map((item) => {
+    const lines = await Promise.all(
+      (groupModal.items ?? []).map(async (item) => {
         const resolvedImage = item.imageId
           ? (imageUrls[item.imageId] ?? item.image)
           : item.image;
-        return buildGroupShareLine(item, percent, resolvedImage ?? undefined);
-      }),
+        const sharableImage = await resolveSharableImage(item.imageId, resolvedImage ?? null);
+        return buildGroupShareLine(item, percent, sharableImage ?? undefined);
+      })
+    );
+    const payload: GroupSharePayload = {
+      name: groupModal.name.trim() || "My group",
+      kcal: groupKcal(groupModal),
+      lines,
     };
     setGroupModal(null);
     handleOpenShare("group", payload);
