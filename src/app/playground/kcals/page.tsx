@@ -4142,6 +4142,18 @@ export default function KcalsPage() {
     setGroupModal((g) => (g ? { ...g, name } : null));
   };
 
+  const handleSaveGroupEmoji = (value: string) => {
+    if (!groupModal) return;
+    const compact = value.replace(/\s+/g, "");
+    const nextEmoji = getLastGrapheme(compact) || groupModal.emoji || "\u{1F372}";
+    updateFoods((prev) =>
+      prev.map((f) =>
+        f.id === groupModal.id ? { ...f, emoji: nextEmoji } : f
+      )
+    );
+    setGroupModal((g) => (g ? { ...g, emoji: nextEmoji } : null));
+  };
+
   const handleRemoveFromGroup = (childId: string) => {
     if (!groupModal) return;
 
@@ -5678,7 +5690,15 @@ export default function KcalsPage() {
               );
             })()}
             <div className="kcals-group-emoji">
-              {groupModal?.emoji}
+              <input
+                className="kcals-group-emoji-input"
+                type="text"
+                value={groupModal?.emoji ?? ""}
+                onChange={(e) => handleSaveGroupEmoji(e.target.value)}
+                onFocus={(e) => e.currentTarget.select()}
+                inputMode="text"
+                aria-label="Group emoji"
+              />
             </div>
             <input
               className="kcals-group-name-input"
