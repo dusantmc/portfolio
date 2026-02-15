@@ -3295,6 +3295,7 @@ select.kcals-profile-settings-input::-ms-expand {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  align-self: center;
   flex-shrink: 0;
   margin-right: 2px;
 }
@@ -3302,10 +3303,14 @@ select.kcals-profile-settings-input::-ms-expand {
 .kcals-group-share-line-visual .kcals-group-share-line-emoji {
   position: absolute;
   inset: 0;
-  display: inline-flex;
+  display: none;
   align-items: center;
   justify-content: center;
   width: auto;
+}
+
+.kcals-group-share-line-visual.is-fallback .kcals-group-share-line-emoji {
+  display: inline-flex;
 }
 
 .kcals-group-share-line-image {
@@ -3316,6 +3321,10 @@ select.kcals-profile-settings-input::-ms-expand {
   position: absolute;
   inset: 0;
   flex-shrink: 0;
+}
+
+.kcals-group-share-line-visual.is-fallback .kcals-group-share-line-image {
+  display: none;
 }
 
 .kcals-group-share-card--block .kcals-group-share-name {

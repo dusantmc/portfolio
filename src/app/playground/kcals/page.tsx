@@ -4580,6 +4580,12 @@ export default function KcalsPage() {
                     decoding="sync"
                     crossOrigin="anonymous"
                     referrerPolicy="no-referrer"
+                    onLoad={(e) => {
+                      e.currentTarget.parentElement?.classList.remove("is-fallback");
+                    }}
+                    onError={(e) => {
+                      e.currentTarget.parentElement?.classList.add("is-fallback");
+                    }}
                   />
                 </span>
               ) : (
