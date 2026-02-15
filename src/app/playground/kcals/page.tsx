@@ -530,6 +530,22 @@ function PlusIcon() {
   );
 }
 
+function ShareIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+<path d="M13 5.32236V8.0001C7.5 8.5001 4.5 11.5001 4.5 18.0001C6.5 15.0001 9 14.0001 13 14.0001V16.6779C13 17.1934 13.6072 17.4688 13.9951 17.1294L20.656 11.3011C20.8381 11.1418 20.8381 10.8584 20.656 10.6991L13.9951 4.87081C13.6072 4.53136 13 4.80686 13 5.32236Z" stroke="#676663" stroke-width="2" stroke-linejoin="round"/>
+    </svg>
+  );
+}
+
 function TrashIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -649,6 +665,28 @@ function buildGroupShareLine(item: FoodItem, percent: number): GroupShareLine {
   }
 
   return { id: item.id, emoji, text: rawName };
+}
+
+function drawGroupShareOverlay(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  alignment: GroupShareAlignment
+): void {
+  let overlay: CanvasGradient;
+  if (alignment === "left") {
+    overlay = ctx.createLinearGradient(0, 0, width * 0.8, 0);
+  } else if (alignment === "top") {
+    overlay = ctx.createLinearGradient(0, 0, 0, height * 0.5);
+  } else if (alignment === "right") {
+    overlay = ctx.createLinearGradient(width, 0, width * 0.2, 0);
+  } else {
+    overlay = ctx.createLinearGradient(0, height, 0, height * 0.5);
+  }
+  overlay.addColorStop(0, "rgba(0, 0, 0, 0.6)");
+  overlay.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = overlay;
+  ctx.fillRect(0, 0, width, height);
 }
 
 function getLastGrapheme(value: string): string {
@@ -801,6 +839,7 @@ export default function KcalsPage() {
   // Edit food modal state
   const [editFoodModal, setEditFoodModal] = useState<FoodItem | null>(null);
   const [editFoodName, setEditFoodName] = useState("");
+  const [editFoodEmoji, setEditFoodEmoji] = useState("");
   const [editFoodGrams, setEditFoodGrams] = useState("");
   const [editFoodUnit, setEditFoodUnit] = useState<"g" | "count">("g");
   const [editFoodSize, setEditFoodSize] = useState("medium");
@@ -858,6 +897,9 @@ export default function KcalsPage() {
 
   const profileInitial = user?.email?.trim()?.[0]?.toUpperCase() ?? "U";
   const avatarEmojiDisplay = avatarEmoji.trim() || profileInitial;
+  const editFoodEmojiDisplay = editFoodEmoji.trim()
+    || editFoodModal?.emoji?.trim()
+    || getFoodEmoji(editFoodName || editFoodModal?.name || "food");
   const showAvatarPhoto = avatarMode === "photo" && !!avatarPhoto;
   const lastSyncRelative = formatRelativeTime(lastSyncAt);
 
@@ -2390,6 +2432,17 @@ export default function KcalsPage() {
     });
   }, [shareMode, groupShareWrapper, groupShareAlignment]);
 
+  const getGroupShareYBounds = useCallback(() => {
+    const preview = sharePreviewRef.current;
+    const badge = shareBadgeRef.current;
+    if (!preview || !badge) return null;
+    const ph = preview.clientHeight;
+    const bh = badge.clientHeight;
+    const minY = 88;
+    const maxY = Math.max(minY, ph - bh - 92);
+    return { minY, maxY };
+  }, []);
+
   useEffect(() => {
     if (!showShareModal) return;
     const raf = requestAnimationFrame(() => {
@@ -2423,6 +2476,14 @@ export default function KcalsPage() {
   ]);
 
   const handleShareBadgePointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    if (shareMode === "group") {
+      if (badgeDragRef.current.pointerId != null) return;
+      badgeDragRef.current.pointerId = e.pointerId;
+      badgeDragRef.current.startY = e.clientY;
+      badgeDragRef.current.originY = badgePos.y;
+      e.currentTarget.setPointerCapture(e.pointerId);
+      return;
+    }
     if (shareMode !== "weekly") return;
     const preview = sharePreviewRef.current;
     const badge = shareBadgeRef.current;
@@ -2451,6 +2512,15 @@ export default function KcalsPage() {
   };
 
   const handleShareBadgePointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    if (shareMode === "group") {
+      if (badgeDragRef.current.pointerId !== e.pointerId) return;
+      const bounds = getGroupShareYBounds();
+      if (!bounds) return;
+      const dy = e.clientY - badgeDragRef.current.startY;
+      const nextY = Math.min(Math.max(bounds.minY, badgeDragRef.current.originY + dy), bounds.maxY);
+      setBadgePos((prev) => ({ ...prev, y: nextY }));
+      return;
+    }
     if (shareMode !== "weekly") return;
     if (!badgePointersRef.current.has(e.pointerId)) return;
     badgePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -2485,6 +2555,17 @@ export default function KcalsPage() {
   };
 
   const handleShareBadgePointerEnd = (e: PointerEvent<HTMLDivElement>) => {
+    if (shareMode === "group") {
+      if (badgeDragRef.current.pointerId === e.pointerId) {
+        badgeDragRef.current.pointerId = null;
+      }
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        // ignore
+      }
+      return;
+    }
     if (shareMode !== "weekly") return;
     if (badgePointersRef.current.has(e.pointerId)) {
       badgePointersRef.current.delete(e.pointerId);
@@ -2555,6 +2636,9 @@ export default function KcalsPage() {
         gradient.addColorStop(1, "#209E9C");
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, width, height);
+      }
+      if (shareMode === "group" && groupShareWrapper === "gradient") {
+        drawGroupShareOverlay(ctx, width, height, groupShareAlignment);
       }
 
       const baseW = badgeExport.offsetWidth;
@@ -2676,6 +2760,12 @@ export default function KcalsPage() {
     const last = getLastGrapheme(value);
     setAvatarEmoji(last);
     setAvatarMode("emoji");
+  };
+
+  const handleEditFoodEmojiChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\s+/g, "");
+    const last = getLastGrapheme(value);
+    setEditFoodEmoji(last);
   };
 
   const handleAvatarPhotoPick = () => {
@@ -3720,6 +3810,7 @@ export default function KcalsPage() {
   const handleEditFood = (food: FoodItem) => {
     setSwipedItemId(null);
     closeSwipe(food.id);
+    setEditFoodEmoji(food.emoji || "");
     if (food.perItem) {
       const xMatch = food.name.match(/^(.+?)\s+x(\d+(?:\.\d+)?)\s*$/);
       setEditFoodName(xMatch ? xMatch[1] : food.name);
@@ -3760,6 +3851,7 @@ export default function KcalsPage() {
     if (!editFoodModal) return;
     const name = editFoodName.trim();
     const amount = Number(editFoodGrams);
+    const emoji = editFoodEmojiDisplay;
     if (!name || isNaN(amount) || amount <= 0) return;
 
     let displayName: string;
@@ -3781,7 +3873,7 @@ export default function KcalsPage() {
 
     updateFoods((prev) =>
       prev.map((f) =>
-        f.id === editFoodModal.id ? { ...f, name: displayName, kcal } : f
+        f.id === editFoodModal.id ? { ...f, name: displayName, kcal, emoji } : f
       )
     );
     setEditFoodModal(null);
@@ -5195,7 +5287,15 @@ export default function KcalsPage() {
                   className="kcals-modal-camera-image"
                 />
               ) : (
-                <span style={{ fontSize: 60 }}>{editFoodModal?.emoji}</span>
+                <input
+                  className="kcals-modal-emoji-input"
+                  type="text"
+                  value={editFoodEmojiDisplay}
+                  onChange={handleEditFoodEmojiChange}
+                  onFocus={(e) => e.currentTarget.select()}
+                  inputMode="text"
+                  aria-label="Food emoji"
+                />
               )}
             </div>
             <div className="kcals-modal-fields">
@@ -5451,7 +5551,7 @@ export default function KcalsPage() {
                       onClick={handleOpenGroupShare}
                       aria-label="Share group"
                     >
-                      <img src="/kcals/assets/share.svg" alt="" />
+                      <ShareIcon />
                     </button>
                   </div>
                   <button
@@ -6174,7 +6274,7 @@ export default function KcalsPage() {
         )}
         {summaryTab === "summary" ? (
           <button className="kcals-summary-action" type="button" onClick={handleSummaryShare}>
-            <img src="/kcals/assets/share.svg" alt="" className="kcals-summary-action-icon" />
+            <ShareIcon className="kcals-summary-action-icon" />
             Share
           </button>
         ) : (
@@ -6191,7 +6291,7 @@ export default function KcalsPage() {
           {renderWeeklyCardContent()}
           {weeklyHasData && (
             <button className="kcals-weekly-share" type="button" onClick={() => handleOpenShare("weekly")}>
-              <img src="/kcals/assets/share.svg" alt="" className="kcals-weekly-share-icon" />
+              <ShareIcon className="kcals-weekly-share-icon" />
               {shareLabel}
             </button>
           )}
@@ -6235,6 +6335,9 @@ export default function KcalsPage() {
                 alt=""
                 onLoad={() => setShareImageLoaded(true)}
               />
+            )}
+            {shareMode === "group" && groupShareWrapper === "gradient" && (
+              <div className={`kcals-share-overlay kcals-share-overlay--${groupShareAlignment}`} />
             )}
             <div
               className={`kcals-share-badge${shareMode === "group" ? " is-fixed" : ""}`}

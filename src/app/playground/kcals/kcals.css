@@ -1071,6 +1071,23 @@
   object-fit: cover;
 }
 
+.kcals-modal-emoji-input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: none;
+  text-align: center;
+  font-size: 56px;
+  line-height: 1;
+  color: var(--black-100);
+  padding: 0;
+  font-family: inherit;
+}
+
+.kcals-modal-emoji-input:focus {
+  outline: none;
+}
+
 .kcals-modal-fields {
   display: flex;
   gap: 12px;
@@ -1833,7 +1850,7 @@ select.kcals-profile-settings-input::-ms-expand {
 .kcals-group-topbar-left {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
 }
 
 /* ===========================
@@ -3045,6 +3062,29 @@ select.kcals-profile-settings-input::-ms-expand {
   object-fit: cover;
 }
 
+.kcals-share-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.kcals-share-overlay--left {
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 80%);
+}
+
+.kcals-share-overlay--top {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 50%);
+}
+
+.kcals-share-overlay--right {
+  background: linear-gradient(270deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 80%);
+}
+
+.kcals-share-overlay--bottom,
+.kcals-share-overlay--center {
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 50%);
+}
+
 .kcals-share-badge {
   position: absolute;
   touch-action: none;
@@ -3053,7 +3093,7 @@ select.kcals-profile-settings-input::-ms-expand {
 }
 
 .kcals-share-badge.is-fixed {
-  touch-action: auto;
+  touch-action: none;
 }
 
 .kcals-share-topbar {
@@ -3073,7 +3113,7 @@ select.kcals-profile-settings-input::-ms-expand {
   transform: translateX(-50%);
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 20px;
 }
 
 .kcals-share-topicon-btn {
@@ -3084,6 +3124,7 @@ select.kcals-profile-settings-input::-ms-expand {
   padding: 0;
   cursor: pointer;
   opacity: 0.95;
+  transition: transform 0.18s ease-out;
 }
 
 .kcals-share-topicon-sprite {
@@ -3098,7 +3139,6 @@ select.kcals-profile-settings-input::-ms-expand {
 .kcals-share-topbtn {
   height: 40px;
   min-width: 40px;
-  padding: 0 14px;
   border-radius: 20px;
   border: none;
   background: #fff;
@@ -3108,6 +3148,7 @@ select.kcals-profile-settings-input::-ms-expand {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.18s ease-out;
 }
 
 .kcals-share-close-icon {
@@ -3117,7 +3158,7 @@ select.kcals-profile-settings-input::-ms-expand {
 }
 
 .kcals-share-topbtn--primary {
-  padding: 0 18px;
+  padding: 0 14px;
 }
 
 .kcals-share-bottom {
@@ -3136,19 +3177,31 @@ select.kcals-profile-settings-input::-ms-expand {
   padding: 0 16px;
   border-radius: 16px;
   border: none;
-  background: rgba(255, 255, 255, 0.7);
-  color: #0d2a2d;
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  transition: transform 0.18s ease-out;
 }
 
 .kcals-share-pill.is-active {
   background: #fff;
+  color: #0d2a2d;
+  font-weight:700;
+}
+
+.kcals-share-topbtn:active,
+.kcals-share-topicon-btn:active,
+.kcals-share-pill:active {
+  transform: scale(0.8);
+}
+
+.kcals-share-topbtn:disabled:active {
+  transform: none;
 }
 
 .kcals-group-share-card {
-  width: 320px;
   color: #fff;
   display: flex;
   flex-direction: column;
@@ -3158,11 +3211,11 @@ select.kcals-profile-settings-input::-ms-expand {
 .kcals-group-share-card--gradient {
   padding: 0;
   background: transparent;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.24);
+  text-shadow: 0 2px 32px rgba(0, 0, 0, 0.05);
 }
 
 .kcals-group-share-card--block {
-  background: rgba(8, 35, 76, 0.72);
+  background: rgba(0, 0, 0, 0.6);
   border-radius: 20px;
   padding: 16px;
 }
@@ -3185,60 +3238,72 @@ select.kcals-profile-settings-input::-ms-expand {
 }
 
 .kcals-group-share-name {
-  font-size: 34px;
-  line-height: 38px;
-  font-weight: 500;
-  letter-spacing: -0.5px;
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
 }
 
 .kcals-group-share-kcal {
-  font-size: 58px;
-  line-height: 58px;
+  font-size: 28px;
+  line-height: 32px;
   font-weight: 700;
-  letter-spacing: -1.8px;
+  letter-spacing: -0.2px;
 }
 
 .kcals-group-share-lines {
-  margin-top: 4px;
+  margin-top: 8px;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  align-items: flex-start;
   max-width: 100%;
 }
 
 .kcals-group-share-line {
   display: inline-flex;
+  width: fit-content;
   align-items: baseline;
-  gap: 4px;
-  font-size: 28px;
-  line-height: 34px;
+  gap: 6px;
+  font-size: 14px;
+  line-height: 20px;
   font-weight: 500;
   white-space: nowrap;
   max-width: 100%;
 }
 
+.kcals-group-share-card--right .kcals-group-share-lines {
+  align-items: flex-end;
+}
+
+.kcals-group-share-card--top .kcals-group-share-lines,
+.kcals-group-share-card--bottom .kcals-group-share-lines,
+.kcals-group-share-card--center .kcals-group-share-lines {
+  align-items: center;
+}
+
 .kcals-group-share-line-emoji {
-  font-size: 24px;
+  font-size: 16px;
   line-height: 1;
 }
 
 .kcals-group-share-card--block .kcals-group-share-name {
-  font-size: 34px;
-  line-height: 38px;
+  font-size: 16px;
+  line-height: 20px;
 }
 
 .kcals-group-share-card--block .kcals-group-share-kcal {
-  font-size: 58px;
-  line-height: 58px;
-}
-
-.kcals-group-share-card--block .kcals-group-share-line {
-  font-size: 20px;
+  font-size: 22px;
   line-height: 24px;
 }
 
+.kcals-group-share-card--block .kcals-group-share-line {
+  font-size: 12px;
+  line-height: 16px;
+}
+
 .kcals-group-share-card--block .kcals-group-share-line-emoji {
-  font-size: 18px;
+  font-size: 14px;
 }
 
 .kcals-share-error {
