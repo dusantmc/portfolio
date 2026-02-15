@@ -2613,6 +2613,27 @@ export default function KcalsPage() {
       const badge = shareBadgeRef.current;
       const badgeExport = shareBadgeExportRef.current;
       if (!badge || !badgeExport) throw new Error("Badge missing.");
+
+      // Pre-convert all images in the export element to data URLs for html-to-image
+      const exportImages = badgeExport.querySelectorAll("img");
+      await Promise.all(
+        Array.from(exportImages).map(async (img) => {
+          if (!img.src || isDataUrl(img.src)) return;
+          try {
+            const resp = await fetch(img.src);
+            const blob = await resp.blob();
+            img.src = await blobToDataUrl(blob);
+          } catch {
+            img.removeAttribute("src");
+          }
+        })
+      );
+      await Promise.all(
+        Array.from(exportImages).map((img) =>
+          img.src ? img.decode().catch(() => {}) : Promise.resolve()
+        )
+      );
+
       const previewRect = preview.getBoundingClientRect();
       const scale = 3;
       const width = Math.max(1, Math.round(previewRect.width * scale));
