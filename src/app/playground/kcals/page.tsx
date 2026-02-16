@@ -2210,8 +2210,12 @@ export default function KcalsPage() {
         }
       }
     }
-    if (!latest) return;
     const stored = Number(localStorage.getItem(LAST_MEAL_TS_KEY) || "0");
+    if (!latest) {
+      if (foods.length === 0 || (Number.isFinite(stored) && stored > 0)) return;
+      // Legacy/older entries may not have addedAt; seed once so timer can render.
+      latest = Date.now();
+    }
     if (!Number.isFinite(stored) || latest > stored) {
       localStorage.setItem(LAST_MEAL_TS_KEY, String(latest));
     }
@@ -4788,7 +4792,7 @@ export default function KcalsPage() {
 		                <div className="kcals-empty-state-emoji">{emptyStateVariant.emoji}</div>
 		                <div className="kcals-empty-state-title">{emptyStateVariant.title}</div>
 		                <div className="kcals-empty-state-text">
-		                  {timerEnabled && lastMealLabel ? lastMealLabel : emptyStateVariant.text}
+		                  {timerEnabled ? (lastMealLabel ?? "\u23F1\uFE0F Last meal: --") : emptyStateVariant.text}
 		                </div>
 		              </div>
 	              <div className="kcals-empty-chip-list kcals-pills">
