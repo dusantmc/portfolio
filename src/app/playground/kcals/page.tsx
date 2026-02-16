@@ -377,6 +377,7 @@ const AUTO_SYNC_DATE_KEY = "kcals_auto_sync_date";
 const AVATAR_MODE_KEY = "kcals_avatar_mode";
 const AVATAR_EMOJI_KEY = "kcals_avatar_emoji";
 const AVATAR_PHOTO_KEY = "kcals_avatar_photo";
+const LAST_MEAL_TS_KEY = "kcals_last_meal_ts";
 const IMAGE_BUCKET = "kcals-images";
 const IMAGE_FOLDER = "custom-foods";
 const AVATAR_FOLDER = "avatars";
@@ -2198,6 +2199,24 @@ export default function KcalsPage() {
     return () => clearInterval(id);
   }, [timerEnabled]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let latest = 0;
+    for (const f of foods) {
+      if (f.addedAt && f.addedAt > latest) latest = f.addedAt;
+      if (f.items) {
+        for (const c of f.items) {
+          if (c.addedAt && c.addedAt > latest) latest = c.addedAt;
+        }
+      }
+    }
+    if (!latest) return;
+    const stored = Number(localStorage.getItem(LAST_MEAL_TS_KEY) || "0");
+    if (!Number.isFinite(stored) || latest > stored) {
+      localStorage.setItem(LAST_MEAL_TS_KEY, String(latest));
+    }
+  }, [foods]);
+
   const lastMealLabel = useMemo(() => {
     void timerTick; // subscribe to ticks
     let latest = 0;
@@ -2209,16 +2228,21 @@ export default function KcalsPage() {
         }
       }
     }
+    if (typeof window !== "undefined") {
+      const stored = Number(localStorage.getItem(LAST_MEAL_TS_KEY) || "0");
+      if (Number.isFinite(stored)) latest = Math.max(latest, stored);
+    }
     if (!latest) return null;
     const diffMs = Date.now() - latest;
     if (diffMs < 0) return null;
     const totalMin = Math.floor(diffMs / 60_000);
-    if (totalMin < 2) return "\u23F1\uFE0F A moment ago";
+    if (totalMin < 1) return "\u23F1\uFE0F Last meal: just now";
     const hours = Math.floor(totalMin / 60);
     const mins = totalMin % 60;
-    if (hours > 72) return "\uD83D\uDE35 It\u2019s been a few days";
-    if (hours === 0) return `\u23F1\uFE0F ${mins}m ago`;
-    return `\u23F1\uFE0F ${hours}h ${mins}m ago`;
+    if (hours === 0) return `\u23F1\uFE0F Last meal: ${mins}m ago`;
+    if (hours < 24) return `\u23F1\uFE0F Last meal: ${hours}h ${mins}m ago`;
+    const days = Math.floor(hours / 24);
+    return `\u23F1\uFE0F Last meal: ${days}d ago`;
   }, [foods, timerTick]);
 
   const handleDayStartHourChange = (value: number) => {
