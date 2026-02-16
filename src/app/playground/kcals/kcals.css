@@ -2669,6 +2669,10 @@ select.kcals-profile-settings-input::-ms-expand {
   justify-content: space-between;
 }
 
+.kcals-summary-controls.is-summary {
+  justify-content: flex-end;
+}
+
 .kcals-summary-controls-left {
   display: flex;
   align-items: center;
@@ -2801,6 +2805,7 @@ select.kcals-profile-settings-input::-ms-expand {
 /* Food list */
 .kcals-summary-list {
   margin-top: 12px;
+  height: min(56vh, 420px);
   max-height: min(56vh, 420px);
   overflow-y: auto;
   display: flex;
@@ -2816,11 +2821,15 @@ select.kcals-profile-settings-input::-ms-expand {
   align-items: center;
   justify-content: space-between;
   background: var(--white);
-  cursor: pointer;
+  cursor: default;
   -webkit-tap-highlight-color: transparent;
 }
 
-.kcals-summary-row:active {
+.kcals-summary-row.is-selectable {
+  cursor: pointer;
+}
+
+.kcals-summary-row.is-selectable:active {
   background: rgba(0, 0, 0, 0.02);
 }
 
@@ -2837,6 +2846,15 @@ select.kcals-profile-settings-input::-ms-expand {
   align-items: center;
   gap: 8px;
   min-width: 0;
+}
+
+.kcals-summary-rank {
+  width: 22px;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--black-50);
+  flex-shrink: 0;
 }
 
 .kcals-summary-emoji {
