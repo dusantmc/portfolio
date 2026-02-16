@@ -1327,7 +1327,7 @@
   border: none;
   background: none;
   text-align: center;
-  font-size: 32px;
+  font-size: 56px;
   font-weight: 800;
   line-height: 1;
   color: var(--black-100);
@@ -1371,7 +1371,7 @@
   height: 32px;
   padding: 0;
   border-radius: 999px;
-  margin: 4px 0;
+  margin: 12px 0 4px;
   background: rgba(145, 144, 142, 0.1);
   display: inline-flex;
   align-items: center;
@@ -1440,6 +1440,7 @@
 .kcals-profile-settings-row {
   width: 100%;
   display: flex;
+  height: 40px;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -2736,7 +2737,7 @@ select.kcals-profile-settings-input::-ms-expand {
 .kcals-summary-controls-label {
   font-size: 14px;
   font-weight: 600;
-  color: var(--black-70);
+  color: var(--black-50);
 }
 
 /* Dropdown selector */
@@ -2752,7 +2753,7 @@ select.kcals-profile-settings-input::-ms-expand {
   background: none;
   font-size: 14px;
   font-weight: 600;
-  color: var(--black-70);
+  color: var(--black-50);
   cursor: pointer;
   font-family: inherit;
   padding: 4px 0;
@@ -2804,13 +2805,10 @@ select.kcals-profile-settings-input::-ms-expand {
 
 /* Food list */
 .kcals-summary-list {
-  margin-top: 12px;
-  height: min(56vh, 420px);
   max-height: min(56vh, 420px);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
   padding-right: 2px;
 }
 
@@ -2850,7 +2848,7 @@ select.kcals-profile-settings-input::-ms-expand {
 
 .kcals-summary-rank {
   width: 22px;
-  text-align: right;
+  text-align: center;
   font-size: 14px;
   font-weight: 600;
   color: var(--black-50);

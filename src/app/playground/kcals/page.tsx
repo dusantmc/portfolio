@@ -6373,9 +6373,11 @@ export default function KcalsPage() {
             </button>
           </div>
         </div>
-        <div className={`kcals-summary-controls${summaryTab === "summary" ? " is-summary" : ""}`}>
+        <div className="kcals-summary-controls">
           <div className="kcals-summary-controls-left">
-            {summaryTab === "grocery" && (
+            {summaryTab === "summary" ? (
+              <span className="kcals-summary-controls-label">Top 10</span>
+            ) : (
               <div className="kcals-summary-select-wrap">
                 <button
                   className="kcals-summary-select-btn"
