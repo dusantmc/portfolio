@@ -879,7 +879,7 @@ export default function KcalsPage() {
   const [editFoodName, setEditFoodName] = useState("");
   const [editFoodEmoji, setEditFoodEmoji] = useState("");
   const [editFoodGrams, setEditFoodGrams] = useState("");
-  const [editFoodUnit, setEditFoodUnit] = useState<"g" | "count">("g");
+  const [editFoodUnit, setEditFoodUnit] = useState<"g" | "count" | "kcal">("g");
   const [editFoodSize, setEditFoodSize] = useState("medium");
   const [editFoodView, setEditFoodView] = useState<"form" | "portion">("form");
 
@@ -3929,7 +3929,13 @@ export default function KcalsPage() {
     setSwipedItemId(null);
     closeSwipe(food.id);
     setEditFoodEmoji(food.emoji || "");
-    if (food.perItem) {
+    const isDirectKcalEntry = food.source === "manual" && !food.perItem && food.kcalPer100g == null && food.kcal != null;
+    if (isDirectKcalEntry) {
+      setEditFoodName(food.name);
+      setEditFoodGrams(Math.round(food.kcal ?? 0).toString());
+      setEditFoodUnit("kcal");
+      setEditFoodSize("medium");
+    } else if (food.perItem) {
       const xMatch = food.name.match(/^(.+?)\s+x(\d+(?:\.\d+)?)\s*$/);
       setEditFoodName(xMatch ? xMatch[1] : food.name);
       setEditFoodGrams(xMatch ? xMatch[2] : "1");
@@ -3978,6 +3984,9 @@ export default function KcalsPage() {
       displayName = `${name} x${amount}`;
       const kcalPerItem = editFoodModal.kcalPer100g;
       kcal = kcalPerItem != null ? Math.round(kcalPerItem * amount) : editFoodModal.kcal;
+    } else if (editFoodUnit === "kcal") {
+      displayName = name;
+      kcal = Math.round(amount);
     } else if (editFoodUnit === "count") {
       displayName = `${name} ${amount} ${editFoodSize}`;
       const grams = Math.round(amount * (editFoodModal.gramsPerUnit ?? 100));
@@ -4286,7 +4295,13 @@ export default function KcalsPage() {
   const handleEditGroupItem = (item: FoodItem) => {
     setGroupEditItem(item);
     setEditFoodEmoji(item.emoji || "");
-    if (item.perItem) {
+    const isDirectKcalEntry = item.source === "manual" && !item.perItem && item.kcalPer100g == null && item.kcal != null;
+    if (isDirectKcalEntry) {
+      setEditFoodName(item.name);
+      setEditFoodGrams(Math.round(item.kcal ?? 0).toString());
+      setEditFoodUnit("kcal");
+      setEditFoodSize("medium");
+    } else if (item.perItem) {
       const xMatch = item.name.match(/^(.+?)\s+x(\d+(?:\.\d+)?)\s*$/);
       setEditFoodName(xMatch ? xMatch[1] : item.name);
       setEditFoodGrams(xMatch ? xMatch[2] : "1");
@@ -4315,6 +4330,9 @@ export default function KcalsPage() {
       displayName = `${name} x${amount}`;
       const kcalPerItem = groupEditItem.kcalPer100g;
       kcal = kcalPerItem != null ? Math.round(kcalPerItem * amount) : groupEditItem.kcal;
+    } else if (editFoodUnit === "kcal") {
+      displayName = name;
+      kcal = Math.round(amount);
     } else if (editFoodUnit === "count") {
       displayName = `${name} ${amount} ${editFoodSize}`;
       const grams = Math.round(amount * (groupEditItem.gramsPerUnit ?? 100));
@@ -5498,10 +5516,10 @@ export default function KcalsPage() {
                     type="number"
                     value={editFoodGrams}
                     onChange={(e) => setEditFoodGrams(e.target.value)}
-                    placeholder={editFoodUnit === "count" ? "1" : "100"}
+                    placeholder={editFoodUnit === "count" ? "1" : editFoodUnit === "kcal" ? "150" : "100"}
                     inputMode="numeric"
                   />
-                  <span className="kcals-modal-kcal-suffix">{editFoodModal?.perItem ? "item" : editFoodUnit === "count" ? editFoodSize : "g"}</span>
+                  <span className="kcals-modal-kcal-suffix">{editFoodModal?.perItem ? "item" : editFoodUnit === "count" ? editFoodSize : editFoodUnit === "kcal" ? "kcal" : "g"}</span>
                 </div>
               </div>
             </div>
@@ -5863,11 +5881,11 @@ export default function KcalsPage() {
                     type="number"
                     value={editFoodGrams}
                     onChange={(e) => setEditFoodGrams(e.target.value)}
-                    placeholder={editFoodUnit === "count" ? "1" : "100"}
+                    placeholder={editFoodUnit === "count" ? "1" : editFoodUnit === "kcal" ? "150" : "100"}
                     inputMode="numeric"
                   />
                   <span className="kcals-modal-kcal-suffix">
-                    {groupEditItem?.perItem ? "item" : editFoodUnit === "count" ? editFoodSize : "g"}
+                    {groupEditItem?.perItem ? "item" : editFoodUnit === "count" ? editFoodSize : editFoodUnit === "kcal" ? "kcal" : "g"}
                   </span>
                 </div>
               </div>
