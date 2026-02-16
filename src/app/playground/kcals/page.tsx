@@ -365,6 +365,18 @@ function mergeDailyLogs(
   return { ...remote, ...local };
 }
 
+function getLatestFoodAddedAt(items: FoodItem[]): number {
+  let latest = 0;
+  for (const item of items) {
+    if (item.addedAt && item.addedAt > latest) latest = item.addedAt;
+    if (item.items?.length) {
+      const childLatest = getLatestFoodAddedAt(item.items);
+      if (childLatest > latest) latest = childLatest;
+    }
+  }
+  return latest;
+}
+
 const SWIPE_THRESHOLD = 48;
 const LONG_PRESS_MS = 1000;
 const MODAL_ANIM_MS = 250;
@@ -1677,6 +1689,15 @@ export default function KcalsPage() {
     setFoods((prev) => {
       const next = updater(prev);
       saveFoodList(next);
+      if (typeof window !== "undefined") {
+        const latest = getLatestFoodAddedAt(next);
+        if (latest > 0) {
+          const stored = Number(localStorage.getItem(LAST_MEAL_TS_KEY) || "0");
+          if (!Number.isFinite(stored) || latest > stored) {
+            localStorage.setItem(LAST_MEAL_TS_KEY, String(latest));
+          }
+        }
+      }
       return next;
     });
   }, []);
@@ -2201,21 +2222,9 @@ export default function KcalsPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    let latest = 0;
-    for (const f of foods) {
-      if (f.addedAt && f.addedAt > latest) latest = f.addedAt;
-      if (f.items) {
-        for (const c of f.items) {
-          if (c.addedAt && c.addedAt > latest) latest = c.addedAt;
-        }
-      }
-    }
+    const latest = getLatestFoodAddedAt(foods);
+    if (!latest) return;
     const stored = Number(localStorage.getItem(LAST_MEAL_TS_KEY) || "0");
-    if (!latest) {
-      if (foods.length === 0 || (Number.isFinite(stored) && stored > 0)) return;
-      // Legacy/older entries may not have addedAt; seed once so timer can render.
-      latest = Date.now();
-    }
     if (!Number.isFinite(stored) || latest > stored) {
       localStorage.setItem(LAST_MEAL_TS_KEY, String(latest));
     }
@@ -2223,26 +2232,10 @@ export default function KcalsPage() {
 
   const lastMealLabel = useMemo(() => {
     void timerTick; // subscribe to ticks
-    let latest = 0;
-    for (const f of foods) {
-      if (f.addedAt && f.addedAt > latest) latest = f.addedAt;
-      if (f.items) {
-        for (const c of f.items) {
-          if (c.addedAt && c.addedAt > latest) latest = c.addedAt;
-        }
-      }
-    }
+    let latest = getLatestFoodAddedAt(foods);
     if (typeof window !== "undefined") {
       const stored = Number(localStorage.getItem(LAST_MEAL_TS_KEY) || "0");
       if (Number.isFinite(stored)) latest = Math.max(latest, stored);
-      if (!latest) {
-        const dailyLog = normalizeDailyLog(loadDailyLogRaw());
-        for (const [dateKey, entry] of Object.entries(dailyLog)) {
-          if (!entry.logged && !entry.foods) continue;
-          const ts = new Date(`${dateKey}T12:00:00`).getTime();
-          if (Number.isFinite(ts) && ts > latest) latest = ts;
-        }
-      }
     }
     if (!latest) return null;
     const diffMs = Date.now() - latest;
@@ -4800,7 +4793,7 @@ export default function KcalsPage() {
 		                <div className="kcals-empty-state-emoji">{emptyStateVariant.emoji}</div>
 		                <div className="kcals-empty-state-title">{emptyStateVariant.title}</div>
 		                <div className="kcals-empty-state-text">
-		                  {timerEnabled ? (lastMealLabel ?? "\u23F1\uFE0F Last meal: --") : emptyStateVariant.text}
+		                  {timerEnabled && lastMealLabel ? lastMealLabel : emptyStateVariant.text}
 		                </div>
 		              </div>
 	              <div className="kcals-empty-chip-list kcals-pills">
