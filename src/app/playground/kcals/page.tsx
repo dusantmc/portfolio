@@ -2235,6 +2235,14 @@ export default function KcalsPage() {
     if (typeof window !== "undefined") {
       const stored = Number(localStorage.getItem(LAST_MEAL_TS_KEY) || "0");
       if (Number.isFinite(stored)) latest = Math.max(latest, stored);
+      if (!latest) {
+        const dailyLog = normalizeDailyLog(loadDailyLogRaw());
+        for (const [dateKey, entry] of Object.entries(dailyLog)) {
+          if (!entry.logged && !entry.foods) continue;
+          const ts = new Date(`${dateKey}T12:00:00`).getTime();
+          if (Number.isFinite(ts) && ts > latest) latest = ts;
+        }
+      }
     }
     if (!latest) return null;
     const diffMs = Date.now() - latest;

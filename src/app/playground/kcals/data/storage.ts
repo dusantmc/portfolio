@@ -68,6 +68,7 @@ const FOOD_LIST_KEY = "kcals-food-list";
 const CUSTOM_KEY = "kcals-custom-foods";
 const RECENT_KEY = "kcals-recent-foods";
 const SAVED_GROUPS_KEY = "kcals-saved-groups";
+const LAST_MEAL_TS_KEY = "kcals_last_meal_ts";
 
 const IMAGE_DB = "kcals-image-db";
 const IMAGE_STORE = "custom-food-images";
@@ -93,12 +94,39 @@ function getImageDb(): Promise<IDBDatabase | null> {
 
 const FOOD_DATE_KEY = "kcals-food-date";
 
+function getLatestAddedAt(items: FoodItem[]): number {
+  let latest = 0;
+  for (const item of items) {
+    if (item.addedAt && item.addedAt > latest) latest = item.addedAt;
+    if (item.items?.length) {
+      const childLatest = getLatestAddedAt(item.items);
+      if (childLatest > latest) latest = childLatest;
+    }
+  }
+  return latest;
+}
+
 export function loadFoodList(): FoodItem[] {
   if (typeof window === "undefined") return [];
   try {
     const today = new Date().toISOString().slice(0, 10);
     const storedDate = localStorage.getItem(FOOD_DATE_KEY);
     if (storedDate !== today) {
+      const previous = localStorage.getItem(FOOD_LIST_KEY);
+      if (previous) {
+        try {
+          const parsed = JSON.parse(previous) as FoodItem[];
+          const latest = Array.isArray(parsed) ? getLatestAddedAt(parsed) : 0;
+          if (latest > 0) {
+            const stored = Number(localStorage.getItem(LAST_MEAL_TS_KEY) || "0");
+            if (!Number.isFinite(stored) || latest > stored) {
+              localStorage.setItem(LAST_MEAL_TS_KEY, String(latest));
+            }
+          }
+        } catch {
+          // ignore malformed previous list
+        }
+      }
       // New day — clear food list
       localStorage.removeItem(FOOD_LIST_KEY);
       localStorage.setItem(FOOD_DATE_KEY, today);
