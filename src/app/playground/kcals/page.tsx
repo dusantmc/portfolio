@@ -1970,6 +1970,10 @@ export default function KcalsPage() {
   const weeklyHasData = weeklyVisibleEntries.length > 0;
   const weeklyIsOnTrack = weeklyBurn >= 0;
   const weeklyAbsTotal = Math.abs(weeklyBurn);
+  const dynamicTotalKcal = dynamicKcalLatest && dynamicKcalLatest.active != null && dynamicKcalLatest.resting != null
+    ? dynamicKcalLatest.active + dynamicKcalLatest.resting
+    : null;
+  const dynamicSurplusKcal = dynamicTotalKcal != null ? dynamicTotalKcal - totalKcal : null;
   const weeklyChipHasData = weeklyVisibleEntries.length > 0;
   const weeklyChipIcon = weeklyChipHasData
     ? (weeklyIsOnTrack ? "\u{1F525}" : "\u{1F437}")
@@ -6644,6 +6648,18 @@ export default function KcalsPage() {
             <span className="kcals-secret-label">Resting</span>
             <span className="kcals-secret-value">
               {dynamicKcalLoading ? "..." : dynamicKcalLatest?.resting != null ? `${dynamicKcalLatest.resting} kcal` : "—"}
+            </span>
+          </div>
+          <div className="kcals-secret-row">
+            <span className="kcals-secret-label">Total</span>
+            <span className="kcals-secret-value">
+              {dynamicKcalLoading ? "..." : dynamicTotalKcal != null ? `${dynamicTotalKcal.toLocaleString()} kcal` : "—"}
+            </span>
+          </div>
+          <div className="kcals-secret-row">
+            <span className="kcals-secret-label">Surplus</span>
+            <span className="kcals-secret-value">
+              {dynamicKcalLoading ? "..." : dynamicSurplusKcal != null ? `${dynamicSurplusKcal.toLocaleString()} kcal` : "—"}
             </span>
           </div>
         </div>
