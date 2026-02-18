@@ -47,6 +47,7 @@ import textModesJson from "./data/text-modes.json";
 const DEFAULT_CALORIE_GOAL = 1600;
 const LAST_DAY_KEY = "kcals_last_day_key";
 const APP_ATTITUDE_KEY = "kcals_app_attitude";
+const HERO_SECRET_LONG_PRESS_MS = 650;
 
 type AttitudeModeId = "standard" | "karen";
 
@@ -812,6 +813,19 @@ export default function KcalsPage() {
   const speechRecognitionRef = useRef<any | null>(null);
   const syncToSupabaseRef = useRef<((reason?: "manual" | "auto") => Promise<boolean>) | null>(null);
   const blurTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const heroLongPressRef = useRef<{
+    timer: ReturnType<typeof setTimeout> | null;
+    pointerId: number | null;
+    startX: number;
+    startY: number;
+    suppressClick: boolean;
+  }>({
+    timer: null,
+    pointerId: null,
+    startX: 0,
+    startY: 0,
+    suppressClick: false,
+  });
   const contentRef = useRef<HTMLDivElement | null>(null);
   const pillLongPressRef = useRef<{
     timer: ReturnType<typeof setTimeout> | null;
@@ -958,6 +972,10 @@ export default function KcalsPage() {
     return () => {
       Object.values(imageUrlsRef.current).forEach((url) => URL.revokeObjectURL(url));
       const recognition = speechRecognitionRef.current;
+      if (heroLongPressRef.current.timer) {
+        clearTimeout(heroLongPressRef.current.timer);
+        heroLongPressRef.current.timer = null;
+      }
       if (recognition) {
         try {
           recognition.stop();
@@ -1925,6 +1943,10 @@ export default function KcalsPage() {
   const [weeklyBurn, setWeeklyBurn] = useState(0);
   const [showWeeklyModal, setShowWeeklyModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showDynamicKcalModal, setShowDynamicKcalModal] = useState(false);
+  const [dynamicKcalLoading, setDynamicKcalLoading] = useState(false);
+  const [dynamicKcalError, setDynamicKcalError] = useState<string | null>(null);
+  const [dynamicKcalLatest, setDynamicKcalLatest] = useState<{ active: number | null; resting: number | null; updatedAt: string | null } | null>(null);
   const [weeklyBreakdown, setWeeklyBreakdown] = useState<WeeklyEntry[]>([]);
   const [lastCustomMatch, setLastCustomMatch] = useState<CustomFood | null>(null);
   const [lastRecentMatch, setLastRecentMatch] = useState<RecentFood | null>(null);
@@ -2883,6 +2905,97 @@ export default function KcalsPage() {
       // ignore
     }
   };
+
+  const fetchDynamicKcalLatest = useCallback(async () => {
+    if (!supabase) {
+      setDynamicKcalError("Supabase is not configured.");
+      setDynamicKcalLatest(null);
+      return;
+    }
+    setDynamicKcalLoading(true);
+    setDynamicKcalError(null);
+    const { data, error } = await supabase
+      .from("dynamic_kcal_latest")
+      .select("*")
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      setDynamicKcalLatest(null);
+      setDynamicKcalError(error.message);
+      setDynamicKcalLoading(false);
+      return;
+    }
+    const row = (data ?? null) as Record<string, unknown> | null;
+    const activeRaw = Number(row?.active_kcal);
+    const restingRaw = Number(row?.resting_kcal);
+    const updatedAt = (() => {
+      const value = row?.updated_at ?? row?.created_at ?? row?.timestamp ?? null;
+      return typeof value === "string" && value.length > 0 ? value : null;
+    })();
+    setDynamicKcalLatest({
+      active: Number.isFinite(activeRaw) ? Math.round(activeRaw) : null,
+      resting: Number.isFinite(restingRaw) ? Math.round(restingRaw) : null,
+      updatedAt,
+    });
+    setDynamicKcalLoading(false);
+  }, []);
+
+  const openDynamicKcalModal = useCallback(() => {
+    setShowDynamicKcalModal(true);
+    void fetchDynamicKcalLatest();
+  }, [fetchDynamicKcalLatest]);
+
+  const cancelHeroLongPress = useCallback(() => {
+    const ref = heroLongPressRef.current;
+    if (ref.timer) {
+      clearTimeout(ref.timer);
+      ref.timer = null;
+    }
+    ref.pointerId = null;
+  }, []);
+
+  const handleHeroPointerDown = useCallback((e: PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    const ref = heroLongPressRef.current;
+    cancelHeroLongPress();
+    ref.pointerId = e.pointerId;
+    ref.startX = e.clientX;
+    ref.startY = e.clientY;
+    ref.timer = setTimeout(() => {
+      ref.timer = null;
+      ref.suppressClick = true;
+      openDynamicKcalModal();
+    }, HERO_SECRET_LONG_PRESS_MS);
+  }, [cancelHeroLongPress, openDynamicKcalModal]);
+
+  const handleHeroPointerMove = useCallback((e: PointerEvent<HTMLDivElement>) => {
+    const ref = heroLongPressRef.current;
+    if (ref.pointerId !== e.pointerId) return;
+    if (Math.abs(e.clientX - ref.startX) > 8 || Math.abs(e.clientY - ref.startY) > 8) {
+      cancelHeroLongPress();
+    }
+  }, [cancelHeroLongPress]);
+
+  const handleHeroPointerEnd = useCallback((e: PointerEvent<HTMLDivElement>) => {
+    const ref = heroLongPressRef.current;
+    if (ref.pointerId !== e.pointerId) return;
+    cancelHeroLongPress();
+  }, [cancelHeroLongPress]);
+
+  const handleHeroPress = useCallback(() => {
+    const ref = heroLongPressRef.current;
+    if (ref.suppressClick) {
+      ref.suppressClick = false;
+      return;
+    }
+    if (user) {
+      setShowAuthModal(false);
+      setShowProfileModal(true);
+      return;
+    }
+    setShowProfileModal(false);
+    setShowAuthModal(true);
+  }, [user]);
 
   const handleOpenAccountOrAuthModal = () => {
     if (user) {
@@ -4806,13 +4919,17 @@ export default function KcalsPage() {
           {/* Calorie Display */}
 		          <div
 		            className={`kcals-calorie-display${isCompact ? " is-hidden" : ""}`}
-		            onClick={handleOpenAccountOrAuthModal}
+		            onClick={handleHeroPress}
+                onPointerDown={handleHeroPointerDown}
+                onPointerMove={handleHeroPointerMove}
+                onPointerUp={handleHeroPointerEnd}
+                onPointerCancel={handleHeroPointerEnd}
 		            role="button"
 		            tabIndex={0}
 		            onKeyDown={(e) => {
 		              if (e.key === "Enter" || e.key === " ") {
 		                e.preventDefault();
-		                handleOpenAccountOrAuthModal();
+		                handleHeroPress();
 		              }
 		            }}
 		          >
@@ -6506,6 +6623,34 @@ export default function KcalsPage() {
             Copy grocery list
           </button>
         )}
+      </BottomSheet>
+
+      {/* Secret Dynamic Kcal Modal */}
+      <BottomSheet
+        open={showDynamicKcalModal}
+        onClose={() => setShowDynamicKcalModal(false)}
+        variant="center"
+        className="kcals-secret-modal"
+      >
+        <div className="kcals-secret-title">Dynamic kcal</div>
+        <div className="kcals-secret-list">
+          <div className="kcals-secret-row">
+            <span className="kcals-secret-label">Active</span>
+            <span className="kcals-secret-value">
+              {dynamicKcalLoading ? "..." : dynamicKcalLatest?.active != null ? `${dynamicKcalLatest.active} kcal` : "—"}
+            </span>
+          </div>
+          <div className="kcals-secret-row">
+            <span className="kcals-secret-label">Resting</span>
+            <span className="kcals-secret-value">
+              {dynamicKcalLoading ? "..." : dynamicKcalLatest?.resting != null ? `${dynamicKcalLatest.resting} kcal` : "—"}
+            </span>
+          </div>
+        </div>
+        {!dynamicKcalLoading && dynamicKcalLatest?.updatedAt && (
+          <div className="kcals-secret-stamp">Updated {formatRelativeTime(dynamicKcalLatest.updatedAt)}</div>
+        )}
+        {dynamicKcalError && <div className="kcals-secret-error">{dynamicKcalError}</div>}
       </BottomSheet>
 
       {/* Weekly Breakdown Modal */}

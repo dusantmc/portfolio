@@ -2926,6 +2926,66 @@ select.kcals-profile-settings-input::-ms-expand {
 }
 
 /* ===========================
+   Secret Dynamic Kcal Modal
+   =========================== */
+
+.kcals-secret-modal {
+  width: calc(100% - 64px);
+  max-width: 300px;
+  background: var(--white);
+  border-radius: 24px;
+  padding: 20px 18px 16px;
+  animation: kcals-drop-in 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.kcals-secret-title {
+  text-align: center;
+  font-size: 18px;
+  line-height: 22px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.kcals-secret-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kcals-secret-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 15px;
+}
+
+.kcals-secret-label {
+  color: var(--black-70);
+  font-weight: 500;
+}
+
+.kcals-secret-value {
+  color: var(--black-100);
+  font-weight: 700;
+}
+
+.kcals-secret-stamp {
+  margin-top: 10px;
+  text-align: center;
+  color: var(--black-50);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.kcals-secret-error {
+  margin-top: 10px;
+  text-align: center;
+  color: var(--red);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+/* ===========================
    Weekly Breakdown Modal
    =========================== */
 
