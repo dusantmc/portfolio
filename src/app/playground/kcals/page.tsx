@@ -2045,7 +2045,7 @@ export default function KcalsPage() {
   const dynamicWeeklyKg = Math.abs(dynamicWeeklySurplusSum) / 7700;
   const dynamicWeeklyKgText = dynamicWeeklyKg.toFixed(2);
   const dynamicSecretTitle = dynamicWeeklySurplusSum > 0
-    ? `Loosing ${dynamicWeeklyKgText}kg`
+    ? `Losing ${dynamicWeeklyKgText}kg`
     : dynamicWeeklySurplusSum < 0
       ? `Gaining ${dynamicWeeklyKgText}kg`
       : "Maintaining 0.0kg";
