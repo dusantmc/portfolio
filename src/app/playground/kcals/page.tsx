@@ -48,6 +48,7 @@ const DEFAULT_CALORIE_GOAL = 1600;
 const LAST_DAY_KEY = "kcals_last_day_key";
 const APP_ATTITUDE_KEY = "kcals_app_attitude";
 const HERO_SECRET_LONG_PRESS_MS = 650;
+const DYNAMIC_SURPLUS_HISTORY_KEY = "kcals_dynamic_surplus_history";
 
 type AttitudeModeId = "standard" | "karen";
 
@@ -89,6 +90,41 @@ function formatRelativeTime(iso: string | null): string {
   if (diffMs < hour) return `${Math.floor(diffMs / minute)}m ago`;
   if (diffMs < day) return `${Math.floor(diffMs / hour)}h ago`;
   return `${Math.floor(diffMs / day)}d ago`;
+}
+
+function loadDynamicSurplusHistory(): Record<string, DynamicSurplusSnapshot> {
+  if (typeof window === "undefined") return {};
+  try {
+    const parsed = JSON.parse(localStorage.getItem(DYNAMIC_SURPLUS_HISTORY_KEY) || "{}");
+    if (!parsed || typeof parsed !== "object") return {};
+    const entries = Object.entries(parsed as Record<string, unknown>);
+    const normalized: Record<string, DynamicSurplusSnapshot> = {};
+    for (const [key, value] of entries) {
+      if (!value || typeof value !== "object") continue;
+      const item = value as Partial<DynamicSurplusSnapshot>;
+      const surplus = Number(item.surplus);
+      const active = Number(item.active);
+      const resting = Number(item.resting);
+      const caloriesIn = Number(item.caloriesIn);
+      if (!Number.isFinite(surplus) || !Number.isFinite(active) || !Number.isFinite(resting) || !Number.isFinite(caloriesIn)) continue;
+      normalized[key] = {
+        dateKey: typeof item.dateKey === "string" && item.dateKey ? item.dateKey : key,
+        surplus: Math.round(surplus),
+        active: Math.round(active),
+        resting: Math.round(resting),
+        caloriesIn: Math.round(caloriesIn),
+        updatedAt: typeof item.updatedAt === "string" && item.updatedAt ? item.updatedAt : new Date().toISOString(),
+      };
+    }
+    return normalized;
+  } catch {
+    return {};
+  }
+}
+
+function saveDynamicSurplusHistory(history: Record<string, DynamicSurplusSnapshot>): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(DYNAMIC_SURPLUS_HISTORY_KEY, JSON.stringify(history));
 }
 
 function formatSpeechQuantity(value: number): string {
@@ -473,6 +509,15 @@ interface GroupSharePayload {
   name: string;
   kcal: number;
   lines: GroupShareLine[];
+}
+
+interface DynamicSurplusSnapshot {
+  dateKey: string;
+  surplus: number;
+  active: number;
+  resting: number;
+  caloriesIn: number;
+  updatedAt: string;
 }
 
 function normalizeEmail(value: string): string {
@@ -992,6 +1037,7 @@ export default function KcalsPage() {
     setCustomFoods(loadCustomFoods());
     setSavedGroups(loadSavedGroups());
     setRecentFoods(loadRecentFoods());
+    setDynamicSurplusHistory(loadDynamicSurplusHistory());
     setShareRecipients(loadShareRecipients());
     if (typeof window !== "undefined") {
       setLastSyncAt(localStorage.getItem(SYNC_KEY));
@@ -1947,6 +1993,7 @@ export default function KcalsPage() {
   const [dynamicKcalLoading, setDynamicKcalLoading] = useState(false);
   const [dynamicKcalError, setDynamicKcalError] = useState<string | null>(null);
   const [dynamicKcalLatest, setDynamicKcalLatest] = useState<{ active: number | null; resting: number | null; updatedAt: string | null } | null>(null);
+  const [dynamicSurplusHistory, setDynamicSurplusHistory] = useState<Record<string, DynamicSurplusSnapshot>>({});
   const [weeklyBreakdown, setWeeklyBreakdown] = useState<WeeklyEntry[]>([]);
   const [lastCustomMatch, setLastCustomMatch] = useState<CustomFood | null>(null);
   const [lastRecentMatch, setLastRecentMatch] = useState<RecentFood | null>(null);
@@ -1970,10 +2017,28 @@ export default function KcalsPage() {
   const weeklyHasData = weeklyVisibleEntries.length > 0;
   const weeklyIsOnTrack = weeklyBurn >= 0;
   const weeklyAbsTotal = Math.abs(weeklyBurn);
+  const dynamicHistoryRows = useMemo(() => {
+    const keys: string[] = [];
+    const cursor = new Date();
+    for (let i = 0; i < 7; i++) {
+      keys.push(getDayKey(cursor));
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    return keys
+      .reverse()
+      .map((key) => dynamicSurplusHistory[key])
+      .filter((entry): entry is DynamicSurplusSnapshot => !!entry);
+  }, [dynamicSurplusHistory, dayStartHour]);
   const dynamicTotalKcal = dynamicKcalLatest && dynamicKcalLatest.active != null && dynamicKcalLatest.resting != null
     ? dynamicKcalLatest.active + dynamicKcalLatest.resting
     : null;
   const dynamicSurplusKcal = dynamicTotalKcal != null ? dynamicTotalKcal - totalKcal : null;
+  const dynamicTodaySnapshot = dynamicSurplusHistory[todayWeekKey];
+  const dynamicTodayActive = dynamicKcalLatest?.active ?? dynamicTodaySnapshot?.active ?? null;
+  const dynamicTodayResting = dynamicKcalLatest?.resting ?? dynamicTodaySnapshot?.resting ?? null;
+  const dynamicTodayCaloriesIn = dynamicTodaySnapshot?.caloriesIn ?? totalKcal;
+  const dynamicTodaySurplus = dynamicSurplusKcal ?? dynamicTodaySnapshot?.surplus ?? null;
+  const dynamicTodayUpdatedAt = dynamicKcalLatest?.updatedAt ?? dynamicTodaySnapshot?.updatedAt ?? null;
   const weeklyChipHasData = weeklyVisibleEntries.length > 0;
   const weeklyChipIcon = weeklyChipHasData
     ? (weeklyIsOnTrack ? "\u{1F525}" : "\u{1F437}")
@@ -2936,13 +3001,36 @@ export default function KcalsPage() {
       const value = row?.updated_at ?? row?.created_at ?? row?.timestamp ?? null;
       return typeof value === "string" && value.length > 0 ? value : null;
     })();
+    const active = Number.isFinite(activeRaw) ? Math.round(activeRaw) : null;
+    const resting = Number.isFinite(restingRaw) ? Math.round(restingRaw) : null;
+    const stamp = updatedAt ?? new Date().toISOString();
     setDynamicKcalLatest({
-      active: Number.isFinite(activeRaw) ? Math.round(activeRaw) : null,
-      resting: Number.isFinite(restingRaw) ? Math.round(restingRaw) : null,
-      updatedAt,
+      active,
+      resting,
+      updatedAt: stamp,
     });
+    if (active != null && resting != null) {
+      const dateKey = getDayKey(new Date(stamp));
+      const snapshot: DynamicSurplusSnapshot = {
+        dateKey,
+        surplus: active + resting - totalKcal,
+        active,
+        resting,
+        caloriesIn: totalKcal,
+        updatedAt: stamp,
+      };
+      setDynamicSurplusHistory((prev) => {
+        const next = { ...prev, [dateKey]: snapshot };
+        const keepKeys = Object.keys(next).sort().slice(-7);
+        const trimmed = Object.fromEntries(
+          keepKeys.map((key) => [key, next[key]])
+        ) as Record<string, DynamicSurplusSnapshot>;
+        saveDynamicSurplusHistory(trimmed);
+        return trimmed;
+      });
+    }
     setDynamicKcalLoading(false);
-  }, []);
+  }, [totalKcal]);
 
   const openDynamicKcalModal = useCallback(() => {
     setShowDynamicKcalModal(true);
@@ -6637,34 +6725,37 @@ export default function KcalsPage() {
         className="kcals-secret-modal"
       >
         <div className="kcals-secret-title">Dynamic kcal</div>
-        <div className="kcals-secret-list">
-          <div className="kcals-secret-row">
-            <span className="kcals-secret-label">Active</span>
-            <span className="kcals-secret-value">
-              {dynamicKcalLoading ? "..." : dynamicKcalLatest?.active != null ? `${dynamicKcalLatest.active} kcal` : "—"}
-            </span>
+        <div className="kcals-secret-history">
+          {dynamicHistoryRows.map((entry) => {
+            const positive = entry.surplus >= 0;
+            const label = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" })
+              .format(new Date(entry.dateKey + "T00:00:00"));
+            return (
+              <div key={entry.dateKey} className="kcals-secret-history-row">
+                <div className="kcals-secret-history-date">
+                  <span>{positive ? "\u{1F525}" : "\u{1F437}"}</span>
+                  {label}
+                </div>
+                <div className={`kcals-secret-history-value ${positive ? "is-positive" : "is-negative"}`}>
+                  {positive ? "+" : "-"}{Math.abs(entry.surplus).toLocaleString()}kcal
+                </div>
+              </div>
+            );
+          })}
+          {!dynamicKcalLoading && dynamicHistoryRows.length === 0 && (
+            <div className="kcals-secret-empty">No surplus history yet.</div>
+          )}
+        </div>
+        <div className="kcals-secret-today">
+          <div className="kcals-secret-today-surplus">
+            Surplus today {dynamicTodaySurplus != null ? `${dynamicTodaySurplus.toLocaleString()}kcal` : "—"}
           </div>
-          <div className="kcals-secret-row">
-            <span className="kcals-secret-label">Resting</span>
-            <span className="kcals-secret-value">
-              {dynamicKcalLoading ? "..." : dynamicKcalLatest?.resting != null ? `${dynamicKcalLatest.resting} kcal` : "—"}
-            </span>
-          </div>
-          <div className="kcals-secret-row">
-            <span className="kcals-secret-label">Total</span>
-            <span className="kcals-secret-value">
-              {dynamicKcalLoading ? "..." : dynamicTotalKcal != null ? `${dynamicTotalKcal.toLocaleString()} kcal` : "—"}
-            </span>
-          </div>
-          <div className="kcals-secret-row">
-            <span className="kcals-secret-label">Surplus</span>
-            <span className="kcals-secret-value">
-              {dynamicKcalLoading ? "..." : dynamicSurplusKcal != null ? `${dynamicSurplusKcal.toLocaleString()} kcal` : "—"}
-            </span>
+          <div className="kcals-secret-today-breakdown">
+            active ({dynamicTodayActive != null ? `${dynamicTodayActive.toLocaleString()}kcal` : "—"}) + resting ({dynamicTodayResting != null ? `${dynamicTodayResting.toLocaleString()}kcal` : "—"}) - calories in ({dynamicTodayCaloriesIn.toLocaleString()}kcal)
           </div>
         </div>
-        {!dynamicKcalLoading && dynamicKcalLatest?.updatedAt && (
-          <div className="kcals-secret-stamp">Updated {formatRelativeTime(dynamicKcalLatest.updatedAt)}</div>
+        {!dynamicKcalLoading && dynamicTodayUpdatedAt && (
+          <div className="kcals-secret-stamp">updated {formatRelativeTime(dynamicTodayUpdatedAt)}</div>
         )}
         {dynamicKcalError && <div className="kcals-secret-error">{dynamicKcalError}</div>}
       </BottomSheet>

@@ -2946,31 +2946,71 @@ select.kcals-profile-settings-input::-ms-expand {
   margin-bottom: 12px;
 }
 
-.kcals-secret-list {
+.kcals-secret-history {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
 }
 
-.kcals-secret-row {
+.kcals-secret-history-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 15px;
+  font-size: 14px;
 }
 
-.kcals-secret-label {
-  color: var(--black-70);
+.kcals-secret-history-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--black-100);
   font-weight: 500;
 }
 
-.kcals-secret-value {
-  color: var(--black-100);
+.kcals-secret-history-value {
   font-weight: 700;
 }
 
-.kcals-secret-stamp {
+.kcals-secret-history-value.is-positive {
+  color: var(--green);
+}
+
+.kcals-secret-history-value.is-negative {
+  color: var(--red);
+}
+
+.kcals-secret-empty {
+  text-align: center;
+  color: var(--black-50);
+  font-size: 13px;
+  line-height: 18px;
+  padding: 8px 0;
+}
+
+.kcals-secret-today {
   margin-top: 10px;
+  text-align: center;
+}
+
+.kcals-secret-today-surplus {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  color: var(--black-70);
+}
+
+.kcals-secret-today-breakdown {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 400;
+  color: var(--black-50);
+}
+
+.kcals-secret-stamp {
+  margin-top: 6px;
   text-align: center;
   color: var(--black-50);
   font-size: 12px;
