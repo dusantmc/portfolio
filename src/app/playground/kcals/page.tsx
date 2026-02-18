@@ -2033,12 +2033,14 @@ export default function KcalsPage() {
     ? dynamicKcalLatest.active + dynamicKcalLatest.resting
     : null;
   const dynamicSurplusKcal = dynamicTotalKcal != null ? dynamicTotalKcal - totalKcal : null;
+  const dynamicLatestDateKey = dynamicKcalLatest?.updatedAt ? getDayKey(new Date(dynamicKcalLatest.updatedAt)) : null;
+  const dynamicLatestIsToday = dynamicLatestDateKey === todayWeekKey;
   const dynamicTodaySnapshot = dynamicSurplusHistory[todayWeekKey];
-  const dynamicTodayActive = dynamicKcalLatest?.active ?? dynamicTodaySnapshot?.active ?? null;
-  const dynamicTodayResting = dynamicKcalLatest?.resting ?? dynamicTodaySnapshot?.resting ?? null;
+  const dynamicTodayActive = dynamicLatestIsToday ? (dynamicKcalLatest?.active ?? null) : (dynamicTodaySnapshot?.active ?? null);
+  const dynamicTodayResting = dynamicLatestIsToday ? (dynamicKcalLatest?.resting ?? null) : (dynamicTodaySnapshot?.resting ?? null);
   const dynamicTodayCaloriesIn = dynamicTodaySnapshot?.caloriesIn ?? totalKcal;
-  const dynamicTodaySurplus = dynamicSurplusKcal ?? dynamicTodaySnapshot?.surplus ?? null;
-  const dynamicTodayUpdatedAt = dynamicKcalLatest?.updatedAt ?? dynamicTodaySnapshot?.updatedAt ?? null;
+  const dynamicTodaySurplus = dynamicLatestIsToday ? (dynamicSurplusKcal ?? null) : (dynamicTodaySnapshot?.surplus ?? null);
+  const dynamicTodayUpdatedAt = dynamicLatestIsToday ? (dynamicKcalLatest?.updatedAt ?? null) : (dynamicTodaySnapshot?.updatedAt ?? null);
   const dynamicHistoryHasToday = dynamicHistoryRows.some((entry) => entry.dateKey === todayWeekKey);
   const dynamicWeeklySurplusSum = dynamicHistoryRows.reduce((sum, entry) => sum + entry.surplus, 0)
     + (!dynamicHistoryHasToday && dynamicTodaySurplus != null ? dynamicTodaySurplus : 0);
@@ -2996,6 +2998,7 @@ export default function KcalsPage() {
     const { data, error } = await supabase
       .from("dynamic_kcal_latest")
       .select("*")
+      .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
     if (error) {
@@ -3014,22 +3017,49 @@ export default function KcalsPage() {
     const active = Number.isFinite(activeRaw) ? Math.round(activeRaw) : null;
     const resting = Number.isFinite(restingRaw) ? Math.round(restingRaw) : null;
     const stamp = updatedAt ?? new Date().toISOString();
+    const dateKey = getDayKey(new Date(stamp));
+    const dailyLog = loadDailyLogRaw();
+    const logEntry = dailyLog[dateKey];
+    const logGoal = logEntry?.goal ?? DEFAULT_CALORIE_GOAL;
+    const logCaloriesIn = logEntry ? Math.max(0, Math.round(logGoal - logEntry.remaining)) : null;
     setDynamicKcalLatest({
       active,
       resting,
       updatedAt: stamp,
     });
     if (active != null && resting != null) {
-      const dateKey = getDayKey(new Date(stamp));
-      const snapshot: DynamicSurplusSnapshot = {
-        dateKey,
-        surplus: active + resting - totalKcal,
-        active,
-        resting,
-        caloriesIn: totalKcal,
-        updatedAt: stamp,
-      };
       setDynamicSurplusHistory((prev) => {
+        const existing = prev[dateKey];
+        const existingTs = existing ? new Date(existing.updatedAt).getTime() : -Infinity;
+        const nextTs = new Date(stamp).getTime();
+        const caloriesInForSnapshot = dateKey === todayWeekKey
+          ? totalKcal
+          : (logCaloriesIn ?? existing?.caloriesIn ?? totalKcal);
+        const expectedSurplus = active + resting - caloriesInForSnapshot;
+        const shouldRefreshSameStamp =
+          !!existing &&
+          Number.isFinite(nextTs) &&
+          nextTs === existingTs &&
+          (
+            existing.active !== active ||
+            existing.resting !== resting ||
+            existing.caloriesIn !== caloriesInForSnapshot ||
+            existing.surplus !== expectedSurplus
+          );
+        if (Number.isFinite(nextTs) && nextTs < existingTs) {
+          return prev;
+        }
+        if (Number.isFinite(nextTs) && nextTs === existingTs && !shouldRefreshSameStamp) {
+          return prev;
+        }
+        const snapshot: DynamicSurplusSnapshot = {
+          dateKey,
+          surplus: expectedSurplus,
+          active,
+          resting,
+          caloriesIn: caloriesInForSnapshot,
+          updatedAt: stamp,
+        };
         const next = { ...prev, [dateKey]: snapshot };
         const keepKeys = Object.keys(next).sort().slice(-7);
         const trimmed = Object.fromEntries(
@@ -3040,7 +3070,7 @@ export default function KcalsPage() {
       });
     }
     setDynamicKcalLoading(false);
-  }, [totalKcal]);
+  }, [totalKcal, todayWeekKey]);
 
   const openDynamicKcalModal = useCallback(() => {
     setShowDynamicKcalModal(true);
