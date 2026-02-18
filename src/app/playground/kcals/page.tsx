@@ -2039,6 +2039,16 @@ export default function KcalsPage() {
   const dynamicTodayCaloriesIn = dynamicTodaySnapshot?.caloriesIn ?? totalKcal;
   const dynamicTodaySurplus = dynamicSurplusKcal ?? dynamicTodaySnapshot?.surplus ?? null;
   const dynamicTodayUpdatedAt = dynamicKcalLatest?.updatedAt ?? dynamicTodaySnapshot?.updatedAt ?? null;
+  const dynamicHistoryHasToday = dynamicHistoryRows.some((entry) => entry.dateKey === todayWeekKey);
+  const dynamicWeeklySurplusSum = dynamicHistoryRows.reduce((sum, entry) => sum + entry.surplus, 0)
+    + (!dynamicHistoryHasToday && dynamicTodaySurplus != null ? dynamicTodaySurplus : 0);
+  const dynamicWeeklyKg = Math.abs(dynamicWeeklySurplusSum) / 7700;
+  const dynamicWeeklyKgText = (Math.round(dynamicWeeklyKg * 10) / 10).toFixed(1);
+  const dynamicSecretTitle = dynamicWeeklySurplusSum > 0
+    ? `Loosing ${dynamicWeeklyKgText}kg`
+    : dynamicWeeklySurplusSum < 0
+      ? `Gaining ${dynamicWeeklyKgText}kg`
+      : "Maintaining 0.0kg";
   const weeklyChipHasData = weeklyVisibleEntries.length > 0;
   const weeklyChipIcon = weeklyChipHasData
     ? (weeklyIsOnTrack ? "\u{1F525}" : "\u{1F437}")
@@ -6724,7 +6734,7 @@ export default function KcalsPage() {
         variant="center"
         className="kcals-secret-modal"
       >
-        <div className="kcals-secret-title">Dynamic kcal</div>
+        <div className="kcals-secret-title">{dynamicSecretTitle}</div>
         <div className="kcals-secret-history">
           {dynamicHistoryRows.map((entry) => {
             const positive = entry.surplus >= 0;
