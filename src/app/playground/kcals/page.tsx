@@ -2051,6 +2051,34 @@ export default function KcalsPage() {
     : dynamicWeeklySurplusSum < 0
       ? `Gaining ${dynamicWeeklyKgText}kg`
       : "Maintaining 0.0kg";
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const keys = Object.keys(dynamicSurplusHistory);
+    if (keys.length === 0) return;
+    const dailyLog = loadDailyLogRaw();
+    let changed = false;
+    const next: Record<string, DynamicSurplusSnapshot> = { ...dynamicSurplusHistory };
+    for (const key of keys) {
+      const snapshot = next[key];
+      if (!snapshot) continue;
+      const logEntry = dailyLog[key];
+      if (!logEntry) continue;
+      const goal = logEntry.goal ?? DEFAULT_CALORIE_GOAL;
+      const caloriesIn = Math.max(0, Math.round(goal - logEntry.remaining));
+      const expectedSurplus = snapshot.active + snapshot.resting - caloriesIn;
+      if (snapshot.caloriesIn !== caloriesIn || snapshot.surplus !== expectedSurplus) {
+        next[key] = {
+          ...snapshot,
+          caloriesIn,
+          surplus: expectedSurplus,
+        };
+        changed = true;
+      }
+    }
+    if (!changed) return;
+    setDynamicSurplusHistory(next);
+    saveDynamicSurplusHistory(next);
+  }, [dynamicSurplusHistory, dayStartHour]);
   const weeklyChipHasData = weeklyVisibleEntries.length > 0;
   const weeklyChipIcon = weeklyChipHasData
     ? (weeklyIsOnTrack ? "\u{1F525}" : "\u{1F437}")
