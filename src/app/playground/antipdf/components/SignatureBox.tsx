@@ -5,6 +5,7 @@ import { createPuffEffect } from '../utils/puffEffect';
 
 export interface SignatureBoxData {
   id: string;
+  page: number;
   x: number;
   y: number;
   width: number;

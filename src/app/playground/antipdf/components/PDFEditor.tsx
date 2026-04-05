@@ -15,15 +15,17 @@ const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 4;
 const ZOOM_STEP = 0.4;
 const RENDER_SCALE = 2;
+const PAGE_GAP = 20;
 const SIGNATURES_STORAGE_KEY = 'antipdf.signatures';
 const SIGN_SESSION_ENDPOINT = '/api/antipdf?action=session';
 const SIGN_STREAM_ENDPOINT = '/api/antipdf?action=stream';
 
 export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
   const [currentPdfFile, setCurrentPdfFile] = useState<File>(pdfFile);
-  const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [pageDimensions, setPageDimensions] = useState<{ width: number; height: number }[]>([]);
+  const [pdfDocVersion, setPdfDocVersion] = useState(0);
+  const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
   const contentRef = useRef<HTMLDivElement>(null);
   const [textBoxes, setTextBoxes] = useState<TextBoxData[]>([]);
   const [zoom, setZoom] = useState(1);
@@ -51,7 +53,7 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
   const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const marqueeStart = useRef({ x: 0, y: 0 });
-  const canvasWrapperRef = useRef<HTMLDivElement>(null);
+  const columnRef = useRef<HTMLDivElement>(null);
   const pdfDocRef = useRef<any>(null);
   const pdfjsRef = useRef<any>(null);
   const signatureMenuRef = useRef<HTMLDivElement>(null);
@@ -249,8 +251,9 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
       const data = await file.arrayBuffer();
       const pdf = await pdfjs.getDocument({ data }).promise;
       pdfDocRef.current = pdf;
+      setPageDimensions([]);
       setTotalPages(pdf.numPages);
-      renderPage(pdf, 1);
+      setPdfDocVersion((v) => v + 1);
     } catch (error) {
       console.error('Error loading PDF:', error);
     }
@@ -282,65 +285,66 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
     }
   };
 
-  const renderPage = async (pdf: any, pageNum: number) => {
+  const renderAllPages = async (pdf: any) => {
     try {
-      const page = await pdf.getPage(pageNum);
-      const canvas = canvasRef.current;
-      if (!canvas) return;
+      const dims: { width: number; height: number }[] = [];
 
-      const context = canvas.getContext('2d');
-      if (!context) return;
+      for (let i = 0; i < pdf.numPages; i++) {
+        const page = await pdf.getPage(i + 1);
+        // Always render without page rotation — rotation: 0 overrides
+        // the page's /Rotate entry, which some PDF generators set incorrectly.
+        const viewport = page.getViewport({ scale: RENDER_SCALE, rotation: 0 });
+        const cssWidth = viewport.width / RENDER_SCALE;
+        const cssHeight = viewport.height / RENDER_SCALE;
+        dims.push({ width: cssWidth, height: cssHeight });
 
-      // Always render without page rotation — rotation: 0 overrides
-      // the page's /Rotate entry, which some PDF generators set incorrectly.
-      const viewport = page.getViewport({ scale: RENDER_SCALE, rotation: 0 });
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
+        const canvas = canvasRefs.current[i];
+        if (!canvas) continue;
 
-      // Set CSS dimensions to 1x so the canvas displays at natural PDF size
-      const cssWidth = viewport.width / RENDER_SCALE;
-      const cssHeight = viewport.height / RENDER_SCALE;
-      canvas.style.width = `${cssWidth}px`;
-      canvas.style.height = `${cssHeight}px`;
+        const context = canvas.getContext('2d');
+        if (!context) continue;
 
-      await page.render({
-        canvasContext: context,
-        viewport: viewport,
-      }).promise;
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        canvas.style.width = `${cssWidth}px`;
+        canvas.style.height = `${cssHeight}px`;
 
-      if (!hasAutoFit) {
+        await page.render({ canvasContext: context, viewport }).promise;
+
+        if (i === 0) {
+          await updateDefaultFontSize(page);
+        }
+      }
+
+      setPageDimensions(dims);
+
+      if (!hasAutoFit && dims.length > 0) {
         const content = contentRef.current;
-
         if (content) {
           const contentW = content.clientWidth;
           const contentH = content.clientHeight;
-          const fitZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, (0.8 * contentW) / cssWidth));
-
+          const colWidth = Math.max(...dims.map((d) => d.width));
+          const colHeight = dims.reduce((s, d) => s + d.height, 0) + (dims.length - 1) * PAGE_GAP;
+          const fitZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, (0.8 * contentW) / colWidth));
           setZoom(fitZoom);
-
-          // Position 40px from the top of the content area
-          const panY = 40 - contentH / 2 + (cssHeight * fitZoom) / 2;
+          // Position first page 40px from the top of the content area
+          const panY = 40 - contentH / 2 + (colHeight * fitZoom) / 2;
           setPan({ x: 0, y: panY });
         }
-
         setHasAutoFit(true);
-
-        // Enable transitions after initial positioning
         requestAnimationFrame(() => setIsInitialLoad(false));
       }
-
-      await updateDefaultFontSize(page);
-      setCurrentPage(pageNum);
     } catch (error) {
-      console.error('Error rendering page:', error);
+      console.error('Error rendering pages:', error);
     }
   };
 
   useEffect(() => {
-    if (pdfDocRef.current && currentPage > 0) {
-      renderPage(pdfDocRef.current, currentPage);
+    if (pdfDocRef.current) {
+      renderAllPages(pdfDocRef.current);
     }
-  }, [currentPage]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pdfDocVersion]);
 
   // Wheel: zoom or scroll-pan
   useEffect(() => {
@@ -351,7 +355,19 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
         const delta = -e.deltaY * 0.01;
-        setZoom((prev) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, prev + delta)));
+        const rect = content.getBoundingClientRect();
+        // Mouse position relative to content center (the transform origin)
+        const cx = e.clientX - rect.left - rect.width / 2;
+        const cy = e.clientY - rect.top - rect.height / 2;
+        setZoom((prev) => {
+          const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, prev + delta));
+          const ratio = next / prev;
+          setPan((prevPan) => ({
+            x: cx - (cx - prevPan.x) * ratio,
+            y: cy - (cy - prevPan.y) * ratio,
+          }));
+          return next;
+        });
         return;
       }
       e.preventDefault();
@@ -383,29 +399,28 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
     }
 
     const content = contentRef.current;
-    const canvasWrapper = canvasWrapperRef.current;
+    const column = columnRef.current;
     if (!content) return;
 
     const contentRect = content.getBoundingClientRect();
     const clickX = e.clientX - contentRect.left;
     const clickY = e.clientY - contentRect.top;
 
-    // Check if click is on the canvas wrapper
-    if (canvasWrapper) {
-      const wrapperRect = canvasWrapper.getBoundingClientRect();
-      const isOnCanvas =
-        e.clientX >= wrapperRect.left && e.clientX <= wrapperRect.right &&
-        e.clientY >= wrapperRect.top && e.clientY <= wrapperRect.bottom;
+    // Check if click is on the pages column — if so, pan
+    if (column) {
+      const columnRect = column.getBoundingClientRect();
+      const isOnColumn =
+        e.clientX >= columnRect.left && e.clientX <= columnRect.right &&
+        e.clientY >= columnRect.top && e.clientY <= columnRect.bottom;
 
-      if (isOnCanvas) {
-        // Pan the canvas
+      if (isOnColumn) {
         setIsDragging(true);
         dragStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
         return;
       }
     }
 
-    // Start marquee selection
+    // Start marquee selection (outside the column)
     setIsMarqueeSelecting(true);
     marqueeStart.current = { x: clickX, y: clickY };
     setMarqueeRect({ x: clickX, y: clickY, width: 0, height: 0 });
@@ -443,39 +458,26 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
     }
 
     if (isMarqueeSelecting && marqueeRect) {
-      // Calculate which text boxes intersect with the marquee
       const content = contentRef.current;
-      const canvasWrapper = canvasWrapperRef.current;
 
-      if (content && canvasWrapper && marqueeRect.width > 5 && marqueeRect.height > 5) {
+      if (content && marqueeRect.width > 5 && marqueeRect.height > 5) {
         const contentRect = content.getBoundingClientRect();
-        const wrapperRect = canvasWrapper.getBoundingClientRect();
-
-        // Marquee rect in content coordinates
-        const marqueeLeft = marqueeRect.x;
-        const marqueeTop = marqueeRect.y;
-        const marqueeRight = marqueeRect.x + marqueeRect.width;
-        const marqueeBottom = marqueeRect.y + marqueeRect.height;
-
-        // Canvas wrapper position in content coordinates
-        const wrapperLeft = wrapperRect.left - contentRect.left;
-        const wrapperTop = wrapperRect.top - contentRect.top;
+        // Convert marquee from content-relative to viewport coords for getBoundingClientRect comparison
+        const marqueeLeft = contentRect.left + marqueeRect.x;
+        const marqueeTop = contentRect.top + marqueeRect.y;
+        const marqueeRight = marqueeLeft + marqueeRect.width;
+        const marqueeBottom = marqueeTop + marqueeRect.height;
 
         const selectedIds: string[] = [];
+        const textBoxEls = content.querySelectorAll<HTMLElement>('[data-textbox-id]');
 
-        for (const tb of textBoxes) {
-          // Text box position in content coordinates (accounting for pan and zoom)
-          const tbLeft = wrapperLeft + (tb.x * zoom) + (wrapperRect.width / 2) - (canvasRef.current?.clientWidth || 0) * zoom / 2;
-          const tbTop = wrapperTop + (tb.y * zoom) + (wrapperRect.height / 2) - (canvasRef.current?.clientHeight || 0) * zoom / 2;
-          const tbRight = tbLeft + tb.width * zoom;
-          const tbBottom = tbTop + tb.height * zoom;
-
-          // Check intersection
-          const intersects = !(tbRight < marqueeLeft || tbLeft > marqueeRight ||
-                              tbBottom < marqueeTop || tbTop > marqueeBottom);
-
+        for (const el of textBoxEls) {
+          const rect = el.getBoundingClientRect();
+          const intersects = !(rect.right < marqueeLeft || rect.left > marqueeRight ||
+                                rect.bottom < marqueeTop || rect.top > marqueeBottom);
           if (intersects) {
-            selectedIds.push(tb.id);
+            const id = el.dataset.textboxId;
+            if (id) selectedIds.push(id);
           }
         }
 
@@ -488,7 +490,7 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
       setIsMarqueeSelecting(false);
       setMarqueeRect(null);
     }
-  }, [isDragging, isMarqueeSelecting, marqueeRect, textBoxes, zoom]);
+  }, [isDragging, isMarqueeSelecting, marqueeRect]);
 
   const handleDoubleClick = useCallback((e: React.MouseEvent) => {
     const content = contentRef.current;
@@ -514,9 +516,9 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
     if (!source) return;
     saveHistory();
 
-    const canvas = canvasRef.current;
-    const cw = canvas?.clientWidth || 600;
-    const ch = canvas?.clientHeight || 800;
+    const pageDim = pageDimensions[source.page - 1];
+    const cw = pageDim?.width ?? 600;
+    const ch = pageDim?.height ?? 800;
 
     // Calculate gap: if source was duplicated from another, use the same distance
     let dx: number;
@@ -558,7 +560,7 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
     setLatestTextBoxId(id);
     setSelectedTextBoxIds([id]);
     setActiveSignatureId(null);
-  }, [textBoxes, saveHistory]);
+  }, [textBoxes, pageDimensions, saveHistory]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -610,27 +612,47 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
     return () => window.removeEventListener('keydown', handleDeleteKey);
   }, [activeSignatureId, selectedTextBoxIds, triggerSignaturePuff, triggerTextBoxPuff, saveHistory]);
 
+  // Returns { page, localX, localY, pageWidth, pageHeight } for the viewport center
+  const getViewportCenterInColumn = useCallback(() => {
+    const content = contentRef.current;
+    if (!content || pageDimensions.length === 0) return null;
+    const colWidth = Math.max(...pageDimensions.map((d) => d.width));
+    const colHeight = pageDimensions.reduce((s, d) => s + d.height, 0) + (pageDimensions.length - 1) * PAGE_GAP;
+    // Viewport center in column-local coordinates (column top-left = 0,0)
+    const colX = colWidth / 2 - pan.x / zoom;
+    const colY = colHeight / 2 - pan.y / zoom;
+
+    let cumY = 0;
+    for (let i = 0; i < pageDimensions.length; i++) {
+      const { width: pw, height: ph } = pageDimensions[i];
+      if (colY <= cumY + ph || i === pageDimensions.length - 1) {
+        // page is centered in the column
+        const pageLocalX = colX - (colWidth - pw) / 2;
+        const pageLocalY = colY - cumY;
+        return { page: i + 1, localX: pageLocalX, localY: pageLocalY, pageWidth: pw, pageHeight: ph };
+      }
+      cumY += ph + PAGE_GAP;
+    }
+    return null;
+  }, [pageDimensions, pan, zoom]);
+
   const handleAddTextBox = useCallback(() => {
     saveHistory();
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const cw = canvas.clientWidth;
-    const ch = canvas.clientHeight;
+    const center = getViewportCenterInColumn();
+    if (!center) return;
+    const { page, localX, localY, pageWidth, pageHeight } = center;
+
     const id = Date.now().toString();
     const fontSize = lastUsedFontSize ?? Math.max(8, defaultFontSize - 2);
     const boxWidth = 100;
     const boxHeight = Math.ceil(fontSize * 1.0) + 8;
 
-    // Calculate viewport center in canvas coordinates
-    const viewportCenterX = cw / 2 - pan.x / zoom;
-    const viewportCenterY = ch / 2 - pan.y / zoom;
-
-    // Clamp to canvas bounds
-    const x = Math.max(0, Math.min(cw - boxWidth, viewportCenterX - boxWidth / 2));
-    const y = Math.max(0, Math.min(ch - boxHeight, viewportCenterY - boxHeight / 2));
+    const x = Math.max(0, Math.min(pageWidth - boxWidth, localX - boxWidth / 2));
+    const y = Math.max(0, Math.min(pageHeight - boxHeight, localY - boxHeight / 2));
 
     const newBox: TextBoxData = {
       id,
+      page,
       x,
       y,
       width: boxWidth,
@@ -644,7 +666,7 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
     setLatestTextBoxId(id);
     setSelectedTextBoxIds([id]);
     setActiveSignatureId(null);
-  }, [defaultFontSize, lastUsedFontSize, pan, zoom, saveHistory]);
+  }, [defaultFontSize, lastUsedFontSize, getViewportCenterInColumn, saveHistory]);
 
   const handleUpdateTextBox = useCallback((id: string, updates: Partial<TextBoxData>) => {
     // Save history for style changes (toolbar), not position/size changes (drag/resize)
@@ -740,23 +762,22 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
 
   const addSignatureBox = useCallback((src: string) => {
     saveHistory();
-    const canvas = canvasRef.current;
-    const cw = canvas?.clientWidth || 600;
-    const ch = canvas?.clientHeight || 800;
+    const center = getViewportCenterInColumn();
     const width = 200;
     const height = 80;
     const id = Date.now().toString();
+    const page = center?.page ?? 1;
+    const pageWidth = center?.pageWidth ?? 600;
+    const pageHeight = center?.pageHeight ?? 800;
+    const localX = center?.localX ?? pageWidth / 2;
+    const localY = center?.localY ?? pageHeight / 2;
 
-    // Calculate viewport center in canvas coordinates
-    const viewportCenterX = cw / 2 - pan.x / zoom;
-    const viewportCenterY = ch / 2 - pan.y / zoom;
-
-    // Clamp to canvas bounds
-    const x = Math.max(0, Math.min(cw - width, viewportCenterX - width / 2));
-    const y = Math.max(0, Math.min(ch - height, viewportCenterY - height / 2));
+    const x = Math.max(0, Math.min(pageWidth - width, localX - width / 2));
+    const y = Math.max(0, Math.min(pageHeight - height, localY - height / 2));
 
     const newBox: SignatureBoxData = {
       id,
+      page,
       x,
       y,
       width,
@@ -766,7 +787,7 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
     };
     setSignatureBoxes((prev) => [...prev, newBox]);
     setActiveSignatureId(id);
-  }, [pan, zoom, saveHistory]);
+  }, [getViewportCenterInColumn, saveHistory]);
 
   const addSignatureFromSrc = useCallback((src: string) => {
     const sigId = Date.now().toString();
@@ -905,27 +926,20 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
       ]);
       const arrayBuffer = await currentPdfFile.arrayBuffer();
       const pdfDoc = await PDFDocument.load(arrayBuffer);
-      const page = pdfDoc.getPage(currentPage - 1);
-      const pageWidth = page.getWidth();
-      const pageHeight = page.getHeight();
-      const canvas = canvasRef.current;
-      const displayWidth = canvas?.clientWidth || canvas?.width || pageWidth;
-      const displayHeight = canvas?.clientHeight || canvas?.height || pageHeight;
-      const scaleX = pageWidth / displayWidth;
-      const scaleY = pageHeight / displayHeight;
 
       const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
       const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-      const drawTextBox = (tb: TextBoxData) => {
+      const drawTextBox = (tb: TextBoxData, page: any, pageHeight: number) => {
+        // Canvas CSS px == PDF pts (scale = 1), so no scaling needed
         const padX = 2;
         const padY = 2;
-        const fontSize = tb.fontSize * scaleY;
+        const fontSize = tb.fontSize;
         const lineHeight = fontSize;
         const lines = (tb.text || '').split('\n');
-        const boxX = (tb.x + padX) * scaleX;
-        const boxWidth = (tb.width - padX * 2) * scaleX;
-        let y = pageHeight - (tb.y + padY) * scaleY - fontSize;
+        const boxX = tb.x + padX;
+        const boxWidth = tb.width - padX * 2;
+        let y = pageHeight - (tb.y + padY) - fontSize;
         const font = tb.bold ? fontBold : fontRegular;
         const align = tb.align ?? 'left';
 
@@ -975,11 +989,11 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
         return dataUrlToBytes(canvasEl.toDataURL('image/png'));
       };
 
-      const drawSignatureBox = async (sb: SignatureBoxData) => {
-        const boxX = sb.x * scaleX;
-        const boxY = pageHeight - (sb.y + sb.height) * scaleY;
-        const boxW = sb.width * scaleX;
-        const boxH = sb.height * scaleY;
+      const drawSignatureBox = async (sb: SignatureBoxData, page: any, pageHeight: number) => {
+        const boxX = sb.x;
+        const boxY = pageHeight - (sb.y + sb.height);
+        const boxW = sb.width;
+        const boxH = sb.height;
 
         let imageBytes: Uint8Array | null = null;
         const isSvg = sb.src.startsWith('data:image/svg+xml');
@@ -1010,9 +1024,18 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
         page.drawImage(embed, { x: drawX, y: drawY, width: drawW, height: drawH, blendMode: BlendMode.Darken });
       };
 
-      textBoxes.forEach(drawTextBox);
-      for (const sb of signatureBoxes) {
-        await drawSignatureBox(sb);
+      for (let i = 0; i < pdfDoc.getPageCount(); i++) {
+        const page = pdfDoc.getPage(i);
+        const pageNum = i + 1;
+        const pageHeight = page.getHeight();
+
+        const pageTextBoxes = textBoxes.filter((tb) => tb.page === pageNum);
+        const pageSignatureBoxes = signatureBoxes.filter((sb) => sb.page === pageNum);
+
+        pageTextBoxes.forEach((tb) => drawTextBox(tb, page, pageHeight));
+        for (const sb of pageSignatureBoxes) {
+          await drawSignatureBox(sb, page, pageHeight);
+        }
       }
 
       const pdfBytes = await pdfDoc.save();
@@ -1207,60 +1230,69 @@ export default function PDFEditor({ pdfFile, onBack }: PDFEditorProps) {
         onDoubleClick={handleDoubleClick}
       >
         <div
-          ref={canvasWrapperRef}
-          className={`editor__canvas-wrapper${isInitialLoad ? ' no-transition' : ''}${isDragging ? ' dragging' : ''}`}
+          ref={columnRef}
+          className={`editor__pages-column${isInitialLoad ? ' no-transition' : ''}${isDragging ? ' dragging' : ''}`}
           style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
         >
-          <canvas ref={canvasRef} className="editor__canvas" />
-
-          <div className="editor__overlay">
-            {alignmentGuides.x !== null && (
-              <div className="editor__guide editor__guide--v" style={{ left: alignmentGuides.x }} />
-            )}
-            {alignmentGuides.y !== null && (
-              <div className="editor__guide editor__guide--h" style={{ top: alignmentGuides.y }} />
-            )}
-            {signatureBoxes.map((sb) => (
-              <SignatureBox
-                key={sb.id}
-                {...sb}
-                zoom={zoom}
-                active={sb.id === activeSignatureId}
-                onActivate={handleSignatureActivate}
-                onUpdate={handleUpdateSignatureBox}
-                onRemove={handleRemoveSignatureBox}
-                isDisintegratingExternal={disintegratingSignatureIds.includes(sb.id)}
-              />
-            ))}
-            {textBoxes.map((tb) => {
-              const isSelected = selectedTextBoxIds.includes(tb.id);
-              const isLastSelected = selectedTextBoxIds[selectedTextBoxIds.length - 1] === tb.id;
-              return (
-                <TextBox
-                  key={tb.id}
-                  {...tb}
-                  zoom={zoom}
-                  autoFocus={tb.id === latestTextBoxId}
-                  isSelected={isSelected}
-                  isLastSelected={isLastSelected}
-                  onUpdate={handleUpdateTextBox}
-                  onRemove={handleRemoveTextBox}
-                  onUpdateSelected={handleUpdateSelectedTextBoxes}
-                  onRemoveSelected={handleRemoveSelectedTextBoxes}
-                  onActivate={handleTextBoxActivate}
-                  onDuplicate={duplicateTextBox}
-                  allTextBoxes={textBoxes}
-                  onGuidesChange={handleGuidesChange}
-                  selectedTextBoxIds={selectedTextBoxIds}
-                  isDisintegratingExternal={disintegratingTextBoxIds.includes(tb.id)}
-                  isDraggingSelected={isDraggingSelected}
-                  onDragSelectedStart={handleDragSelectedStart}
-                  onDragSelected={handleDragSelected}
-                  onDragSelectedEnd={handleDragSelectedEnd}
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => {
+            const pageTextBoxes = textBoxes.filter((tb) => tb.page === pageNum);
+            return (
+              <div key={pageNum} className="editor__page">
+                <canvas
+                  ref={(el) => { canvasRefs.current[pageNum - 1] = el; }}
+                  className="editor__canvas"
                 />
-              );
-            })}
-          </div>
+                <div className="editor__overlay">
+                  {alignmentGuides.x !== null && (
+                    <div className="editor__guide editor__guide--v" style={{ left: alignmentGuides.x }} />
+                  )}
+                  {alignmentGuides.y !== null && (
+                    <div className="editor__guide editor__guide--h" style={{ top: alignmentGuides.y }} />
+                  )}
+                  {signatureBoxes.filter((sb) => sb.page === pageNum).map((sb) => (
+                    <SignatureBox
+                      key={sb.id}
+                      {...sb}
+                      zoom={zoom}
+                      active={sb.id === activeSignatureId}
+                      onActivate={handleSignatureActivate}
+                      onUpdate={handleUpdateSignatureBox}
+                      onRemove={handleRemoveSignatureBox}
+                      isDisintegratingExternal={disintegratingSignatureIds.includes(sb.id)}
+                    />
+                  ))}
+                  {pageTextBoxes.map((tb) => {
+                    const isSelected = selectedTextBoxIds.includes(tb.id);
+                    const isLastSelected = selectedTextBoxIds[selectedTextBoxIds.length - 1] === tb.id;
+                    return (
+                      <TextBox
+                        key={tb.id}
+                        {...tb}
+                        zoom={zoom}
+                        autoFocus={tb.id === latestTextBoxId}
+                        isSelected={isSelected}
+                        isLastSelected={isLastSelected}
+                        onUpdate={handleUpdateTextBox}
+                        onRemove={handleRemoveTextBox}
+                        onUpdateSelected={handleUpdateSelectedTextBoxes}
+                        onRemoveSelected={handleRemoveSelectedTextBoxes}
+                        onActivate={handleTextBoxActivate}
+                        onDuplicate={duplicateTextBox}
+                        allTextBoxes={pageTextBoxes}
+                        onGuidesChange={handleGuidesChange}
+                        selectedTextBoxIds={selectedTextBoxIds}
+                        isDisintegratingExternal={disintegratingTextBoxIds.includes(tb.id)}
+                        isDraggingSelected={isDraggingSelected}
+                        onDragSelectedStart={handleDragSelectedStart}
+                        onDragSelected={handleDragSelected}
+                        onDragSelectedEnd={handleDragSelectedEnd}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {marqueeRect && (

@@ -582,23 +582,31 @@
   user-select: none;
 }
 
-.editor__canvas-wrapper {
-  position: relative;
-  background-color: white;
-  border-radius: 12px;
-  overflow: visible;
-  box-shadow: 0 4px 80px rgba(0, 0, 0, 0.03);
+.editor__pages-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
   transition: transform 100ms ease-out;
   transform-origin: center center;
   cursor: grab;
 }
 
-.editor__content.dragging .editor__canvas-wrapper {
+.editor__content.dragging .editor__pages-column {
   cursor: grabbing;
 }
 
-.editor__canvas-wrapper.no-transition {
+.editor__pages-column.no-transition {
   transition: none;
+}
+
+.editor__page {
+  position: relative;
+  background-color: white;
+  border-radius: 12px;
+  overflow: visible;
+  box-shadow: 0 4px 80px rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
 }
 
 .editor__canvas {

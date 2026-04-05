@@ -35,6 +35,7 @@ interface TextBoxProps {
 
 export interface TextBoxData {
   id: string;
+  page: number;
   x: number;
   y: number;
   width: number;
