@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import s from "./styles.css";
+import s from "./styles.module.css";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
