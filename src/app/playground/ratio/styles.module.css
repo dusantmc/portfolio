@@ -95,6 +95,10 @@
   padding-bottom: 2.5rem;
 }
 
+.recipeCardWrapper {
+  position: relative;
+}
+
 .recipeCard {
   display: flex;
   flex-direction: column;
@@ -158,6 +162,26 @@
   font-size: 15px;
   font-weight: 600;
   color: #52525b;
+}
+
+.editButton {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  background-color: #27272a;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 150ms;
+}
+
+.editButton:active {
+  background-color: #3f3f46;
 }
 
 /* ── Recipe view ──────────────────────────────────────────────────────────────  */

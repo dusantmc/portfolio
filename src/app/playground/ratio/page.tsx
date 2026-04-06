@@ -23,7 +23,8 @@ type Recipe = {
 type View =
   | { type: "home" }
   | { type: "recipe"; recipe: Recipe }
-  | { type: "add" };
+  | { type: "add" }
+  | { type: "edit"; recipe: Recipe };
 
 type NewIngredient = { name: string; unit: string; ratio: string };
 
@@ -97,6 +98,7 @@ const BUILT_IN: Recipe[] = [
 // ── Storage ───────────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = "ratio_app_custom_recipes_v1";
+const OVERRIDES_KEY = "ratio_app_overrides_v1";
 
 function loadCustom(): Recipe[] {
   if (typeof window === "undefined") return [];
@@ -109,6 +111,19 @@ function loadCustom(): Recipe[] {
 
 function saveCustom(recipes: Recipe[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(recipes));
+}
+
+function loadOverrides(): Record<string, Recipe> {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem(OVERRIDES_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveOverrides(overrides: Record<string, Recipe>) {
+  localStorage.setItem(OVERRIDES_KEY, JSON.stringify(overrides));
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -206,10 +221,12 @@ function HomeView({
   recipes,
   onSelect,
   onAdd,
+  onEdit,
 }: {
   recipes: Recipe[];
   onSelect: (r: Recipe) => void;
   onAdd: () => void;
+  onEdit: (r: Recipe) => void;
 }) {
   return (
     <div className={s.homeContainer}>
@@ -220,14 +237,24 @@ function HomeView({
 
       <div className={s.homeGrid}>
         {recipes.map((r) => (
-          <button
-            key={r.id}
-            onClick={() => onSelect(r)}
-            className={s.recipeCard}
-          >
-            <span className={s.recipeEmoji}>{r.emoji}</span>
-            <span className={s.recipeName}>{r.name}</span>
-          </button>
+          <div key={r.id} className={s.recipeCardWrapper}>
+            <button
+              onClick={() => onSelect(r)}
+              className={s.recipeCard}
+            >
+              <span className={s.recipeEmoji}>{r.emoji}</span>
+              <span className={s.recipeName}>{r.name}</span>
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onEdit(r); }}
+              className={s.editButton}
+              aria-label={`Edit ${r.name}`}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M9.5 2L12 4.5L4.5 12H2V9.5L9.5 2Z" stroke="#71717a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
         ))}
 
         <button
@@ -399,20 +426,30 @@ function RecipeView({
 function AddRecipeView({
   onSave,
   onCancel,
+  initial,
 }: {
   onSave: (r: Recipe) => void;
   onCancel: () => void;
+  initial?: Recipe;
 }) {
-  const [name, setName] = useState("");
-  const [emoji, setEmoji] = useState("");
-  const [ingredients, setIngredients] = useState<NewIngredient[]>([
-    { name: "", unit: "", ratio: "1" },
-    { name: "", unit: "", ratio: "" },
-  ]);
-  const [mainIdx, setMainIdx] = useState(0);
-  const [sliderMin, setSliderMin] = useState("10");
-  const [sliderMax, setSliderMax] = useState("100");
-  const [sliderDefault, setSliderDefault] = useState("50");
+  const [name, setName] = useState(initial?.name ?? "");
+  const [emoji, setEmoji] = useState(initial?.emoji ?? "");
+  const [ingredients, setIngredients] = useState<NewIngredient[]>(
+    initial
+      ? initial.ingredients.map((ing, i) => ({
+          name: ing.name,
+          unit: ing.unit,
+          ratio: i === initial.defaultMainIndex ? "1" : String(ing.ratio),
+        }))
+      : [
+          { name: "", unit: "", ratio: "1" },
+          { name: "", unit: "", ratio: "" },
+        ]
+  );
+  const [mainIdx, setMainIdx] = useState(initial?.defaultMainIndex ?? 0);
+  const [sliderMin, setSliderMin] = useState(String(initial?.sliderMin ?? "10"));
+  const [sliderMax, setSliderMax] = useState(String(initial?.sliderMax ?? "100"));
+  const [sliderDefault, setSliderDefault] = useState(String(initial?.sliderDefault ?? "50"));
 
   const addIngredient = () =>
     setIngredients((p) => [...p, { name: "", unit: "", ratio: "" }]);
@@ -435,7 +472,7 @@ function AddRecipeView({
   const handleSave = () => {
     if (!isValid) return;
     onSave({
-      id: `custom-${Date.now()}`,
+      id: initial?.id ?? `custom-${Date.now()}`,
       name: name.trim(),
       emoji: emoji.trim(),
       ingredients: ingredients.map((ing, i) => ({
@@ -461,7 +498,7 @@ function AddRecipeView({
         <button onClick={onCancel} className={s.cancelButton}>
           Cancel
         </button>
-        <span className={s.addHeaderTitle}>New Recipe</span>
+        <span className={s.addHeaderTitle}>{initial ? "Edit Recipe" : "New Recipe"}</span>
         <button
           onClick={handleSave}
           disabled={!isValid}
@@ -593,27 +630,40 @@ function AddRecipeView({
 
 export default function RatioPage() {
   const [customRecipes, setCustomRecipes] = useState<Recipe[]>([]);
+  const [overrides, setOverrides] = useState<Record<string, Recipe>>({});
   const [view, setView] = useState<View>({ type: "home" });
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setCustomRecipes(loadCustom());
+    setOverrides(loadOverrides());
     setMounted(true);
-    // Dark background for this page
     document.body.style.background = "#000";
     return () => { document.body.style.background = ""; };
   }, []);
 
-  const allRecipes = [...BUILT_IN, ...customRecipes];
+  const allRecipes = [
+    ...BUILT_IN.map((r) => overrides[r.id] ?? r),
+    ...customRecipes,
+  ];
 
   const handleSaveRecipe = useCallback(
     (recipe: Recipe) => {
-      const updated = [...customRecipes, recipe];
-      setCustomRecipes(updated);
-      saveCustom(updated);
+      const isBuiltIn = BUILT_IN.some((r) => r.id === recipe.id);
+      if (isBuiltIn) {
+        const updated = { ...overrides, [recipe.id]: recipe };
+        setOverrides(updated);
+        saveOverrides(updated);
+      } else {
+        const updated = customRecipes.map((r) => r.id === recipe.id ? recipe : r);
+        const isExisting = customRecipes.some((r) => r.id === recipe.id);
+        const final = isExisting ? updated : [...customRecipes, recipe];
+        setCustomRecipes(final);
+        saveCustom(final);
+      }
       setView({ type: "home" });
     },
-    [customRecipes]
+    [customRecipes, overrides]
   );
 
   if (!mounted) return <div className={s.pagePlaceholder} />;
@@ -625,6 +675,7 @@ export default function RatioPage() {
           recipes={allRecipes}
           onSelect={(r) => setView({ type: "recipe", recipe: r })}
           onAdd={() => setView({ type: "add" })}
+          onEdit={(r) => setView({ type: "edit", recipe: r })}
         />
       )}
       {view.type === "recipe" && (
@@ -632,6 +683,13 @@ export default function RatioPage() {
       )}
       {view.type === "add" && (
         <AddRecipeView
+          onSave={handleSaveRecipe}
+          onCancel={() => setView({ type: "home" })}
+        />
+      )}
+      {view.type === "edit" && (
+        <AddRecipeView
+          initial={view.recipe}
           onSave={handleSaveRecipe}
           onCancel={() => setView({ type: "home" })}
         />
