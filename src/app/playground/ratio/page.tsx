@@ -221,12 +221,10 @@ function HomeView({
   recipes,
   onSelect,
   onAdd,
-  onEdit,
 }: {
   recipes: Recipe[];
   onSelect: (r: Recipe) => void;
   onAdd: () => void;
-  onEdit: (r: Recipe) => void;
 }) {
   return (
     <div className={s.homeContainer}>
@@ -237,24 +235,14 @@ function HomeView({
 
       <div className={s.homeGrid}>
         {recipes.map((r) => (
-          <div key={r.id} className={s.recipeCardWrapper}>
-            <button
-              onClick={() => onSelect(r)}
-              className={s.recipeCard}
-            >
-              <span className={s.recipeEmoji}>{r.emoji}</span>
-              <span className={s.recipeName}>{r.name}</span>
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); onEdit(r); }}
-              className={s.editButton}
-              aria-label={`Edit ${r.name}`}
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M9.5 2L12 4.5L4.5 12H2V9.5L9.5 2Z" stroke="#71717a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          </div>
+          <button
+            key={r.id}
+            onClick={() => onSelect(r)}
+            className={s.recipeCard}
+          >
+            <span className={s.recipeEmoji}>{r.emoji}</span>
+            <span className={s.recipeName}>{r.name}</span>
+          </button>
         ))}
 
         <button
@@ -280,9 +268,11 @@ function toGrams(amount: number, unit: string): { amount: number; unit: string }
 function RecipeView({
   recipe,
   onBack,
+  onEdit,
 }: {
   recipe: Recipe;
   onBack: () => void;
+  onEdit: () => void;
 }) {
   const [mainIdx, setMainIdx] = useState(recipe.defaultMainIndex);
   const [sliderVal, setSliderVal] = useState(recipe.sliderDefault);
@@ -341,6 +331,15 @@ function RecipeView({
           </svg>
         </button>
         <span className={s.recipeTitle}>{recipe.emoji} {recipe.name}</span>
+        <button
+          onClick={onEdit}
+          className={s.editButton}
+          aria-label="Edit recipe"
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M9.5 2L12 4.5L4.5 12H2V9.5L9.5 2Z" stroke="#71717a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
         <button
           onClick={() => setUseGrams((v) => !v)}
           className={`${s.gramsToggle} ${useGrams ? s.gramsToggleActive : s.gramsToggleInactive}`}
@@ -675,11 +674,14 @@ export default function RatioPage() {
           recipes={allRecipes}
           onSelect={(r) => setView({ type: "recipe", recipe: r })}
           onAdd={() => setView({ type: "add" })}
-          onEdit={(r) => setView({ type: "edit", recipe: r })}
         />
       )}
       {view.type === "recipe" && (
-        <RecipeView recipe={view.recipe} onBack={() => setView({ type: "home" })} />
+        <RecipeView
+          recipe={view.recipe}
+          onBack={() => setView({ type: "home" })}
+          onEdit={() => setView({ type: "edit", recipe: view.recipe })}
+        />
       )}
       {view.type === "add" && (
         <AddRecipeView
