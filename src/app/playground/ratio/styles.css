@@ -1,0 +1,319 @@
+/* ── Shared ───────────────────────────────────────────────────────────────────  */
+
+.page {
+  @apply h-dvh bg-black overflow-hidden;
+}
+
+.pagePlaceholder {
+  @apply h-dvh bg-black;
+}
+
+/* ── Vertical Slider ──────────────────────────────────────────────────────────  */
+
+.sliderTrack {
+  @apply relative rounded-full bg-zinc-800 cursor-pointer;
+}
+
+.sliderFill {
+  @apply absolute bottom-0 left-0 right-0 rounded-full bg-white;
+}
+
+.sliderThumbWrapper {
+  @apply absolute left-1/2 z-10;
+}
+
+.sliderThumb {
+  @apply w-full h-full rounded-full bg-white flex flex-col items-center justify-center gap-[5px];
+  box-shadow: 0 2px 16px rgba(255, 255, 255, 0.25);
+}
+
+.sliderThumbLine {
+  @apply w-5 h-[2px] bg-zinc-400 rounded-full;
+}
+
+/* ── Home view ────────────────────────────────────────────────────────────────  */
+
+.homeContainer {
+  @apply flex flex-col h-full bg-black text-white px-4;
+}
+
+.homeHeader {
+  @apply pt-16 pb-6;
+}
+
+.homeTitle {
+  @apply text-3xl font-bold tracking-tight;
+}
+
+.homeSubtitle {
+  @apply text-zinc-500 text-sm mt-1;
+}
+
+.homeGrid {
+  @apply grid grid-cols-2 gap-3 overflow-y-auto flex-1 pb-10;
+}
+
+.recipeCard {
+  @apply flex flex-col items-center justify-center gap-3 rounded-3xl bg-zinc-900 aspect-square active:scale-[0.96] transition-transform duration-100;
+}
+
+.recipeEmoji {
+  @apply text-5xl leading-none;
+}
+
+.recipeName {
+  @apply text-[15px] font-semibold leading-tight px-3 text-center;
+}
+
+.addCard {
+  @apply flex flex-col items-center justify-center gap-3 rounded-3xl border-2 border-dashed border-zinc-800 aspect-square active:scale-[0.96] transition-transform duration-100;
+}
+
+.addCardIcon {
+  @apply text-4xl text-zinc-600 leading-none font-light;
+}
+
+.addCardLabel {
+  @apply text-[15px] font-semibold text-zinc-600;
+}
+
+/* ── Recipe view ──────────────────────────────────────────────────────────────  */
+
+.recipeContainer {
+  @apply flex flex-col h-full bg-black text-white overflow-hidden;
+}
+
+.recipeHeader {
+  @apply flex items-center gap-3 px-4 pt-14 pb-4 flex-shrink-0;
+}
+
+.backButton {
+  @apply w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center active:scale-95 transition-transform flex-shrink-0;
+}
+
+.recipeTitle {
+  @apply text-lg font-bold;
+}
+
+.gramsToggle {
+  @apply ml-auto px-3 py-1.5 rounded-full text-sm font-semibold transition-colors flex-shrink-0;
+}
+
+.gramsToggleActive {
+  @apply bg-white text-black;
+}
+
+.gramsToggleInactive {
+  @apply bg-zinc-900 text-zinc-400;
+}
+
+.ingredientToggleRow {
+  @apply flex gap-2 px-4 pb-4 overflow-x-auto flex-shrink-0;
+  scrollbar-width: none;
+}
+
+.ingredientToggleBtn {
+  @apply px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors flex-shrink-0;
+}
+
+.ingredientToggleBtnActive {
+  @apply bg-white text-black;
+}
+
+.ingredientToggleBtnInactive {
+  @apply bg-zinc-900 text-zinc-400 active:bg-zinc-800;
+}
+
+.bigValueContainer {
+  @apply px-5 pb-1 flex-shrink-0;
+}
+
+.bigValueRow {
+  @apply flex items-end gap-2;
+}
+
+.bigValue {
+  @apply text-[64px] font-bold leading-none tabular-nums;
+}
+
+.bigValueUnit {
+  @apply text-2xl text-zinc-400 pb-2;
+}
+
+.bigValueMeta {
+  @apply flex items-center gap-3 mt-1;
+}
+
+.bigValueLabel {
+  @apply text-zinc-500 text-sm;
+}
+
+.bigValueDot {
+  @apply text-zinc-700;
+}
+
+.bigValueServings {
+  @apply text-zinc-500 text-sm;
+}
+
+.sliderArea {
+  @apply flex-1 flex items-center justify-center py-6 min-h-0;
+}
+
+.breakdown {
+  @apply px-4 pb-10 flex-shrink-0;
+}
+
+.breakdownCard {
+  @apply bg-zinc-900 rounded-3xl overflow-hidden;
+}
+
+.breakdownRow {
+  @apply flex items-center justify-between px-5 py-[14px];
+}
+
+.breakdownRowBorder {
+  @apply border-b border-zinc-800;
+}
+
+.breakdownIngredientActive {
+  @apply text-[15px] text-white font-semibold;
+}
+
+.breakdownIngredientInactive {
+  @apply text-[15px] text-zinc-400;
+}
+
+.breakdownAmount {
+  @apply text-[15px] font-semibold tabular-nums text-white;
+}
+
+.breakdownUnit {
+  @apply text-zinc-500 font-normal text-sm;
+}
+
+/* ── Add recipe view ──────────────────────────────────────────────────────────  */
+
+.addContainer {
+  @apply flex flex-col h-full bg-black text-white;
+}
+
+.addHeader {
+  @apply flex items-center justify-between px-5 pt-14 pb-4 flex-shrink-0;
+}
+
+.cancelButton {
+  @apply text-zinc-400 text-[15px] active:text-white transition-colors;
+}
+
+.addHeaderTitle {
+  @apply text-[15px] font-semibold;
+}
+
+.saveButton {
+  @apply text-[15px] font-semibold transition-colors;
+}
+
+.saveButtonActive {
+  @apply text-white active:text-zinc-300;
+}
+
+.saveButtonDisabled {
+  @apply text-zinc-700;
+}
+
+.addScrollArea {
+  @apply flex-1 overflow-y-auto px-4 pb-16;
+}
+
+.nameRow {
+  @apply flex gap-3 mb-6;
+}
+
+.emojiInput {
+  @apply w-16 h-16 text-center text-3xl bg-zinc-900 rounded-2xl outline-none;
+}
+
+.nameInput {
+  @apply flex-1 h-16 px-4 text-[15px] font-semibold bg-zinc-900 rounded-2xl outline-none placeholder:text-zinc-600;
+}
+
+.sectionLabel {
+  @apply text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3;
+}
+
+.ingredientList {
+  @apply bg-zinc-900 rounded-2xl overflow-hidden mb-3;
+}
+
+.ingredientItem {
+  @apply p-4;
+}
+
+.ingredientItemBorder {
+  @apply border-b border-zinc-800;
+}
+
+.ingredientItemHeader {
+  @apply flex items-center gap-2 mb-3;
+}
+
+.radioButton {
+  @apply w-5 h-5 rounded-full border-2 flex-shrink-0 transition-colors;
+}
+
+.radioButtonActive {
+  @apply border-white bg-white;
+}
+
+.radioButtonInactive {
+  @apply border-zinc-600;
+}
+
+.ingredientHint {
+  @apply text-xs text-zinc-500 flex-1;
+}
+
+.removeButton {
+  @apply text-xs text-zinc-600 active:text-red-400 transition-colors;
+}
+
+.ingredientFields {
+  @apply flex gap-2;
+}
+
+.fieldName {
+  @apply flex-1 h-11 px-3 bg-zinc-800 rounded-xl text-sm outline-none placeholder:text-zinc-600;
+}
+
+.fieldUnit {
+  @apply w-16 h-11 px-3 bg-zinc-800 rounded-xl text-sm outline-none placeholder:text-zinc-600;
+}
+
+.fieldRatio {
+  @apply w-16 h-11 px-3 bg-zinc-800 rounded-xl text-sm outline-none placeholder:text-zinc-600;
+}
+
+.addIngredientButton {
+  @apply w-full h-12 rounded-2xl border border-dashed border-zinc-800 text-zinc-500 text-sm mb-8 active:border-zinc-600 active:text-zinc-400 transition-colors;
+}
+
+.sliderRangeList {
+  @apply bg-zinc-900 rounded-2xl overflow-hidden;
+}
+
+.sliderRangeRow {
+  @apply flex items-center justify-between px-5 py-[14px];
+}
+
+.sliderRangeRowBorder {
+  @apply border-b border-zinc-800;
+}
+
+.sliderRangeLabel {
+  @apply text-[15px] text-zinc-400;
+}
+
+.sliderRangeInput {
+  @apply w-24 h-10 px-3 text-right bg-zinc-800 rounded-xl text-[15px] outline-none tabular-nums;
+}
