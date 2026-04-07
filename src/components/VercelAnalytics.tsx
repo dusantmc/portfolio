@@ -2,7 +2,7 @@
 
 import { Analytics } from "@vercel/analytics/next";
 
-const EXCLUDED_PATHS = ["/playground/kcals"];
+const EXCLUDED_PATHS = ["/playground/kcals", "/playground/ratio"];
 
 const getPathname = (url: string) => {
   try {
