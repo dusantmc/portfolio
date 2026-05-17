@@ -187,6 +187,45 @@ export default function Playground() {
             </p>
           </div>
         </Link>
+
+        <Link href="/playground/3dbadges" style={{ textDecoration: 'none', flex: '1', minWidth: '280px', maxWidth: '380px' }}>
+          <div className="card" style={{
+            cursor: 'pointer',
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '16px'
+          }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-4px)';
+              e.currentTarget.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.08)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <h2 style={{
+              fontSize: '24px',
+              lineHeight: '28px',
+              fontWeight: 700,
+              color: '#000',
+              margin: 0
+            }}>
+              3D Badges
+            </h2>
+            <p style={{
+              fontSize: '14px',
+              lineHeight: '20px',
+              color: 'rgba(0, 0, 0, 0.6)',
+              margin: 0
+            }}>
+              Design metallic badges from SVG icons
+            </p>
+          </div>
+        </Link>
       </div>
     </div>
   );
