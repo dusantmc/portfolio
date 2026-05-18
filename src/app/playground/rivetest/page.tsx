@@ -656,7 +656,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
             {/* Buttons */}
             <div style={{ padding: '24px 20px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div
-                onClick={() => { setFocusMode(true); setShowFocusModal(false); }}
+                onClick={() => { setShowFocusModal(false); setTimeout(() => setFocusMode(true), 300); }}
                 className="pressable"
                 style={{ height: 52, borderRadius: 12, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
               >
@@ -751,19 +751,19 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
               </div>
 
               {/* Focus Mode */}
-              <div onClick={() => focusMode ? setFocusMode(false) : setShowFocusModal(true)} className="pressable-card" style={{ background: focusMode ? `linear-gradient(rgba(132,204,22,0.1), rgba(132,204,22,0.1)), ${isDark ? '#0A1628' : '#fff'}` : isDark ? '#0A1628' : '#fff', border: `1.5px solid ${focusMode ? '#84CC16' : 'transparent'}`, borderRadius: 16, boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)', padding: '20px 20px 20px 24px', display: 'flex', alignItems: 'center', gap: 16, marginTop: 8, marginBottom: 24, cursor: 'pointer', transition: 'background 0.2s ease, border-color 0.2s ease, transform 0.15s ease' }}>
+              <div onClick={() => focusMode ? setFocusMode(false) : setShowFocusModal(true)} className="pressable-card" style={{ background: focusMode ? `linear-gradient(rgba(132,204,22,0.1), rgba(132,204,22,0.1)), ${isDark ? '#0A1628' : '#fff'}` : isDark ? '#0A1628' : '#fff', border: `1.5px solid ${focusMode ? '#84CC16' : 'transparent'}`, borderRadius: 16, boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)', padding: '20px 20px 20px 24px', display: 'flex', alignItems: 'center', gap: 16, marginTop: 8, marginBottom: 24, cursor: 'pointer', transition: 'background 0.5s ease, border-color 0.5s ease, transform 0.15s ease' }}>
                 <div style={{ position: 'relative', width: 24, height: 24, flexShrink: 0 }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/playground/doorslam/bell.svg" alt="" width={24} height={24} style={{ display: 'block', position: 'absolute', opacity: focusMode ? 0 : 1, transition: 'opacity 0.2s ease', filter: isDark ? 'brightness(0) invert(1)' : 'none' }} />
+                  <img src="/playground/doorslam/bell.svg" alt="" width={24} height={24} style={{ display: 'block', position: 'absolute', opacity: focusMode ? 0 : 1, transition: 'opacity 0.5s ease', filter: isDark ? 'brightness(0) invert(1)' : 'none' }} />
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/playground/doorslam/bell-off.svg" alt="" width={24} height={24} style={{ display: 'block', position: 'absolute', opacity: focusMode ? 1 : 0, transition: 'opacity 0.2s ease' }} />
+                  <img src="/playground/doorslam/bell-off.svg" alt="" width={24} height={24} style={{ display: 'block', position: 'absolute', opacity: focusMode ? 1 : 0, transition: 'opacity 0.5s ease' }} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 16, fontWeight: 600, color: fg, lineHeight: '125%', transition: 'color 0.2s ease' }}>Focus Mode</div>
                   <div style={{ fontSize: 12, fontWeight: 500, color: isDark ? '#9CA3AF' : '#6B7280', lineHeight: '150%', transition: 'color 0.2s ease' }}>{focusMode ? '+5 bonus points for focused revision' : 'Earn +5 bonus points for focused revision'}</div>
                 </div>
-                <div style={{ width: 56, height: 32, borderRadius: 16, background: focusMode ? '#84CC16' : isDark ? '#1B2840' : '#E5E7EB', position: 'relative', flexShrink: 0, transition: 'background 0.2s ease' }}>
-                  <div style={{ position: 'absolute', top: 4, left: focusMode ? 28 : 4, width: 24, height: 24, borderRadius: 12, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', transition: 'left 0.2s ease' }} />
+                <div style={{ width: 56, height: 32, borderRadius: 16, background: focusMode ? '#84CC16' : isDark ? '#1B2840' : '#E5E7EB', position: 'relative', flexShrink: 0, transition: 'background 0.5s ease' }}>
+                  <div style={{ position: 'absolute', top: 4, left: focusMode ? 28 : 4, width: 24, height: 24, borderRadius: 12, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', transition: 'left 0.5s ease' }} />
                 </div>
               </div>
 
