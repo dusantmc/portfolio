@@ -75,11 +75,22 @@ const { RiveComponent, rive } = useRive({
     autoplay: true,
   });
 
-  const { RiveComponent: StreakButtonRive, rive: streakButtonRive } = useRive({
-    src: '/playground/doorslam/streak_fire.riv',
-    stateMachines: 'Streak Increase',
-    autoplay: true,
-  });
+  useEffect(() => {
+    if (!focusRive) return;
+    try {
+      const input = focusRive.stateMachineInputs('Focus_On')?.find(i => i.name === 'isDarkMode');
+      if (input) input.value = isDark;
+    } catch {}
+  }, [focusRive, isDark]);
+
+
+const { RiveComponent: StreakButtonRive, rive: streakButtonRive } = useRive({
+  src: '/playground/doorslam/streak_fire.riv',
+  stateMachines: 'Streak Increase',
+  autoplay: true,
+});
+
+
 
   useEffect(() => {
     if (streakAnimKey === 0) return;
@@ -87,6 +98,11 @@ const { RiveComponent, rive } = useRive({
     streakButtonRive?.play('Streak Increase');
   }, [streakAnimKey, streakButtonRive]);
 
+
+
+
+
+  
   const [avatarReady, setAvatarReady] = useState(false);
 
   useEffect(() => {
@@ -185,9 +201,13 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
       if (!focusRive) return;
       focusRive.reset({ stateMachines: 'Focus_On' });
       focusRive.play('Focus_On');
+      try {
+        const input = focusRive.stateMachineInputs('Focus_On')?.find(i => i.name === 'isDarkMode');
+        if (input) input.value = isDark;
+      } catch {}
     }, 250);
     return () => clearTimeout(t);
-  }, [showFocusModal, focusRive]);
+  }, [showFocusModal, focusRive, isDark]);
 
   useEffect(() => {
     const update = () => {
