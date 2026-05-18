@@ -1,0 +1,65 @@
+*, *::before, *::after { box-sizing: border-box; }
+
+.pressable { -webkit-tap-highlight-color: transparent; transition: transform 0.15s ease; }
+.pressable:active { transform: scale(0.9); }
+
+.pressable-fade { -webkit-tap-highlight-color: transparent; transition: opacity 0.15s ease; }
+.pressable-fade:active { opacity: 0.6; }
+
+.pressable-card { -webkit-tap-highlight-color: transparent; }
+.pressable-card:active { transform: scale(0.95); }
+
+@keyframes thinking-shimmer {
+  0%      { background-position: 200% center; }
+  85.7%   { background-position: -200% center; }
+  100%    { background-position: -200% center; }
+}
+
+@keyframes circle-pop {
+  from { opacity: 0; transform: scale(0.5); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes scale-in {
+  from { transform: scale(0.8); }
+  to   { transform: scale(1); }
+}
+
+@keyframes step-shrink {
+  from { transform: scale(1); }
+  to   { transform: scale(0); }
+}
+
+@keyframes step-grow {
+  from { transform: scale(0); }
+  to   { transform: scale(1); }
+}
+
+@keyframes streak-slot {
+  from { transform: translateY(-50%); }
+  to   { transform: translateY(0); }
+}
+
+@media (max-width: 430px) {
+  .phone-outer {
+    padding: 0 !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+  }
+  .phone-frame {
+    width: 100% !important;
+    height: 100dvh !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  .phone-side-btn { display: none !important; }
+  .phone-screen {
+    width: 100% !important;
+    height: 100dvh !important;
+    border-radius: 0 !important;
+  }
+  .phone-status-bar { display: none !important; }
+  .phone-notch { display: none !important; }
+  .phone-panel { width: 100% !important; height: 100% !important; }
+}

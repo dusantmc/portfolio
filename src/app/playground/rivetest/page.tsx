@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DM_Sans } from 'next/font/google';
 import { useRive, useStateMachineInput, Layout, Fit, Alignment } from '@rive-app/react-webgl2';
+import './styles.css';
 
 const SM_NAME = 'FAB_Machine';
 
@@ -17,8 +18,8 @@ const SCREEN_BG = {
     '#ffffff',
   ].join(', '),
   dark: [
-    'linear-gradient(4deg, #0A1628 0%, rgba(10,22,40,0) 89%)',
-    'linear-gradient(328deg, rgba(132,204,22,0.2) 0%, rgba(129,140,248,0.2) 100%)',
+    'linear-gradient(175.46deg, #0A1628 1.14%, rgba(10,22,40,0) 87.22%)',
+    'linear-gradient(-32.22deg, rgba(132,204,22,0.2) 19.71%, rgba(129,140,248,0.2) 72.22%)',
     '#0A1628',
   ].join(', '),
 };
@@ -37,6 +38,11 @@ export default function RiveTestPage() {
   const [streakCount, setStreakCount] = useState(2);
   const [streakAnimKey, setStreakAnimKey] = useState(0);
   const [streakAnimating, setStreakAnimating] = useState(false);
+  const [showSession, setShowSession] = useState(false);
+  const [selectedConfidence, setSelectedConfidence] = useState<string | null>(null);
+  const [focusMode, setFocusMode] = useState(false);
+  const [showFocusModal, setShowFocusModal] = useState(false);
+  const [stepOneActive, setStepOneActive] = useState(false);
 
 const { RiveComponent, rive } = useRive({
   src: '/playground/doorslam/fab.riv',
@@ -60,6 +66,12 @@ const { RiveComponent, rive } = useRive({
   const { RiveComponent: StreakFireRive } = useRive({
     src: '/playground/doorslam/streak_fire.riv',
     stateMachines: 'Streak Fire',
+    autoplay: true,
+  });
+
+  const { RiveComponent: FocusRive, rive: focusRive } = useRive({
+    src: '/playground/doorslam/focus.riv',
+    stateMachines: 'Focus_On',
     autoplay: true,
   });
 
@@ -156,6 +168,28 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
   }, [streakAnimKey]);
 
   useEffect(() => {
+    if (showSession) {
+      const t = setTimeout(() => setStepOneActive(true), 250);
+      return () => clearTimeout(t);
+    } else {
+      setStepOneActive(false);
+    }
+  }, [showSession]);
+
+  useEffect(() => {
+    if (!showFocusModal) {
+      const t = setTimeout(() => focusRive?.reset({ stateMachines: 'Focus_On' }), 300);
+      return () => clearTimeout(t);
+    }
+    const t = setTimeout(() => {
+      if (!focusRive) return;
+      focusRive.reset({ stateMachines: 'Focus_On' });
+      focusRive.play('Focus_On');
+    }, 250);
+    return () => clearTimeout(t);
+  }, [showFocusModal, focusRive]);
+
+  useEffect(() => {
     const update = () => {
       const now = new Date();
       const h = now.getHours() % 12 || 12;
@@ -169,6 +203,8 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
 
   const fg = isDark ? '#E5E7EB' : '#1F2330';
   const accent = isDark ? '#818CF8' : '#4F46E5';
+  const statusBarFg = (showStudyBuddy && !showSession) ? '#1F2330' : fg;
+  const statusBarIconFilter = (showStudyBuddy && !showSession) ? 'none' : (isDark ? 'brightness(0) invert(1)' : 'none');
 
   const StatusIcons = () => (
     <svg width="96" height="22" viewBox="0 0 96 22" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -182,34 +218,10 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
 
   return (
     <>
-    <style>{`
-      .pressable { -webkit-tap-highlight-color: transparent; transition: transform 0.15s ease; }
-      .pressable:active { transform: scale(0.9); }
-      @keyframes thinking-shimmer {
-        0%      { background-position: 200% center; }
-        85.7%   { background-position: -200% center; }
-        100%    { background-position: -200% center; }
-      }
-      @keyframes circle-pop {
-        from { opacity: 0; transform: scale(0.5); }
-        to   { opacity: 1; transform: scale(1); }
-      }
-      @keyframes streak-slot {
-        from { transform: translateY(-50%); }
-        to   { transform: translateY(0); }
-      }
-      @media (max-width: 430px) {
-        .phone-outer { padding: 0 !important; align-items: stretch !important; justify-content: flex-start !important; }
-        .phone-frame { width: 100% !important; height: 100dvh !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; }
-        .phone-side-btn { display: none !important; }
-        .phone-screen { width: 100% !important; height: 100dvh !important; border-radius: 0 !important; }
-        .phone-status-bar { display: none !important; }
-        .phone-notch { display: none !important; }
-        .phone-panel { width: 100% !important; height: 100% !important; }
-      }
-    `}</style>
     <div className="phone-outer" style={{
-      minHeight: '100vh',
+      boxSizing: 'content-box',
+      height: '100dvh',
+      overflow: 'hidden',
       background: '#111',
       display: 'flex',
       flexDirection: 'column',
@@ -260,20 +272,28 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
           transition: 'background 0.2s ease',
         }}>
 
-          {/* Dynamic Island */}
-          <div className="phone-notch" style={{
-            position: 'absolute',
-            top: 13,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: 126,
-            height: 37,
-            background: '#000',
-            borderRadius: 20,
-            zIndex: 20,
-          }} />
+          {/* Persistent status bar + Dynamic Island — sits above all panels */}
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 40, pointerEvents: 'none' }}>
+            <div className="phone-notch" style={{ position: 'absolute', top: 13, left: '50%', transform: 'translateX(-50%)', width: 126, height: 37, background: '#000', borderRadius: 20 }} />
+            <div className="phone-status-bar" style={{ height: 59, position: 'relative' }}>
+              <div style={{ position: 'absolute', left: 0, width: SIDE_ZONE, top: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: 16, fontWeight: 700, color: statusBarFg, letterSpacing: '-0.3px', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', marginTop: 2, transition: 'color 0.2s ease' }}>{time}</span>
+              </div>
+              <div style={{ position: 'absolute', right: 0, width: SIDE_ZONE, top: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', filter: statusBarIconFilter, transition: 'filter 0.2s ease' }}>
+                <StatusIcons />
+              </div>
+            </div>
+          </div>
 
-          {/* Header — status bar + top bar, frosted glass */}
+          {/* Main content — pushed left when session panel opens */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', flexDirection: 'column',
+            transform: showSession ? 'translateX(-30%)' : 'translateX(0)',
+            transition: 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+          }}>
+
+          {/* Header — top bar only, frosted glass */}
           <div style={{
             flexShrink: 0,
             display: 'flex',
@@ -286,33 +306,8 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
             zIndex: 10,
           }}>
 
-          {/* Status bar */}
-          <div className="phone-status-bar" style={{ height: 59, position: 'relative' }}>
-            <div style={{
-              position: 'absolute', left: 0, width: SIDE_ZONE, top: 0, bottom: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <span style={{
-                fontSize: 16,
-                fontWeight: 700,
-                color: fg,
-                letterSpacing: '-0.3px',
-                fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
-                marginTop: 2,
-                transition: 'color 0.2s ease',
-              }}>
-                {time}
-              </span>
-            </div>
-            <div style={{
-              position: 'absolute', right: 0, width: SIDE_ZONE, top: 0, bottom: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              filter: isDark ? 'brightness(0) invert(1)' : 'none',
-              transition: 'filter 0.2s ease',
-            }}>
-              <StatusIcons />
-            </div>
-          </div>
+          {/* Status bar spacer */}
+          <div className="phone-status-bar" style={{ height: 59 }} />
 
           {/* Top bar */}
           <div style={{
@@ -349,6 +344,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
 
             <div className="pressable" onClick={() => { setStreakModalKey(k => k + 1); setShowStreakModal(true); }} style={{ marginLeft: 'auto', flexShrink: 0, cursor: 'pointer' }}>
               <div style={{
+                boxSizing: 'border-box',
                 height: 36, borderRadius: 18,
                 background: isDark ? 'rgba(255,255,255,0.08)' : '#fff',
                 boxShadow: 'none',
@@ -397,14 +393,41 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                 }}>
                   {label}
                 </div>
-                <div style={{
-                  height: h, borderRadius: 16,
-                  background: isDark ? '#0A1628' : '#ffffff',
-                  boxShadow: isDark
-                    ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)'
-                    : '0px 1px 2px -1px rgba(0,0,0,0.10), 0px 1px 3px 0px rgba(0,0,0,0.10)',
-                  transition: 'background 0.2s ease',
-                }} />
+                <div
+                  onClick={si === 0 ? () => { setSelectedConfidence(null); setFocusMode(false); setShowSession(true); } : undefined}
+                  className={si === 0 ? 'pressable-card' : undefined}
+                  style={{
+                    borderRadius: 16,
+                    background: isDark ? '#0A1628' : '#ffffff',
+                    boxShadow: isDark
+                      ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)'
+                      : '0px 1px 2px -1px rgba(0,0,0,0.10), 0px 1px 3px 0px rgba(0,0,0,0.10)',
+                    ...(si === 0 ? {
+                      padding: 16,
+                      display: 'flex', flexDirection: 'column', gap: 12,
+                      cursor: 'pointer',
+                      transition: 'background 0.2s ease, transform 0.15s ease',
+                    } : {
+                      height: h,
+                      transition: 'background 0.2s ease',
+                    }),
+                  }}
+                >
+                  {si === 0 && (
+                    <>
+                      <div style={{ height: 16, borderRadius: 10, background: isDark ? '#1B2840' : '#F3F4F6', transition: 'background 0.2s ease' }} />
+                      <div style={{ height: 68, borderRadius: 10, background: isDark ? '#1B2840' : '#F3F4F6', transition: 'background 0.2s ease' }} />
+                      <div style={{
+                        boxSizing: 'border-box',
+                        height: 40, borderRadius: 10,
+                        background: '#4F46E5',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <span style={{ fontSize: 16, lineHeight: '125%', fontWeight: 700, color: '#fff' }}>Start Session</span>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             ))}
             <div style={{ height: 16 }} />
@@ -423,13 +446,13 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
             }}
             className="pressable"
             style={{
-              position: 'absolute', right: 32, bottom: 125,
+              position: 'absolute', right: 20, bottom: 113,
               width: 56, height: 56, zIndex: 15, cursor: 'pointer',
               transformOrigin: 'center',
             }}
           >
             <div style={{
-              position: 'absolute', left: -32, top: -32,
+              position: 'absolute', left: -44, top: -44,
               width: 120, height: 120, pointerEvents: 'none',
             }}>
               <RiveComponent />
@@ -446,7 +469,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
             backdropFilter: 'blur(40px)',
             transition: 'background 0.2s ease, border-color 0.2s ease',
           }}>
-            <div style={{ height: 70, display: 'flex', alignItems: 'flex-start', paddingTop: 12, paddingLeft: 24, paddingRight: 24 }}>
+            <div style={{ boxSizing: 'border-box', height: 70, display: 'flex', alignItems: 'flex-start', paddingTop: 12, paddingLeft: 24, paddingRight: 24 }}>
               {[
                 { label: 'Today',   icon: '/playground/doorslam/tab-home.svg',   active: true  },
                 { label: 'Rewards', icon: '/playground/doorslam/tab-reward.svg', active: false },
@@ -471,6 +494,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
             </div>
             <div style={{ height: 23 }} />
           </div>
+          </div>{/* end main content wrapper */}
 
           {/* Streak modal backdrop */}
           <div
@@ -492,12 +516,12 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
             borderRadius: 32,
             transform: showStreakModal ? 'translateY(0)' : 'translateY(120%)',
             opacity: showStreakModal ? 1 : 0,
-            transition: 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.25s ease',
+            transition: 'transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.25s ease, background 0.2s ease',
             paddingBottom: 40,
           }}>
             {/* Notch */}
             <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 12, paddingBottom: 8 }}>
-              <div style={{ width: 36, height: 4, borderRadius: 2, background: isDark ? 'rgba(255,255,255,0.2)' : '#E5E7EB' }} />
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: isDark ? 'rgba(255,255,255,0.2)' : '#E5E7EB', transition: 'background 0.2s ease' }} />
             </div>
 
             {/* Content */}
@@ -514,7 +538,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
               {/* Title */}
               <div style={{
                 marginTop: 24, fontSize: 24, lineHeight: '125%', fontWeight: 700,
-                color: isDark ? '#E5E7EB' : '#1F2330', textAlign: 'center',
+                color: isDark ? '#E5E7EB' : '#1F2330', textAlign: 'center', transition: 'color 0.2s ease',
               }}>
                 {streakCount}-day streak – great momentum!
               </div>
@@ -557,12 +581,218 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                       border: `1.5px solid ${isDark ? '#818CF8' : '#4F46E5'}`,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       animation: 'circle-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) 320ms both',
+                      transition: 'background 0.2s ease, border-color 0.2s ease',
                     }}>
-                      <span style={{ fontSize: 18, lineHeight: '125%', fontWeight: 700, color: isDark ? '#818CF8' : '#4F46E5' }}>{streakCount + 1}</span>
+                      <span style={{ fontSize: 18, lineHeight: '125%', fontWeight: 700, color: isDark ? '#818CF8' : '#4F46E5', transition: 'color 0.2s ease' }}>{streakCount + 1}</span>
                     </div>
                   </div>
                 );
               })()}
+            </div>
+          </div>
+
+          {/* Focus Mode modal backdrop */}
+          <div
+            onClick={() => setShowFocusModal(false)}
+            style={{
+              position: 'absolute', inset: 0, zIndex: 30,
+              background: 'rgba(0,0,0,0.25)',
+              opacity: showFocusModal ? 1 : 0,
+              pointerEvents: showFocusModal ? 'auto' : 'none',
+              transition: 'opacity 0.25s ease',
+            }}
+          />
+
+          {/* Focus Mode modal */}
+          <div style={{
+            position: 'absolute', bottom: 40, left: 16, right: 16,
+            zIndex: 31,
+            background: isDark ? '#0A1628' : '#fff',
+            borderRadius: 32,
+            overflow: 'hidden',
+            transform: showFocusModal ? 'translateY(0)' : 'translateY(120%)',
+            opacity: showFocusModal ? 1 : 0,
+            transition: 'transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.25s ease, background 0.2s ease',
+          }}>
+            {/* Pill handle */}
+            <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', width: 52, height: 6, borderRadius: 40, background: isDark ? 'rgba(255,255,255,0.2)' : '#E5E7EB', zIndex: 1, transition: 'background 0.2s ease' }} />
+
+            {/* Top animation area */}
+            <div style={{ position: 'relative', height: 144, overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(107,114,128,0.15) 0%, rgba(107,114,128,0) 100%)' }} />
+              <FocusRive style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: '12px 20px 0', textAlign: 'center' }}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: accent, lineHeight: '125%', transition: 'color 0.2s ease' }}>Focus Mode</div>
+              <div style={{ marginTop: 8, fontSize: 14, fontWeight: 500, color: '#6B7280', lineHeight: '150%' }}>
+                Turn on Do Not Disturb to silence notifications and stay focused during your session.
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div style={{ padding: '24px 20px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div
+                onClick={() => { setFocusMode(true); setShowFocusModal(false); }}
+                className="pressable"
+                style={{ height: 52, borderRadius: 12, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', lineHeight: '125%' }}>Turn On Focus Mode</span>
+              </div>
+              <div
+                onClick={() => setShowFocusModal(false)}
+                className="pressable-fade"
+                style={{ height: 52, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <span style={{ fontSize: 16, fontWeight: 600, color: '#6B7280', lineHeight: '125%' }}>Skip for now</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Session panel — slides in from right */}
+          <div className="phone-panel" style={{
+            position: 'absolute', top: 0, left: 0,
+            width: 393, height: 852,
+            background: isDark ? SCREEN_BG.dark : SCREEN_BG.light,
+            zIndex: 26,
+            display: 'flex', flexDirection: 'column',
+            transform: showSession ? 'translateX(0)' : 'translateX(100%)',
+            transition: 'transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94), background 0.2s ease',
+            borderRadius: 44,
+            overflow: 'hidden',
+          }}>
+            {/* Header wrapper — frosted glass */}
+            <div style={{
+              flexShrink: 0, display: 'flex', flexDirection: 'column',
+              background: isDark
+                ? 'linear-gradient(to bottom, rgba(10,22,40,0.8) 0%, rgba(10,22,40,0) 100%)'
+                : 'linear-gradient(to bottom, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 100%)',
+              backdropFilter: 'blur(40px)',
+              transition: 'background 0.2s ease',
+              zIndex: 10,
+            }}>
+            {/* Status bar spacer */}
+            <div className="phone-status-bar" style={{ height: 59, flexShrink: 0 }} />
+
+            {/* Header nav */}
+            <div style={{ height: 64, flexShrink: 0, display: 'flex', alignItems: 'center', paddingLeft: 16, paddingRight: 16 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 20, fontWeight: 700, color: fg, lineHeight: '125%', letterSpacing: '-0.3px', transition: 'color 0.2s ease' }}>Mathematics A</div>
+                <div style={{ fontSize: 14, fontWeight: 400, color: '#6B7280', lineHeight: '150%' }}>Fractional Distillation of Crude Oil</div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                {/* Timer badge */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: isDark ? '#1B2840' : '#fff', borderRadius: 18, paddingLeft: 10, paddingRight: 10, boxSizing: 'border-box', height: 36, transition: 'background 0.2s ease' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/playground/doorslam/timer.svg" alt="" width={16} height={16} style={{ display: 'block' }} />
+                  <span style={{ fontSize: 14, fontWeight: 500, color: '#6B7280', lineHeight: 1 }}>25m</span>
+                </div>
+                {/* Close */}
+                <div onClick={() => setShowSession(false)} className="pressable" style={{ width: 36, height: 36, borderRadius: 18, background: isDark ? '#1B2840' : '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, transition: 'background 0.2s ease' }}>
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M5 5l10 10M15 5L5 15" stroke={fg} strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+            </div>{/* end header wrapper */}
+
+            {/* Scrollable content */}
+            <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingLeft: 16, paddingRight: 16 }}>
+
+              {/* Steps */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4, paddingBottom: 16 }}>
+                {(['Preview','Recall','Revise','Practice','Summary','Complete'] as const).map((step, i) => (
+                  <div key={step} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 52 }}>
+                    {i === 0 ? (
+                      <div style={{ position: 'relative', width: 32, height: 32, flexShrink: 0 }}>
+                        {/* Inactive circle — shrinks away */}
+                        <div style={{ position: 'absolute', inset: 0, borderRadius: 16, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)', animation: stepOneActive ? 'step-shrink 0.2s ease forwards' : undefined }}>
+                          <span style={{ fontSize: 14, fontWeight: 600, color: isDark ? 'rgba(255,255,255,0.4)' : '#6B7280', lineHeight: '125%' }}>1</span>
+                        </div>
+                        {/* Active circle — grows in */}
+                        {stepOneActive && (
+                          <div style={{ position: 'absolute', inset: 0, borderRadius: 16, background: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'step-grow 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.18s both', transition: 'background 0.2s ease' }}>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: '125%' }}>1</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ width: 32, height: 32, borderRadius: 16, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)', transition: 'background 0.2s ease' }}>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: isDark ? 'rgba(255,255,255,0.4)' : '#6B7280', lineHeight: '125%', transition: 'color 0.2s ease' }}>{i + 1}</span>
+                      </div>
+                    )}
+                    <span style={{ fontSize: 12, fontWeight: i === 0 && stepOneActive ? 700 : 400, color: i === 0 && stepOneActive ? accent : '#6B7280', marginTop: 4, lineHeight: '125%', transition: 'color 0.2s ease, font-weight 0s' }}>{step}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Focus Mode */}
+              <div onClick={() => focusMode ? setFocusMode(false) : setShowFocusModal(true)} className="pressable-card" style={{ background: focusMode ? `linear-gradient(rgba(132,204,22,0.1), rgba(132,204,22,0.1)), ${isDark ? '#0A1628' : '#fff'}` : isDark ? '#0A1628' : '#fff', border: `1.5px solid ${focusMode ? '#84CC16' : 'transparent'}`, borderRadius: 16, boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)', padding: '20px 20px 20px 24px', display: 'flex', alignItems: 'center', gap: 16, marginTop: 8, marginBottom: 24, cursor: 'pointer', transition: 'background 0.2s ease, border-color 0.2s ease, transform 0.15s ease' }}>
+                <div style={{ position: 'relative', width: 24, height: 24, flexShrink: 0 }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/playground/doorslam/bell.svg" alt="" width={24} height={24} style={{ display: 'block', position: 'absolute', opacity: focusMode ? 0 : 1, transition: 'opacity 0.2s ease', filter: isDark ? 'brightness(0) invert(1)' : 'none' }} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/playground/doorslam/bell-off.svg" alt="" width={24} height={24} style={{ display: 'block', position: 'absolute', opacity: focusMode ? 1 : 0, transition: 'opacity 0.2s ease' }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: fg, lineHeight: '125%', transition: 'color 0.2s ease' }}>Focus Mode</div>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: isDark ? '#9CA3AF' : '#6B7280', lineHeight: '150%', transition: 'color 0.2s ease' }}>{focusMode ? '+5 bonus points for focused revision' : 'Earn +5 bonus points for focused revision'}</div>
+                </div>
+                <div style={{ width: 56, height: 32, borderRadius: 16, background: focusMode ? '#84CC16' : isDark ? '#1B2840' : '#E5E7EB', position: 'relative', flexShrink: 0, transition: 'background 0.2s ease' }}>
+                  <div style={{ position: 'absolute', top: 4, left: focusMode ? 28 : 4, width: 24, height: 24, borderRadius: 12, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', transition: 'left 0.2s ease' }} />
+                </div>
+              </div>
+
+              {/* Confidence heading */}
+              <div style={{ paddingLeft: 4, marginBottom: 12 }}>
+                <div style={{ fontSize: 18, fontWeight: 600, color: fg, lineHeight: '125%', transition: 'color 0.2s ease' }}>How confident are you with this topic?</div>
+                <div style={{ fontSize: 14, fontWeight: 500, color: '#6B7280', lineHeight: '150%', marginTop: 2 }}>This helps us tailor the session to your needs</div>
+              </div>
+
+              {/* Confidence options */}
+              <div style={{ opacity: showFocusModal ? 0.3 : 1, pointerEvents: showFocusModal ? 'none' : 'auto', transition: 'opacity 0.2s ease' }}>
+              <div style={{ background: isDark ? '#0A1628' : '#fff', borderRadius: 16, padding: 8, boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 1px rgba(0,0,0,0.05)', transition: 'background 0.2s ease' }}>
+                {([
+                  { id: 'very-confident', title: 'Very confident', subtitle: 'I already know this topic well', color: '#84CC16', selectedBg: 'rgba(132,204,22,0.102)', icon: '/playground/doorslam/option-confident.svg' },
+                  { id: 'fairly-confident', title: 'Fairly confident', subtitle: 'I know some of it but could use a refresher', color: '#4F46E5', selectedBg: 'rgba(59,130,246,0.102)', icon: '/playground/doorslam/option-fairly.svg' },
+                  { id: 'unsure', title: 'A bit unsure', subtitle: "I've heard of it but don't know it well", color: '#F97316', selectedBg: 'rgba(249,115,22,0.102)', icon: '/playground/doorslam/option-unsure.svg' },
+                  { id: 'new', title: 'New to me', subtitle: 'This topic is completely new or very unclear', color: '#EF4444', selectedBg: 'rgba(239,68,68,0.102)', icon: '/playground/doorslam/option-new.svg' },
+                ] as const).map(({ id, title, subtitle, color, selectedBg, icon }) => (
+                  <div key={id} onClick={() => setSelectedConfidence(id)} style={{ WebkitTapHighlightColor: 'transparent', display: 'flex', alignItems: 'center', gap: 16, padding: '13px 12px', borderRadius: 8, cursor: 'pointer', background: selectedConfidence === id ? selectedBg : selectedBg.replace('0.102', '0'), transition: 'background 0.2s ease' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={icon} alt="" width={24} height={24} style={{ flexShrink: 0, display: 'block' }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 16, fontWeight: 600, color: fg, lineHeight: '125%', transition: 'color 0.2s ease' }}>{title}</div>
+                      <div style={{ fontSize: 12, fontWeight: 500, color: '#6B7280', lineHeight: '150%' }}>{subtitle}</div>
+                    </div>
+                    <div style={{ width: 20, height: 20, borderRadius: 10, border: `2px solid ${selectedConfidence === id ? color : '#D1D5DB'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'border-color 0.15s ease' }}>
+                      {selectedConfidence === id && <div style={{ width: 10, height: 10, borderRadius: 5, background: color, animation: 'scale-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both' }} />}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              </div>{/* end confidence section */}
+
+            </div>
+
+            {/* Footer */}
+            <div style={{ flexShrink: 0, paddingTop: 0, paddingLeft: 16, paddingRight: 16, paddingBottom: 20, opacity: showFocusModal ? 0 : 1, pointerEvents: showFocusModal ? 'none' : 'auto', transition: 'opacity 0.2s ease' }}>
+              <div style={{ textAlign: 'center', marginBottom: 12 }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: accent, lineHeight: '125%', transition: 'color 0.2s ease' }}>Ready to begin?</div>
+                <div style={{ fontSize: 14, fontWeight: 400, color: '#6B7280', lineHeight: '150%' }}>Let&apos;s start your revision session</div>
+              </div>
+              <div className="pressable" style={{ boxSizing: 'border-box', height: 52, borderRadius: 12, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: selectedConfidence ? 1 : 0.5, cursor: selectedConfidence ? 'pointer' : 'default', transition: 'opacity 0.2s ease' }}>
+                <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', lineHeight: '125%' }}>Start Session</span>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/playground/doorslam/cta-arrow.svg" alt="" width={16} height={16} style={{ display: 'block' }} />
+              </div>
+            </div>
+            <div style={{ height: 23, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 140, height: 5, borderRadius: 3, background: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(31,35,48,0.2)' }} />
             </div>
           </div>
 
@@ -581,34 +811,8 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
             overflow: 'hidden',
           }}>
 
-            {/* Dynamic Island (covered by panel) */}
-            <div className="phone-notch" style={{
-              position: 'absolute', top: 13, left: '50%', transform: 'translateX(-50%)',
-              width: 126, height: 37, background: '#000', borderRadius: 20, zIndex: 10,
-            }} />
-
-            {/* Status bar */}
-            <div className="phone-status-bar" style={{ height: 59, position: 'relative', flexShrink: 0 }}>
-              <div style={{
-                position: 'absolute', left: 0, width: SIDE_ZONE, top: 0, bottom: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <span style={{
-                  fontSize: 16, fontWeight: 700, color: '#1F2330',
-                  letterSpacing: '-0.3px',
-                  fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
-                  marginTop: 2,
-                }}>
-                  {time}
-                </span>
-              </div>
-              <div style={{
-                position: 'absolute', right: 0, width: SIDE_ZONE, top: 0, bottom: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <StatusIcons />
-              </div>
-            </div>
+            {/* Status bar spacer */}
+            <div className="phone-status-bar" style={{ height: 59, flexShrink: 0 }} />
 
             {/* Nav bar */}
             <div style={{
@@ -644,10 +848,11 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                 style={{
                   marginLeft: 'auto',
                   width: 36, height: 36, borderRadius: 18,
-                  background: '#fff',
+                  background: isDark ? '#1B2840' : '#fff',
                   boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer', flexShrink: 0,
+                  transition: 'background 0.2s ease',
                 }}
               >
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
