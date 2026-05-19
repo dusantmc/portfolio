@@ -885,8 +885,8 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                           <span style={{ fontSize: 14, fontWeight: 700, color: '#6B7280', lineHeight: '125%' }}>Tips</span>
                         </div>
                         {['Use a dark pen on white paper', 'Keep all your working in the frame', "Make sure it's clear and easy to read"].map(tip => (
-                          <div key={tip} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                            <div style={{ width: 4, height: 4, borderRadius: 2, background: '#6B7280', marginTop: 5, flexShrink: 0 }} />
+                          <div key={tip} style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                            <span style={{ fontSize: 14, fontWeight: 500, color: '#6B7280', lineHeight: '150%', flexShrink: 0 }}>•</span>
                             <span style={{ fontSize: 14, fontWeight: 500, color: '#6B7280', lineHeight: '150%' }}>{tip}</span>
                           </div>
                         ))}
