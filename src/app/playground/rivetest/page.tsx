@@ -618,7 +618,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
             onClick={() => setShowFocusModal(false)}
             style={{
               position: 'absolute', inset: 0, zIndex: 30,
-              background: 'rgba(0,0,0,0.15)',
+              background: 'rgba(0,0,0,0.25)',
               opacity: showFocusModal ? 1 : 0,
               pointerEvents: showFocusModal ? 'auto' : 'none',
               transition: 'opacity 0.25s ease',
