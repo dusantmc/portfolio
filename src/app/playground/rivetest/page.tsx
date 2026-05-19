@@ -88,6 +88,14 @@ const { RiveComponent, rive } = useRive({
   });
 
   useEffect(() => {
+    if (!rive) return;
+    try {
+      const input = rive.stateMachineInputs(SM_NAME)?.find(i => i.name === 'isDarkMode');
+      if (input) input.value = isDark;
+    } catch {}
+  }, [rive, isDark]);
+
+  useEffect(() => {
     if (!focusRive) return;
     try {
       const input = focusRive.stateMachineInputs('Focus_On')?.find(i => i.name === 'isDarkMode');
@@ -226,8 +234,8 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
     setTimeout(() => {
       setScanMode(m => !m);
       setFlipPhase('in');
-      setTimeout(() => setFlipPhase('idle'), 250);
-    }, 250);
+      setTimeout(() => setFlipPhase('idle'), 150);
+    }, 150);
   };
 
   useEffect(() => {
@@ -739,14 +747,14 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
             <div style={{ height: 64, flexShrink: 0, display: 'flex', alignItems: 'center', paddingLeft: 16, paddingRight: 16 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 20, fontWeight: 700, color: fg, lineHeight: '125%', letterSpacing: '-0.3px', transition: 'color 0.2s ease' }}>Mathematics A</div>
-                <div style={{ fontSize: 14, fontWeight: 400, color: '#6B7280', lineHeight: '150%' }}>Fractional Distillation of Crude Oil</div>
+                <div style={{ fontSize: 14, fontWeight: 400, color: isDark ? '#9CA3AF' : '#6B7280', lineHeight: '150%', transition: 'color 0.2s ease' }}>Fractional Distillation of Crude Oil</div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                 {/* Timer badge — tapping navigates back from question view */}
                 <div onClick={() => { if (showQuestion) setShowQuestion(false); }} className={showQuestion ? 'pressable' : ''} style={{ display: 'flex', alignItems: 'center', gap: 6, background: isDark ? '#1B2840' : '#fff', borderRadius: 18, paddingLeft: 10, paddingRight: 10, boxSizing: 'border-box', height: 36, transition: 'background 0.2s ease', cursor: showQuestion ? 'pointer' : 'default' }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/playground/doorslam/timer.svg" alt="" width={16} height={16} style={{ display: 'block' }} />
-                  <span style={{ fontSize: 14, fontWeight: 500, color: '#6B7280', lineHeight: 1 }}>25m</span>
+                  <img src="/playground/doorslam/timer.svg" alt="" width={16} height={16} style={{ display: 'block', filter: isDark ? 'brightness(0) invert(1) opacity(0.6)' : 'none', transition: 'filter 0.2s ease' }} />
+                  <span style={{ fontSize: 14, fontWeight: 500, color: isDark ? '#9CA3AF' : '#6B7280', lineHeight: 1, transition: 'color 0.2s ease' }}>25m</span>
                 </div>
                 {/* Close */}
                 <div onClick={() => setShowSession(false)} className="pressable" style={{ width: 36, height: 36, borderRadius: 18, background: isDark ? '#1B2840' : '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, transition: 'background 0.2s ease' }}>
@@ -871,18 +879,18 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                   {/* Question metadata */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4, paddingBottom: 16, paddingLeft: 8, paddingRight: 8 }}>
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <div style={{ background: '#4F46E5', borderRadius: 9999, paddingLeft: 12, paddingRight: 12, paddingTop: 5, paddingBottom: 5 }}>
+                      <div style={{ background: isDark ? '#818CF8' : '#4F46E5', borderRadius: 9999, paddingLeft: 12, paddingRight: 12, paddingTop: 5, paddingBottom: 5, transition: 'background 0.2s ease' }}>
                         <span style={{ fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: '125%' }}>Q1</span>
                       </div>
-                      <div style={{ background: 'rgba(79,70,229,0.1)', borderRadius: 9999, paddingLeft: 12, paddingRight: 12, paddingTop: 5, paddingBottom: 5 }}>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: '#4F46E5', lineHeight: '125%' }}>3 marks</span>
+                      <div style={{ background: isDark ? 'rgba(129,140,248,0.1)' : 'rgba(79,70,229,0.1)', borderRadius: 9999, paddingLeft: 12, paddingRight: 12, paddingTop: 5, paddingBottom: 5, transition: 'background 0.2s ease' }}>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: isDark ? '#818CF8' : '#4F46E5', lineHeight: '125%', transition: 'color 0.2s ease' }}>3 marks</span>
                       </div>
                     </div>
                     <span style={{ fontSize: 14, fontWeight: 500, color: '#6B7280', lineHeight: '125%' }}>1 of 1</span>
                   </div>
 
                   {/* Question card */}
-                  <div style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#fff', borderRadius: 16, padding: '16px 20px', boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)', transition: 'background 0.2s ease' }}>
+                  <div style={{ background: isDark ? '#0A1628' : '#fff', borderRadius: 16, padding: '16px 20px', boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)', transition: 'background 0.2s ease' }}>
                     <p style={{ fontSize: 18, fontWeight: 500, color: fg, lineHeight: '150%', margin: 0, transition: 'color 0.2s ease' }}>A shop sells a jacket for £80. In a sale, the price is reduced by 15%.</p>
                     <p style={{ fontSize: 18, fontWeight: 500, color: fg, lineHeight: '150%', margin: '16px 0 0', transition: 'color 0.2s ease' }}>Calculate the sale price.</p>
                   </div>
@@ -890,24 +898,41 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                   {/* Answer input label */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 16, paddingBottom: 8, paddingLeft: 8, paddingRight: 8 }}>
                     <span style={{ fontSize: 16, fontWeight: 500, color: '#6B7280', lineHeight: '150%' }}>{scanMode ? 'Scan your answer' : 'Type your answer'}</span>
-                    <div onClick={handleAnswerModeToggle} className="pressable" style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(79,70,229,0.1)', borderRadius: 9999, paddingLeft: 10, paddingRight: 12, paddingTop: 5, paddingBottom: 5, cursor: 'pointer' }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={scanMode ? '/playground/doorslam/type.svg' : '/playground/doorslam/scan.svg'} alt="" width={20} height={20} style={{ display: 'block' }} />
-                      <span style={{ fontSize: 14, fontWeight: 600, color: '#4F46E5', lineHeight: '125%' }}>{scanMode ? 'Type' : 'Scan'}</span>
+                    <div onClick={handleAnswerModeToggle} className="pressable" style={{ display: 'flex', alignItems: 'center', gap: 6, background: isDark ? 'rgba(129,140,248,0.1)' : 'rgba(79,70,229,0.1)', borderRadius: 9999, paddingLeft: 10, paddingRight: 12, paddingTop: 5, paddingBottom: 5, cursor: 'pointer', transition: 'background 0.2s ease' }}>
+                      {scanMode ? (
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                          <rect x="4" y="10" width="2.5" height="2.5" rx="0.5" fill={isDark ? '#818CF8' : '#4F46E5'}/>
+                          <rect x="4" y="5.5" width="2.5" height="2.5" rx="0.5" fill={isDark ? '#818CF8' : '#4F46E5'}/>
+                          <rect x="8.75" y="10" width="2.5" height="2.5" rx="0.5" fill={isDark ? '#818CF8' : '#4F46E5'}/>
+                          <rect x="8.75" y="5.5" width="2.5" height="2.5" rx="0.5" fill={isDark ? '#818CF8' : '#4F46E5'}/>
+                          <rect x="8" y="14.5" width="4" height="2" rx="0.5" fill={isDark ? '#818CF8' : '#4F46E5'}/>
+                          <rect x="13.5" y="10" width="2.5" height="2.5" rx="0.5" fill={isDark ? '#818CF8' : '#4F46E5'}/>
+                          <rect x="13.5" y="5.5" width="2.5" height="2.5" rx="0.5" fill={isDark ? '#818CF8' : '#4F46E5'}/>
+                        </svg>
+                      ) : (
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                          <path d="M4 7V5C4 4.44772 4.44772 4 5 4H7" stroke={isDark ? '#818CF8' : '#4F46E5'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M4 13V15C4 15.5523 4.44772 16 5 16H7" stroke={isDark ? '#818CF8' : '#4F46E5'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M16 7V5C16 4.44772 15.5523 4 15 4H13" stroke={isDark ? '#818CF8' : '#4F46E5'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M16 13V15C16 15.5523 15.5523 16 15 16H13" stroke={isDark ? '#818CF8' : '#4F46E5'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M2 10L18 10" stroke={isDark ? '#818CF8' : '#4F46E5'} strokeWidth="1.5" strokeLinecap="round"/>
+                        </svg>
+                      )}
+                      <span style={{ fontSize: 14, fontWeight: 600, color: isDark ? '#818CF8' : '#4F46E5', lineHeight: '125%', transition: 'color 0.2s ease' }}>{scanMode ? 'Type' : 'Scan'}</span>
                     </div>
                   </div>
 
                   {/* Answer content */}
-                  <div style={{ animation: flipPhase === 'out' ? `card-flip-out${flipDirection === 'reverse' ? '-reverse' : ''} 0.2s ease forwards` : flipPhase === 'in' ? `card-flip-in${flipDirection === 'reverse' ? '-reverse' : ''} 0.2s ease forwards` : undefined }}>
+                  <div style={{ animation: flipPhase === 'out' ? `card-flip-out${flipDirection === 'reverse' ? '-reverse' : ''} 0.15s ease forwards` : flipPhase === 'in' ? `card-flip-in${flipDirection === 'reverse' ? '-reverse' : ''} 0.15s ease forwards` : undefined }}>
                   {scanMode ? (
-                    <div style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#fff', borderRadius: 16, padding: '16px 20px 8px', display: 'flex', flexDirection: 'column', gap: 12, boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)', transition: 'background 0.2s ease' }}>
+                    <div style={{ background: isDark ? '#0A1628' : '#fff', borderRadius: 16, padding: '16px 20px 8px', display: 'flex', flexDirection: 'column', gap: 12, boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)', transition: 'background 0.2s ease' }}>
                       <span style={{ fontSize: 16, fontWeight: 400, color: fg, lineHeight: '150%', transition: 'color 0.2s ease' }}>Scan your written answer</span>
                       {/* Camera area */}
-                      <div style={{ background: 'rgba(107,114,128,0.1)', borderRadius: 10, height: 140, flexShrink: 0, overflow: 'hidden' }}>
+                      <div style={{ background: 'rgba(156,163,175,0.1)', borderRadius: 10, height: 140, flexShrink: 0, overflow: 'hidden' }}>
                         <ScanIllustration style={{ width: 320, height: 140, display: 'block' }} />
                       </div>
                       {/* Tips */}
-                      <div style={{ marginTop: -8, opacity: 0.8, background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.8)', borderRadius: 16, padding: '12px 0', display: 'flex', flexDirection: 'column', gap: 4, transition: 'background 0.2s ease' }}>
+                      <div style={{ marginTop: -8, opacity: 0.8, background: isDark ? 'transparent' : 'rgba(255,255,255,0.8)', borderRadius: 16, padding: '12px 0', display: 'flex', flexDirection: 'column', gap: 4, transition: 'background 0.2s ease' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src="/playground/doorslam/tips.svg" alt="" width={16} height={16} style={{ display: 'block' }} />
@@ -931,7 +956,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                       onFocus={() => setIsAnswerFocused(true)}
                       onBlur={() => setIsAnswerFocused(false)}
                       style={{
-                        background: isDark ? 'rgba(255,255,255,0.05)' : '#fff',
+                        background: isDark ? '#0A1628' : '#fff',
                         border: `1px solid ${isAnswerFocused ? (isDark ? 'rgba(255,255,255,0.15)' : '#6B7280') : 'transparent'}`,
                         boxShadow: isAnswerFocused ? 'none' : (isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)'),
                         borderRadius: 16, padding: 20, minHeight: 240, boxSizing: 'border-box',
@@ -950,11 +975,11 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                   </div>
                   <div className="pressable-fade" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 20, cursor: 'pointer' }}>
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                      <circle cx="10" cy="10" r="8.25" stroke="#4F46E5" strokeWidth="1.5"/>
-                      <path d="M10 13.5v1" stroke="#4F46E5" strokeWidth="2" strokeLinecap="round"/>
-                      <path d="M10 11c0-2 2.5-1.5 2.5-3.5a2.5 2.5 0 0 0-5 0" stroke="#4F46E5" strokeWidth="1.5" strokeLinecap="round"/>
+                      <circle cx="10" cy="10" r="8.25" stroke={isDark ? '#818CF8' : '#4F46E5'} strokeWidth="1.5"/>
+                      <path d="M10 13.5v1" stroke={isDark ? '#818CF8' : '#4F46E5'} strokeWidth="2" strokeLinecap="round"/>
+                      <path d="M10 11c0-2 2.5-1.5 2.5-3.5a2.5 2.5 0 0 0-5 0" stroke={isDark ? '#818CF8' : '#4F46E5'} strokeWidth="1.5" strokeLinecap="round"/>
                     </svg>
-                    <span style={{ fontSize: 14, fontWeight: 500, color: '#4F46E5', lineHeight: '150%' }}>Stuck? View related notes</span>
+                    <span style={{ fontSize: 14, fontWeight: 500, color: isDark ? '#818CF8' : '#4F46E5', lineHeight: '150%', transition: 'color 0.2s ease' }}>Stuck? View related notes</span>
                   </div>
                 </div>
                 <div style={{ height: 23, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

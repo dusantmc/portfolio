@@ -44,20 +44,20 @@
 .answer-input::placeholder { color: #6B7280; opacity: 1; }
 
 @keyframes card-flip-out {
-  from { transform: perspective(800px) rotateY(0deg); }
-  to   { transform: perspective(800px) rotateY(90deg); }
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(-10px); }
 }
 @keyframes card-flip-in {
-  from { transform: perspective(800px) rotateY(-90deg); }
-  to   { transform: perspective(800px) rotateY(0deg); }
+  from { opacity: 0; transform: translateX(10px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 @keyframes card-flip-out-reverse {
-  from { transform: perspective(800px) rotateY(0deg); }
-  to   { transform: perspective(800px) rotateY(-90deg); }
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(10px); }
 }
 @keyframes card-flip-in-reverse {
-  from { transform: perspective(800px) rotateY(90deg); }
-  to   { transform: perspective(800px) rotateY(0deg); }
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
 @media (max-width: 430px) {
