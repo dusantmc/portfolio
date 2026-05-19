@@ -51,6 +51,14 @@
   from { transform: perspective(800px) rotateY(-90deg); }
   to   { transform: perspective(800px) rotateY(0deg); }
 }
+@keyframes card-flip-out-reverse {
+  from { transform: perspective(800px) rotateY(0deg); }
+  to   { transform: perspective(800px) rotateY(-90deg); }
+}
+@keyframes card-flip-in-reverse {
+  from { transform: perspective(800px) rotateY(90deg); }
+  to   { transform: perspective(800px) rotateY(0deg); }
+}
 
 @media (max-width: 430px) {
   .phone-outer {
