@@ -197,12 +197,17 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
     }
   }, [showSession]);
 
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   useEffect(() => {
     if (!showQuestion) {
       setScanMode(false);
       setAnswerText('');
       setIsAnswerFocused(false);
+      return;
     }
+    const t = setTimeout(() => textareaRef.current?.focus(), 380);
+    return () => clearTimeout(t);
   }, [showQuestion]);
 
   useEffect(() => {
@@ -900,6 +905,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                     </div>
                   ) : (
                     <textarea
+                      ref={textareaRef}
                       className="answer-input"
                       placeholder="Enter your answer and working..."
                       value={answerText}
