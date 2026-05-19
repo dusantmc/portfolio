@@ -926,7 +926,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
 
                 {/* Bottom actions */}
                 <div style={{ flexShrink: 0, paddingTop: 20, paddingLeft: 16, paddingRight: 16, paddingBottom: 16 }}>
-                  <div className="pressable" style={{ height: 52, borderRadius: 12, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: answerText.trim() ? 'pointer' : 'default', opacity: answerText.trim() ? 1 : 0.5, pointerEvents: answerText.trim() ? 'auto' : 'none', transition: 'opacity 0.2s ease, transform 0.15s ease' }}>
+                  <div className="pressable" style={{ height: 52, borderRadius: 12, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: (scanMode || answerText.trim()) ? 'pointer' : 'default', opacity: (scanMode || answerText.trim()) ? 1 : 0.5, pointerEvents: (scanMode || answerText.trim()) ? 'auto' : 'none', transition: 'opacity 0.2s ease, transform 0.15s ease' }}>
                     <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', lineHeight: '125%' }}>{scanMode ? 'Scan answer' : 'Check my answer'}</span>
                   </div>
                   <div className="pressable-fade" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 20, cursor: 'pointer' }}>
