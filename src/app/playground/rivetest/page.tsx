@@ -41,6 +41,8 @@ export default function RiveTestPage() {
   const [showSession, setShowSession] = useState(false);
   const [showQuestion, setShowQuestion] = useState(false);
   const [scanMode, setScanMode] = useState(false);
+  const [answerText, setAnswerText] = useState('');
+  const [isAnswerFocused, setIsAnswerFocused] = useState(false);
   const [selectedConfidence, setSelectedConfidence] = useState<string | null>(null);
   const [focusMode, setFocusMode] = useState(false);
   const [showFocusModal, setShowFocusModal] = useState(false);
@@ -196,7 +198,11 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
   }, [showSession]);
 
   useEffect(() => {
-    if (!showQuestion) setScanMode(false);
+    if (!showQuestion) {
+      setScanMode(false);
+      setAnswerText('');
+      setIsAnswerFocused(false);
+    }
   }, [showQuestion]);
 
   useEffect(() => {
@@ -859,7 +865,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                   {/* Answer input label */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 16, paddingBottom: 8, paddingLeft: 8, paddingRight: 8 }}>
                     <span style={{ fontSize: 16, fontWeight: 500, color: '#6B7280', lineHeight: '150%' }}>{scanMode ? 'Scan your answer' : 'Type your answer'}</span>
-                    <div onClick={() => setScanMode(m => !m)} className="pressable-fade" style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(79,70,229,0.1)', borderRadius: 9999, paddingLeft: 10, paddingRight: 12, paddingTop: 5, paddingBottom: 5, cursor: 'pointer' }}>
+                    <div onClick={() => setScanMode(m => !m)} className="pressable" style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(79,70,229,0.1)', borderRadius: 9999, paddingLeft: 10, paddingRight: 12, paddingTop: 5, paddingBottom: 5, cursor: 'pointer' }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={scanMode ? '/playground/doorslam/type.svg' : '/playground/doorslam/scan.svg'} alt="" width={20} height={20} style={{ display: 'block' }} />
                       <span style={{ fontSize: 14, fontWeight: 600, color: '#4F46E5', lineHeight: '125%' }}>{scanMode ? 'Type' : 'Scan'}</span>
@@ -893,13 +899,28 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                       </div>
                     </div>
                   ) : (
-                    <textarea className="answer-input" placeholder="Enter your answer and working..." style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#fff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : '#6B7280'}`, borderRadius: 16, padding: 20, minHeight: 240, boxSizing: 'border-box', fontSize: 18, fontWeight: 400, color: fg, lineHeight: '150%', transition: 'background 0.2s ease, border-color 0.2s ease' }} />
+                    <textarea
+                      className="answer-input"
+                      placeholder="Enter your answer and working..."
+                      value={answerText}
+                      onChange={e => setAnswerText(e.target.value)}
+                      onFocus={() => setIsAnswerFocused(true)}
+                      onBlur={() => setIsAnswerFocused(false)}
+                      style={{
+                        background: isDark ? 'rgba(255,255,255,0.05)' : '#fff',
+                        border: `1px solid ${isAnswerFocused ? (isDark ? 'rgba(255,255,255,0.15)' : '#6B7280') : 'transparent'}`,
+                        boxShadow: isAnswerFocused ? 'none' : (isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)'),
+                        borderRadius: 16, padding: 20, minHeight: 240, boxSizing: 'border-box',
+                        fontSize: 18, fontWeight: 400, color: fg, lineHeight: '150%',
+                        transition: 'background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
+                      }}
+                    />
                   )}
                 </div>
 
                 {/* Bottom actions */}
                 <div style={{ flexShrink: 0, paddingTop: 20, paddingLeft: 16, paddingRight: 16, paddingBottom: 16 }}>
-                  <div className="pressable" style={{ height: 52, borderRadius: 12, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <div className="pressable" style={{ height: 52, borderRadius: 12, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: answerText.trim() ? 'pointer' : 'default', opacity: answerText.trim() ? 1 : 0.5, pointerEvents: answerText.trim() ? 'auto' : 'none', transition: 'opacity 0.2s ease, transform 0.15s ease' }}>
                     <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', lineHeight: '125%' }}>{scanMode ? 'Scan answer' : 'Check my answer'}</span>
                   </div>
                   <div className="pressable-fade" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 20, cursor: 'pointer' }}>
