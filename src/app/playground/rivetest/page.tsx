@@ -216,7 +216,6 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
   useEffect(() => {
     if (!showQuestion) {
       setScanMode(false);
-      setFlipPhase('idle');
       setAnswerText('');
       setIsAnswerFocused(false);
       return;
