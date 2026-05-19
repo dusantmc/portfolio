@@ -40,6 +40,9 @@
   to   { transform: translateY(0); }
 }
 
+.answer-input { font-family: inherit; display: block; width: 100%; resize: none; outline: none; }
+.answer-input::placeholder { color: #6B7280; opacity: 1; }
+
 @media (max-width: 430px) {
   .phone-outer {
     padding: 0 !important;

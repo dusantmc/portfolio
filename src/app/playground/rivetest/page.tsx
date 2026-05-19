@@ -40,6 +40,7 @@ export default function RiveTestPage() {
   const [streakAnimating, setStreakAnimating] = useState(false);
   const [showSession, setShowSession] = useState(false);
   const [showQuestion, setShowQuestion] = useState(false);
+  const [scanMode, setScanMode] = useState(false);
   const [selectedConfidence, setSelectedConfidence] = useState<string | null>(null);
   const [focusMode, setFocusMode] = useState(false);
   const [showFocusModal, setShowFocusModal] = useState(false);
@@ -193,6 +194,10 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
       setShowQuestion(false);
     }
   }, [showSession]);
+
+  useEffect(() => {
+    if (!showQuestion) setScanMode(false);
+  }, [showQuestion]);
 
   useEffect(() => {
     if (!showFocusModal) {
@@ -853,28 +858,51 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
 
                   {/* Answer input label */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 16, paddingBottom: 8, paddingLeft: 8, paddingRight: 8 }}>
-                    <span style={{ fontSize: 16, fontWeight: 500, color: '#6B7280', lineHeight: '150%' }}>Type your answer</span>
-                    <div className="pressable-fade" style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(79,70,229,0.1)', borderRadius: 9999, paddingLeft: 10, paddingRight: 12, paddingTop: 5, paddingBottom: 5, cursor: 'pointer' }}>
-                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                        <rect x="2.75" y="2.75" width="5.5" height="5.5" rx="1.25" stroke="#4F46E5" strokeWidth="1.5"/>
-                        <rect x="11.75" y="2.75" width="5.5" height="5.5" rx="1.25" stroke="#4F46E5" strokeWidth="1.5"/>
-                        <rect x="2.75" y="11.75" width="5.5" height="5.5" rx="1.25" stroke="#4F46E5" strokeWidth="1.5"/>
-                        <path d="M11.75 14.5h2.75M14.5 11.75v2.75M17.25 14.5v2.75M14.5 17.25h2.75" stroke="#4F46E5" strokeWidth="1.5" strokeLinecap="round"/>
-                      </svg>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: '#4F46E5', lineHeight: '125%' }}>Scan</span>
+                    <span style={{ fontSize: 16, fontWeight: 500, color: '#6B7280', lineHeight: '150%' }}>{scanMode ? 'Scan your answer' : 'Type your answer'}</span>
+                    <div onClick={() => setScanMode(m => !m)} className="pressable-fade" style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(79,70,229,0.1)', borderRadius: 9999, paddingLeft: 10, paddingRight: 12, paddingTop: 5, paddingBottom: 5, cursor: 'pointer' }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={scanMode ? '/playground/doorslam/type.svg' : '/playground/doorslam/scan.svg'} alt="" width={20} height={20} style={{ display: 'block' }} />
+                      <span style={{ fontSize: 14, fontWeight: 600, color: '#4F46E5', lineHeight: '125%' }}>{scanMode ? 'Type' : 'Scan'}</span>
                     </div>
                   </div>
 
-                  {/* Answer input box */}
-                  <div style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#fff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : '#6B7280'}`, borderRadius: 16, padding: 20, minHeight: 240, boxSizing: 'border-box', transition: 'background 0.2s ease, border-color 0.2s ease' }}>
-                    <span style={{ fontSize: 18, fontWeight: 400, color: isDark ? 'rgba(255,255,255,0.3)' : '#6B7280', lineHeight: '150%' }}>Enter your answer and working...</span>
-                  </div>
+                  {/* Answer content */}
+                  {scanMode ? (
+                    <div style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#fff', borderRadius: 16, padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', gap: 12, boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)', transition: 'background 0.2s ease' }}>
+                      <span style={{ fontSize: 16, fontWeight: 400, color: fg, lineHeight: '150%', transition: 'color 0.2s ease' }}>Scan your written answer</span>
+                      {/* Camera area */}
+                      <div style={{ position: 'relative', background: 'rgba(107,114,128,0.1)', borderRadius: 10, height: 140 }}>
+                        <div style={{ position: 'absolute', top: 10, left: 10, width: 14, height: 14, borderTop: '2px solid #9CA3AF', borderLeft: '2px solid #9CA3AF', borderRadius: '2px 0 0 0' }} />
+                        <div style={{ position: 'absolute', top: 10, right: 10, width: 14, height: 14, borderTop: '2px solid #9CA3AF', borderRight: '2px solid #9CA3AF', borderRadius: '0 2px 0 0' }} />
+                        <div style={{ position: 'absolute', bottom: 10, left: 10, width: 14, height: 14, borderBottom: '2px solid #9CA3AF', borderLeft: '2px solid #9CA3AF', borderRadius: '0 0 0 2px' }} />
+                        <div style={{ position: 'absolute', bottom: 10, right: 10, width: 14, height: 14, borderBottom: '2px solid #9CA3AF', borderRight: '2px solid #9CA3AF', borderRadius: '0 0 2px 0' }} />
+                      </div>
+                      {/* Tips */}
+                      <div style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.8)', borderRadius: 16, padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8, transition: 'background 0.2s ease' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M8 1.5C5.51 1.5 3.5 3.51 3.5 6c0 1.55.77 2.92 1.95 3.75.28.19.45.5.45.83V11h4.2v-.42c0-.33.17-.64.45-.83C11.73 8.92 12.5 7.55 12.5 6c0-2.49-2.01-4.5-4.5-4.5z" stroke="#6B7280" strokeWidth="1.2" strokeLinejoin="round"/>
+                            <path d="M6 11v.5A2 2 0 008 13.5a2 2 0 002-2V11" stroke="#6B7280" strokeWidth="1.2" strokeLinecap="round"/>
+                          </svg>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: '#6B7280', lineHeight: '125%' }}>Tips</span>
+                        </div>
+                        {['Use a dark pen on white paper', 'Keep all your working in the frame', "Make sure it's clear and easy to read"].map(tip => (
+                          <div key={tip} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                            <div style={{ width: 4, height: 4, borderRadius: 2, background: '#6B7280', marginTop: 7, flexShrink: 0 }} />
+                            <span style={{ fontSize: 14, fontWeight: 500, color: '#6B7280', lineHeight: '150%' }}>{tip}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <textarea className="answer-input" placeholder="Enter your answer and working..." style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#fff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : '#6B7280'}`, borderRadius: 16, padding: 20, minHeight: 240, boxSizing: 'border-box', fontSize: 18, fontWeight: 400, color: fg, lineHeight: '150%', transition: 'background 0.2s ease, border-color 0.2s ease' }} />
+                  )}
                 </div>
 
                 {/* Bottom actions */}
                 <div style={{ flexShrink: 0, paddingTop: 20, paddingLeft: 16, paddingRight: 16, paddingBottom: 16 }}>
                   <div className="pressable" style={{ height: 52, borderRadius: 12, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                    <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', lineHeight: '125%' }}>Check my answer</span>
+                    <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', lineHeight: '125%' }}>{scanMode ? 'Scan answer' : 'Check my answer'}</span>
                   </div>
                   <div className="pressable-fade" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 20, cursor: 'pointer' }}>
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
