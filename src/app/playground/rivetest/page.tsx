@@ -41,7 +41,9 @@ export default function RiveTestPage() {
   const [showSession, setShowSession] = useState(false);
   const [showQuestion, setShowQuestion] = useState(false);
   const [scanMode, setScanMode] = useState(false);
+  const [displayScanMode, setDisplayScanMode] = useState(false);
   const [flipDirection, setFlipDirection] = useState<'forward' | 'reverse'>('forward');
+  const [cardPhase, setCardPhase] = useState<'idle' | 'out'>('idle');
   const [answerText, setAnswerText] = useState('');
   const [isAnswerFocused, setIsAnswerFocused] = useState(false);
   const [selectedConfidence, setSelectedConfidence] = useState<string | null>(null);
@@ -217,6 +219,8 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
   useEffect(() => {
     if (!showQuestion) {
       setScanMode(false);
+      setDisplayScanMode(false);
+      setCardPhase('idle');
       setAnswerText('');
       setIsAnswerFocused(false);
       return;
@@ -228,6 +232,11 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
   const handleAnswerModeToggle = () => {
     setFlipDirection(scanMode ? 'reverse' : 'forward');
     setScanMode(m => !m);
+    setCardPhase('out');
+    setTimeout(() => {
+      setDisplayScanMode(m => !m);
+      setCardPhase('idle');
+    }, 200);
   };
 
   useEffect(() => {
@@ -890,7 +899,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                   {/* Answer input label */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 16, paddingBottom: 8, paddingLeft: 8, paddingRight: 8 }}>
                     <span style={{ fontSize: 16, fontWeight: 500, color: '#6B7280', lineHeight: '150%' }}>{scanMode ? 'Scan your answer' : 'Type your answer'}</span>
-                    <div onClick={handleAnswerModeToggle} className="pressable" style={{ display: 'flex', alignItems: 'center', gap: 6, background: isDark ? 'rgba(129,140,248,0.1)' : 'rgba(79,70,229,0.1)', borderRadius: 9999, paddingLeft: 10, paddingRight: 12, paddingTop: 5, paddingBottom: 5, cursor: 'pointer', transition: 'background 0.2s ease' }}>
+                    <div onClick={handleAnswerModeToggle} className="pressable" style={{ display: 'flex', alignItems: 'center', gap: 6, background: isDark ? 'rgba(129,140,248,0.1)' : 'rgba(79,70,229,0.1)', borderRadius: 9999, paddingLeft: 10, paddingRight: 12, paddingTop: 5, paddingBottom: 5, cursor: 'pointer', transition: 'background 0.2s ease, transform 0.15s ease' }}>
                       {scanMode ? (
                         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                           <rect x="4" y="10" width="2.5" height="2.5" rx="0.5" fill={isDark ? '#818CF8' : '#4F46E5'}/>
@@ -915,8 +924,8 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                   </div>
 
                   {/* Answer content */}
-                  <div key={scanMode ? 'scan' : 'type'} style={{ animation: `card-flip-in${flipDirection === 'reverse' ? '-reverse' : ''} 0.2s ease both` }}>
-                  {scanMode ? (
+                  <div key={displayScanMode ? 'scan' : 'type'} style={{ animation: `card-flip-${cardPhase === 'out' ? 'out' : 'in'}${flipDirection === 'reverse' ? '-reverse' : ''} 0.2s ease ${cardPhase === 'out' ? 'forwards' : 'both'}` }}>
+                  {displayScanMode ? (
                     <div style={{ background: isDark ? '#0A1628' : '#fff', borderRadius: 16, padding: '16px 20px 8px', display: 'flex', flexDirection: 'column', gap: 12, boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)', transition: 'background 0.2s ease' }}>
                       <span style={{ fontSize: 16, fontWeight: 400, color: fg, lineHeight: '150%', transition: 'color 0.2s ease' }}>Scan your written answer</span>
                       {/* Camera area */}
@@ -962,8 +971,8 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
 
                 {/* Bottom actions */}
                 <div style={{ flexShrink: 0, paddingTop: 20, paddingLeft: 16, paddingRight: 16, paddingBottom: 16 }}>
-                  <div className="pressable" style={{ height: 52, borderRadius: 12, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: (scanMode || answerText.trim()) ? 'pointer' : 'default', opacity: (scanMode || answerText.trim()) ? 1 : 0.5, pointerEvents: (scanMode || answerText.trim()) ? 'auto' : 'none', transition: 'opacity 0.2s ease, transform 0.15s ease' }}>
-                    <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', lineHeight: '125%' }}>{scanMode ? 'Scan answer' : 'Check my answer'}</span>
+                  <div className="pressable" style={{ height: 52, borderRadius: 12, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: (displayScanMode || answerText.trim()) ? 'pointer' : 'default', opacity: (displayScanMode || answerText.trim()) ? 1 : 0.5, pointerEvents: (displayScanMode || answerText.trim()) ? 'auto' : 'none', transition: 'opacity 0.2s ease, transform 0.15s ease' }}>
+                    <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', lineHeight: '125%' }}>{displayScanMode ? 'Scan answer' : 'Check my answer'}</span>
                   </div>
                   <div className="pressable-fade" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 20, cursor: 'pointer' }}>
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
