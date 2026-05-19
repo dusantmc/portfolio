@@ -39,6 +39,7 @@ export default function RiveTestPage() {
   const [streakAnimKey, setStreakAnimKey] = useState(0);
   const [streakAnimating, setStreakAnimating] = useState(false);
   const [showSession, setShowSession] = useState(false);
+  const [showQuestion, setShowQuestion] = useState(false);
   const [selectedConfidence, setSelectedConfidence] = useState<string | null>(null);
   const [focusMode, setFocusMode] = useState(false);
   const [showFocusModal, setShowFocusModal] = useState(false);
@@ -189,6 +190,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
       return () => clearTimeout(t);
     } else {
       setStepOneActive(false);
+      setShowQuestion(false);
     }
   }, [showSession]);
 
@@ -704,8 +706,8 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                 <div style={{ fontSize: 14, fontWeight: 400, color: '#6B7280', lineHeight: '150%' }}>Fractional Distillation of Crude Oil</div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                {/* Timer badge */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: isDark ? '#1B2840' : '#fff', borderRadius: 18, paddingLeft: 10, paddingRight: 10, boxSizing: 'border-box', height: 36, transition: 'background 0.2s ease' }}>
+                {/* Timer badge — tapping navigates back from question view */}
+                <div onClick={() => { if (showQuestion) setShowQuestion(false); }} className={showQuestion ? 'pressable' : ''} style={{ display: 'flex', alignItems: 'center', gap: 6, background: isDark ? '#1B2840' : '#fff', borderRadius: 18, paddingLeft: 10, paddingRight: 10, boxSizing: 'border-box', height: 36, transition: 'background 0.2s ease', cursor: showQuestion ? 'pointer' : 'default' }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src="/playground/doorslam/timer.svg" alt="" width={16} height={16} style={{ display: 'block' }} />
                   <span style={{ fontSize: 14, fontWeight: 500, color: '#6B7280', lineHeight: 1 }}>25m</span>
@@ -720,102 +722,174 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
             </div>
             </div>{/* end header wrapper */}
 
-            {/* Scrollable content */}
-            <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingLeft: 16, paddingRight: 16 }}>
+            {/* Content area — only this slides during the preview→question transition */}
+            <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
 
-              {/* Steps */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4, paddingBottom: 16 }}>
-                {(['Preview','Recall','Revise','Practice','Summary','Complete'] as const).map((step, i) => (
-                  <div key={step} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 52 }}>
-                    {i === 0 ? (
-                      <div style={{ position: 'relative', width: 32, height: 32, flexShrink: 0 }}>
-                        {/* Inactive circle — shrinks away */}
-                        <div style={{ position: 'absolute', inset: 0, borderRadius: 16, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)', animation: stepOneActive ? 'step-shrink 0.2s ease forwards' : undefined }}>
-                          <span style={{ fontSize: 14, fontWeight: 600, color: isDark ? 'rgba(255,255,255,0.4)' : '#6B7280', lineHeight: '125%' }}>1</span>
-                        </div>
-                        {/* Active circle — grows in */}
-                        {stepOneActive && (
-                          <div style={{ position: 'absolute', inset: 0, borderRadius: 16, background: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'step-grow 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.18s both', transition: 'background 0.2s ease' }}>
-                            <span style={{ fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: '125%' }}>1</span>
+              {/* Preview panel */}
+              <div style={{
+                position: 'absolute', inset: 0,
+                display: 'flex', flexDirection: 'column',
+                transform: showQuestion ? 'translateX(-30%)' : 'translateX(0)',
+                transition: 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+              }}>
+                <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingLeft: 16, paddingRight: 16 }}>
+                  {/* Steps */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4, paddingBottom: 16 }}>
+                    {(['Preview','Recall','Revise','Practice','Summary','Complete'] as const).map((step, i) => (
+                      <div key={step} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 52 }}>
+                        {i === 0 ? (
+                          <div style={{ position: 'relative', width: 32, height: 32, flexShrink: 0 }}>
+                            <div style={{ position: 'absolute', inset: 0, borderRadius: 16, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)', animation: stepOneActive ? 'step-shrink 0.2s ease forwards' : undefined }}>
+                              <span style={{ fontSize: 14, fontWeight: 600, color: isDark ? 'rgba(255,255,255,0.4)' : '#6B7280', lineHeight: '125%' }}>1</span>
+                            </div>
+                            {stepOneActive && (
+                              <div style={{ position: 'absolute', inset: 0, borderRadius: 16, background: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'step-grow 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.18s both', transition: 'background 0.2s ease' }}>
+                                <span style={{ fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: '125%' }}>1</span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div style={{ width: 32, height: 32, borderRadius: 16, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)', transition: 'background 0.2s ease' }}>
+                            <span style={{ fontSize: 14, fontWeight: 600, color: isDark ? 'rgba(255,255,255,0.4)' : '#6B7280', lineHeight: '125%', transition: 'color 0.2s ease' }}>{i + 1}</span>
                           </div>
                         )}
+                        <span style={{ fontSize: 12, fontWeight: i === 0 && stepOneActive ? 700 : 400, color: i === 0 && stepOneActive ? accent : '#6B7280', marginTop: 4, lineHeight: '125%', transition: 'color 0.2s ease, font-weight 0s' }}>{step}</span>
                       </div>
-                    ) : (
-                      <div style={{ width: 32, height: 32, borderRadius: 16, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)', transition: 'background 0.2s ease' }}>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: isDark ? 'rgba(255,255,255,0.4)' : '#6B7280', lineHeight: '125%', transition: 'color 0.2s ease' }}>{i + 1}</span>
-                      </div>
-                    )}
-                    <span style={{ fontSize: 12, fontWeight: i === 0 && stepOneActive ? 700 : 400, color: i === 0 && stepOneActive ? accent : '#6B7280', marginTop: 4, lineHeight: '125%', transition: 'color 0.2s ease, font-weight 0s' }}>{step}</span>
+                    ))}
                   </div>
-                ))}
-              </div>
 
-              {/* Focus Mode */}
-              <div onClick={() => focusMode ? setFocusMode(false) : setShowFocusModal(true)} className="pressable-card" style={{ background: focusMode ? `linear-gradient(rgba(132,204,22,0.1), rgba(132,204,22,0.1)), ${isDark ? '#0A1628' : '#fff'}` : isDark ? '#0A1628' : '#fff', border: `1.5px solid ${focusMode ? '#84CC16' : 'transparent'}`, borderRadius: 16, boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)', padding: '20px 20px 20px 24px', display: 'flex', alignItems: 'center', gap: 16, marginTop: 8, marginBottom: 24, cursor: 'pointer', transition: 'background 0.5s ease, border-color 0.5s ease, transform 0.15s ease' }}>
-                <div style={{ position: 'relative', width: 24, height: 24, flexShrink: 0 }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/playground/doorslam/bell.svg" alt="" width={24} height={24} style={{ display: 'block', position: 'absolute', opacity: focusMode ? 0 : 1, transition: 'opacity 0.5s ease', filter: isDark ? 'brightness(0) invert(1)' : 'none' }} />
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/playground/doorslam/bell-off.svg" alt="" width={24} height={24} style={{ display: 'block', position: 'absolute', opacity: focusMode ? 1 : 0, transition: 'opacity 0.5s ease' }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 16, fontWeight: 600, color: fg, lineHeight: '125%', transition: 'color 0.2s ease' }}>Focus Mode</div>
-                  <div style={{ fontSize: 12, fontWeight: 500, color: isDark ? '#9CA3AF' : '#6B7280', lineHeight: '150%', transition: 'color 0.2s ease' }}>{focusMode ? '+5 bonus points for focused revision' : 'Earn +5 bonus points for focused revision'}</div>
-                </div>
-                <div style={{ width: 56, height: 32, borderRadius: 16, background: focusMode ? '#84CC16' : isDark ? '#1B2840' : '#E5E7EB', position: 'relative', flexShrink: 0, transition: 'background 0.5s ease' }}>
-                  <div style={{ position: 'absolute', top: 4, left: focusMode ? 28 : 4, width: 24, height: 24, borderRadius: 12, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', transition: 'left 0.5s ease' }} />
-                </div>
-              </div>
-
-              {/* Confidence heading */}
-              <div style={{ paddingLeft: 4, marginBottom: 12 }}>
-                <div style={{ fontSize: 18, fontWeight: 600, color: fg, lineHeight: '125%', transition: 'color 0.2s ease' }}>How confident are you with this topic?</div>
-                <div style={{ fontSize: 14, fontWeight: 500, color: '#6B7280', lineHeight: '150%', marginTop: 2 }}>This helps us tailor the session to your needs</div>
-              </div>
-
-              {/* Confidence options */}
-              <div style={{ opacity: showFocusModal ? 0.3 : 1, pointerEvents: showFocusModal ? 'none' : 'auto', transition: 'opacity 0.2s ease' }}>
-              <div style={{ background: isDark ? '#0A1628' : '#fff', borderRadius: 16, padding: 8, boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 1px rgba(0,0,0,0.05)', transition: 'background 0.2s ease' }}>
-                {([
-                  { id: 'very-confident', title: 'Very confident', subtitle: 'I already know this topic well', color: '#84CC16', selectedBg: 'rgba(132,204,22,0.102)', icon: '/playground/doorslam/option-confident.svg' },
-                  { id: 'fairly-confident', title: 'Fairly confident', subtitle: 'I know some of it but could use a refresher', color: '#4F46E5', selectedBg: 'rgba(59,130,246,0.102)', icon: '/playground/doorslam/option-fairly.svg' },
-                  { id: 'unsure', title: 'A bit unsure', subtitle: "I've heard of it but don't know it well", color: '#F97316', selectedBg: 'rgba(249,115,22,0.102)', icon: '/playground/doorslam/option-unsure.svg' },
-                  { id: 'new', title: 'New to me', subtitle: 'This topic is completely new or very unclear', color: '#EF4444', selectedBg: 'rgba(239,68,68,0.102)', icon: '/playground/doorslam/option-new.svg' },
-                ] as const).map(({ id, title, subtitle, color, selectedBg, icon }) => (
-                  <div key={id} onClick={() => setSelectedConfidence(id)} style={{ WebkitTapHighlightColor: 'transparent', display: 'flex', alignItems: 'center', gap: 16, padding: '13px 12px', borderRadius: 8, cursor: 'pointer', background: selectedConfidence === id ? selectedBg : selectedBg.replace('0.102', '0'), transition: 'background 0.2s ease' }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={icon} alt="" width={24} height={24} style={{ flexShrink: 0, display: 'block' }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 16, fontWeight: 600, color: fg, lineHeight: '125%', transition: 'color 0.2s ease' }}>{title}</div>
-                      <div style={{ fontSize: 12, fontWeight: 500, color: '#6B7280', lineHeight: '150%' }}>{subtitle}</div>
+                  {/* Focus Mode */}
+                  <div onClick={() => focusMode ? setFocusMode(false) : setShowFocusModal(true)} className="pressable-card" style={{ background: focusMode ? `linear-gradient(rgba(132,204,22,0.1), rgba(132,204,22,0.1)), ${isDark ? '#0A1628' : '#fff'}` : isDark ? '#0A1628' : '#fff', border: `1.5px solid ${focusMode ? '#84CC16' : 'transparent'}`, borderRadius: 16, boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)', padding: '20px 20px 20px 24px', display: 'flex', alignItems: 'center', gap: 16, marginTop: 8, marginBottom: 24, cursor: 'pointer', transition: 'background 0.5s ease, border-color 0.5s ease, transform 0.15s ease' }}>
+                    <div style={{ position: 'relative', width: 24, height: 24, flexShrink: 0 }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/playground/doorslam/bell.svg" alt="" width={24} height={24} style={{ display: 'block', position: 'absolute', opacity: focusMode ? 0 : 1, transition: 'opacity 0.5s ease', filter: isDark ? 'brightness(0) invert(1)' : 'none' }} />
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/playground/doorslam/bell-off.svg" alt="" width={24} height={24} style={{ display: 'block', position: 'absolute', opacity: focusMode ? 1 : 0, transition: 'opacity 0.5s ease' }} />
                     </div>
-                    <div style={{ width: 20, height: 20, borderRadius: 10, border: `2px solid ${selectedConfidence === id ? color : '#D1D5DB'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'border-color 0.15s ease' }}>
-                      {selectedConfidence === id && <div style={{ width: 10, height: 10, borderRadius: 5, background: color, animation: 'scale-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both' }} />}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 16, fontWeight: 600, color: fg, lineHeight: '125%', transition: 'color 0.2s ease' }}>Focus Mode</div>
+                      <div style={{ fontSize: 12, fontWeight: 500, color: isDark ? '#9CA3AF' : '#6B7280', lineHeight: '150%', transition: 'color 0.2s ease' }}>{focusMode ? '+5 bonus points for focused revision' : 'Earn +5 bonus points for focused revision'}</div>
+                    </div>
+                    <div style={{ width: 56, height: 32, borderRadius: 16, background: focusMode ? '#84CC16' : isDark ? '#1B2840' : '#E5E7EB', position: 'relative', flexShrink: 0, transition: 'background 0.5s ease' }}>
+                      <div style={{ position: 'absolute', top: 4, left: focusMode ? 28 : 4, width: 24, height: 24, borderRadius: 12, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', transition: 'left 0.5s ease' }} />
                     </div>
                   </div>
-                ))}
-              </div>
 
-              </div>{/* end confidence section */}
+                  {/* Confidence heading */}
+                  <div style={{ paddingLeft: 4, marginBottom: 12 }}>
+                    <div style={{ fontSize: 18, fontWeight: 600, color: fg, lineHeight: '125%', transition: 'color 0.2s ease' }}>How confident are you with this topic?</div>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: '#6B7280', lineHeight: '150%', marginTop: 2 }}>This helps us tailor the session to your needs</div>
+                  </div>
 
-            </div>
+                  {/* Confidence options */}
+                  <div style={{ opacity: showFocusModal ? 0.3 : 1, pointerEvents: showFocusModal ? 'none' : 'auto', transition: 'opacity 0.2s ease' }}>
+                    <div style={{ background: isDark ? '#0A1628' : '#fff', borderRadius: 16, padding: 8, boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 1px rgba(0,0,0,0.05)', transition: 'background 0.2s ease' }}>
+                      {([
+                        { id: 'very-confident', title: 'Very confident', subtitle: 'I already know this topic well', color: '#84CC16', selectedBg: 'rgba(132,204,22,0.102)', icon: '/playground/doorslam/option-confident.svg' },
+                        { id: 'fairly-confident', title: 'Fairly confident', subtitle: 'I know some of it but could use a refresher', color: '#4F46E5', selectedBg: 'rgba(59,130,246,0.102)', icon: '/playground/doorslam/option-fairly.svg' },
+                        { id: 'unsure', title: 'A bit unsure', subtitle: "I've heard of it but don't know it well", color: '#F97316', selectedBg: 'rgba(249,115,22,0.102)', icon: '/playground/doorslam/option-unsure.svg' },
+                        { id: 'new', title: 'New to me', subtitle: 'This topic is completely new or very unclear', color: '#EF4444', selectedBg: 'rgba(239,68,68,0.102)', icon: '/playground/doorslam/option-new.svg' },
+                      ] as const).map(({ id, title, subtitle, color, selectedBg, icon }) => (
+                        <div key={id} onClick={() => setSelectedConfidence(id)} style={{ WebkitTapHighlightColor: 'transparent', display: 'flex', alignItems: 'center', gap: 16, padding: '13px 12px', borderRadius: 8, cursor: 'pointer', background: selectedConfidence === id ? selectedBg : selectedBg.replace('0.102', '0'), transition: 'background 0.2s ease' }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={icon} alt="" width={24} height={24} style={{ flexShrink: 0, display: 'block' }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 16, fontWeight: 600, color: fg, lineHeight: '125%', transition: 'color 0.2s ease' }}>{title}</div>
+                            <div style={{ fontSize: 12, fontWeight: 500, color: '#6B7280', lineHeight: '150%' }}>{subtitle}</div>
+                          </div>
+                          <div style={{ width: 20, height: 20, borderRadius: 10, border: `2px solid ${selectedConfidence === id ? color : '#D1D5DB'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'border-color 0.15s ease' }}>
+                            {selectedConfidence === id && <div style={{ width: 10, height: 10, borderRadius: 5, background: color, animation: 'scale-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both' }} />}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
 
-            {/* Footer */}
-            <div style={{ flexShrink: 0, paddingTop: 0, paddingLeft: 16, paddingRight: 16, paddingBottom: 20, opacity: showFocusModal ? 0 : 1, pointerEvents: showFocusModal ? 'none' : 'auto', transition: 'opacity 0.2s ease' }}>
-              <div style={{ textAlign: 'center', marginBottom: 12 }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: accent, lineHeight: '125%', transition: 'color 0.2s ease' }}>Ready to begin?</div>
-                <div style={{ fontSize: 14, fontWeight: 400, color: '#6B7280', lineHeight: '150%' }}>Let&apos;s start your revision session</div>
-              </div>
-              <div className="pressable" style={{ boxSizing: 'border-box', height: 52, borderRadius: 12, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: selectedConfidence ? 1 : 0.5, cursor: selectedConfidence ? 'pointer' : 'default', transition: 'opacity 0.2s ease' }}>
-                <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', lineHeight: '125%' }}>Start Session</span>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/playground/doorslam/cta-arrow.svg" alt="" width={16} height={16} style={{ display: 'block' }} />
-              </div>
-            </div>
-            <div style={{ height: 23, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ width: 140, height: 5, borderRadius: 3, background: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(31,35,48,0.2)' }} />
-            </div>
+                {/* Footer */}
+                <div style={{ flexShrink: 0, paddingTop: 32, paddingLeft: 16, paddingRight: 16, paddingBottom: 16, opacity: showFocusModal ? 0 : 1, pointerEvents: showFocusModal ? 'none' : 'auto', transition: 'opacity 0.2s ease' }}>
+                  <div style={{ textAlign: 'center', marginBottom: 12 }}>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: accent, lineHeight: '125%', transition: 'color 0.2s ease' }}>Ready to begin?</div>
+                    <div style={{ fontSize: 14, fontWeight: 400, color: '#6B7280', lineHeight: '150%' }}>Let&apos;s start your revision session</div>
+                  </div>
+                  <div onClick={() => { if (selectedConfidence) setShowQuestion(true); }} className="pressable" style={{ boxSizing: 'border-box', height: 52, borderRadius: 12, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: selectedConfidence ? 1 : 0.5, cursor: selectedConfidence ? 'pointer' : 'default', transition: 'opacity 0.2s ease' }}>
+                    <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', lineHeight: '125%' }}>Start Session</span>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/playground/doorslam/cta-arrow.svg" alt="" width={16} height={16} style={{ display: 'block' }} />
+                  </div>
+                </div>
+                <div style={{ height: 23, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 140, height: 5, borderRadius: 3, background: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(31,35,48,0.2)' }} />
+                </div>
+              </div>{/* end preview panel */}
+
+              {/* Question panel */}
+              <div style={{
+                position: 'absolute', inset: 0,
+                display: 'flex', flexDirection: 'column',
+                transform: showQuestion ? 'translateX(0)' : 'translateX(100%)',
+                transition: 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+              }}>
+                <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingLeft: 16, paddingRight: 16 }}>
+                  {/* Question metadata */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4, paddingBottom: 16, paddingLeft: 8, paddingRight: 8 }}>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <div style={{ background: '#4F46E5', borderRadius: 9999, paddingLeft: 12, paddingRight: 12, paddingTop: 5, paddingBottom: 5 }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: '125%' }}>Q1</span>
+                      </div>
+                      <div style={{ background: 'rgba(79,70,229,0.1)', borderRadius: 9999, paddingLeft: 12, paddingRight: 12, paddingTop: 5, paddingBottom: 5 }}>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: '#4F46E5', lineHeight: '125%' }}>3 marks</span>
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 14, fontWeight: 500, color: '#6B7280', lineHeight: '125%' }}>1 of 1</span>
+                  </div>
+
+                  {/* Question card */}
+                  <div style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#fff', borderRadius: 16, padding: '16px 20px', boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)', transition: 'background 0.2s ease' }}>
+                    <p style={{ fontSize: 18, fontWeight: 500, color: fg, lineHeight: '150%', margin: 0, transition: 'color 0.2s ease' }}>A shop sells a jacket for £80. In a sale, the price is reduced by 15%.</p>
+                    <p style={{ fontSize: 18, fontWeight: 500, color: fg, lineHeight: '150%', margin: '16px 0 0', transition: 'color 0.2s ease' }}>Calculate the sale price.</p>
+                  </div>
+
+                  {/* Answer input label */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 16, paddingBottom: 8, paddingLeft: 8, paddingRight: 8 }}>
+                    <span style={{ fontSize: 16, fontWeight: 500, color: '#6B7280', lineHeight: '150%' }}>Type your answer</span>
+                    <div className="pressable-fade" style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(79,70,229,0.1)', borderRadius: 9999, paddingLeft: 10, paddingRight: 12, paddingTop: 5, paddingBottom: 5, cursor: 'pointer' }}>
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <rect x="2.75" y="2.75" width="5.5" height="5.5" rx="1.25" stroke="#4F46E5" strokeWidth="1.5"/>
+                        <rect x="11.75" y="2.75" width="5.5" height="5.5" rx="1.25" stroke="#4F46E5" strokeWidth="1.5"/>
+                        <rect x="2.75" y="11.75" width="5.5" height="5.5" rx="1.25" stroke="#4F46E5" strokeWidth="1.5"/>
+                        <path d="M11.75 14.5h2.75M14.5 11.75v2.75M17.25 14.5v2.75M14.5 17.25h2.75" stroke="#4F46E5" strokeWidth="1.5" strokeLinecap="round"/>
+                      </svg>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: '#4F46E5', lineHeight: '125%' }}>Scan</span>
+                    </div>
+                  </div>
+
+                  {/* Answer input box */}
+                  <div style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#fff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : '#6B7280'}`, borderRadius: 16, padding: 20, minHeight: 240, boxSizing: 'border-box', transition: 'background 0.2s ease, border-color 0.2s ease' }}>
+                    <span style={{ fontSize: 18, fontWeight: 400, color: isDark ? 'rgba(255,255,255,0.3)' : '#6B7280', lineHeight: '150%' }}>Enter your answer and working...</span>
+                  </div>
+                </div>
+
+                {/* Bottom actions */}
+                <div style={{ flexShrink: 0, paddingTop: 20, paddingLeft: 16, paddingRight: 16, paddingBottom: 16 }}>
+                  <div className="pressable" style={{ height: 52, borderRadius: 12, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                    <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', lineHeight: '125%' }}>Check my answer</span>
+                  </div>
+                  <div className="pressable-fade" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 20, cursor: 'pointer' }}>
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                      <circle cx="10" cy="10" r="8.25" stroke="#4F46E5" strokeWidth="1.5"/>
+                      <path d="M10 13.5v1" stroke="#4F46E5" strokeWidth="2" strokeLinecap="round"/>
+                      <path d="M10 11c0-2 2.5-1.5 2.5-3.5a2.5 2.5 0 0 0-5 0" stroke="#4F46E5" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                    <span style={{ fontSize: 14, fontWeight: 500, color: '#4F46E5', lineHeight: '150%' }}>Stuck? View related notes</span>
+                  </div>
+                </div>
+                <div style={{ height: 23, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 140, height: 5, borderRadius: 3, background: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(31,35,48,0.2)' }} />
+                </div>
+              </div>{/* end question panel */}
+
+            </div>{/* end content area */}
           </div>
 
           {/* Study Buddy panel — slides in from right */}
