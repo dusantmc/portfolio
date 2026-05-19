@@ -41,6 +41,7 @@ export default function RiveTestPage() {
   const [showSession, setShowSession] = useState(false);
   const [showQuestion, setShowQuestion] = useState(false);
   const [scanMode, setScanMode] = useState(false);
+  const [flipPhase, setFlipPhase] = useState<'idle' | 'out' | 'in'>('idle');
   const [answerText, setAnswerText] = useState('');
   const [isAnswerFocused, setIsAnswerFocused] = useState(false);
   const [selectedConfidence, setSelectedConfidence] = useState<string | null>(null);
@@ -202,6 +203,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
   useEffect(() => {
     if (!showQuestion) {
       setScanMode(false);
+      setFlipPhase('idle');
       setAnswerText('');
       setIsAnswerFocused(false);
       return;
@@ -209,6 +211,16 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
     const t = setTimeout(() => textareaRef.current?.focus(), 380);
     return () => clearTimeout(t);
   }, [showQuestion]);
+
+  const handleAnswerModeToggle = () => {
+    if (flipPhase !== 'idle') return;
+    setFlipPhase('out');
+    setTimeout(() => {
+      setScanMode(m => !m);
+      setFlipPhase('in');
+      setTimeout(() => setFlipPhase('idle'), 250);
+    }, 250);
+  };
 
   useEffect(() => {
     if (!showFocusModal) {
@@ -870,7 +882,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                   {/* Answer input label */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 16, paddingBottom: 8, paddingLeft: 8, paddingRight: 8 }}>
                     <span style={{ fontSize: 16, fontWeight: 500, color: '#6B7280', lineHeight: '150%' }}>{scanMode ? 'Scan your answer' : 'Type your answer'}</span>
-                    <div onClick={() => setScanMode(m => !m)} className="pressable" style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(79,70,229,0.1)', borderRadius: 9999, paddingLeft: 10, paddingRight: 12, paddingTop: 5, paddingBottom: 5, cursor: 'pointer' }}>
+                    <div onClick={handleAnswerModeToggle} className="pressable" style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(79,70,229,0.1)', borderRadius: 9999, paddingLeft: 10, paddingRight: 12, paddingTop: 5, paddingBottom: 5, cursor: 'pointer' }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={scanMode ? '/playground/doorslam/type.svg' : '/playground/doorslam/scan.svg'} alt="" width={20} height={20} style={{ display: 'block' }} />
                       <span style={{ fontSize: 14, fontWeight: 600, color: '#4F46E5', lineHeight: '125%' }}>{scanMode ? 'Type' : 'Scan'}</span>
@@ -878,6 +890,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                   </div>
 
                   {/* Answer content */}
+                  <div style={{ animation: flipPhase === 'out' ? 'card-flip-out 0.25s ease forwards' : flipPhase === 'in' ? 'card-flip-in 0.25s ease forwards' : undefined }}>
                   {scanMode ? (
                     <div style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#fff', borderRadius: 16, padding: '16px 20px 8px', display: 'flex', flexDirection: 'column', gap: 12, boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)', transition: 'background 0.2s ease' }}>
                       <span style={{ fontSize: 16, fontWeight: 400, color: fg, lineHeight: '150%', transition: 'color 0.2s ease' }}>Scan your written answer</span>
@@ -922,7 +935,8 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                       }}
                     />
                   )}
-                </div>
+                  </div>{/* end flip wrapper */}
+                </div>{/* end scrollable content */}
 
                 {/* Bottom actions */}
                 <div style={{ flexShrink: 0, paddingTop: 20, paddingLeft: 16, paddingRight: 16, paddingBottom: 16 }}>
