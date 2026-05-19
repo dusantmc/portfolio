@@ -236,7 +236,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
     setTimeout(() => {
       setDisplayScanMode(m => !m);
       setCardPhase('idle');
-    }, 200);
+    }, 150);
   };
 
   useEffect(() => {
@@ -924,7 +924,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                   </div>
 
                   {/* Answer content */}
-                  <div key={displayScanMode ? 'scan' : 'type'} style={{ animation: `card-flip-${cardPhase === 'out' ? 'out' : 'in'}${flipDirection === 'reverse' ? '-reverse' : ''} 0.2s ease ${cardPhase === 'out' ? 'forwards' : 'both'}` }}>
+                  <div key={displayScanMode ? 'scan' : 'type'} style={{ animation: `card-flip-${cardPhase === 'out' ? 'out' : 'in'}${flipDirection === 'reverse' ? '-reverse' : ''} 0.15s ease ${cardPhase === 'out' ? 'forwards' : 'both'}` }}>
                   {displayScanMode ? (
                     <div style={{ background: isDark ? '#0A1628' : '#fff', borderRadius: 16, padding: '16px 20px 8px', display: 'flex', flexDirection: 'column', gap: 12, boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)', transition: 'background 0.2s ease' }}>
                       <span style={{ fontSize: 16, fontWeight: 400, color: fg, lineHeight: '150%', transition: 'color 0.2s ease' }}>Scan your written answer</span>
