@@ -903,8 +903,8 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                     <div style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#fff', borderRadius: 16, padding: '16px 20px 8px', display: 'flex', flexDirection: 'column', gap: 12, boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)', transition: 'background 0.2s ease' }}>
                       <span style={{ fontSize: 16, fontWeight: 400, color: fg, lineHeight: '150%', transition: 'color 0.2s ease' }}>Scan your written answer</span>
                       {/* Camera area */}
-                      <div style={{ background: 'rgba(107,114,128,0.1)', borderRadius: 10, height: 140, overflow: 'hidden' }}>
-                        <ScanIllustration style={{ width: 320, height: 140 }} />
+                      <div style={{ background: 'rgba(107,114,128,0.1)', borderRadius: 10, height: 140, flexShrink: 0, overflow: 'hidden' }}>
+                        <ScanIllustration style={{ width: 320, height: 140, display: 'block' }} />
                       </div>
                       {/* Tips */}
                       <div style={{ marginTop: -8, opacity: 0.8, background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.8)', borderRadius: 16, padding: '12px 0', display: 'flex', flexDirection: 'column', gap: 4, transition: 'background 0.2s ease' }}>
