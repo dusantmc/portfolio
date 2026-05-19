@@ -913,7 +913,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                   </div>
 
                   {/* Answer content */}
-                  <div>
+                  <div key={scanMode ? 'scan' : 'type'} style={{ animation: 'card-flip-in 0.2s ease both' }}>
                   {scanMode ? (
                     <div style={{ background: isDark ? '#0A1628' : '#fff', borderRadius: 16, padding: '16px 20px 8px', display: 'flex', flexDirection: 'column', gap: 12, boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)', transition: 'background 0.2s ease' }}>
                       <span style={{ fontSize: 16, fontWeight: 400, color: fg, lineHeight: '150%', transition: 'color 0.2s ease' }}>Scan your written answer</span>
