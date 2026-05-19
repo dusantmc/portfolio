@@ -868,7 +868,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
 
                   {/* Answer content */}
                   {scanMode ? (
-                    <div style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#fff', borderRadius: 16, padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', gap: 12, boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)', transition: 'background 0.2s ease' }}>
+                    <div style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#fff', borderRadius: 16, padding: '16px 20px 8px', display: 'flex', flexDirection: 'column', gap: 12, boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)', transition: 'background 0.2s ease' }}>
                       <span style={{ fontSize: 16, fontWeight: 400, color: fg, lineHeight: '150%', transition: 'color 0.2s ease' }}>Scan your written answer</span>
                       {/* Camera area */}
                       <div style={{ position: 'relative', background: 'rgba(107,114,128,0.1)', borderRadius: 10, height: 140 }}>
@@ -878,17 +878,15 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                         <div style={{ position: 'absolute', bottom: 10, right: 10, width: 14, height: 14, borderBottom: '2px solid #9CA3AF', borderRight: '2px solid #9CA3AF', borderRadius: '0 0 2px 0' }} />
                       </div>
                       {/* Tips */}
-                      <div style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.8)', borderRadius: 16, padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8, transition: 'background 0.2s ease' }}>
+                      <div style={{ marginTop: -8, opacity: 0.8, background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.8)', borderRadius: 16, padding: '12px 0', display: 'flex', flexDirection: 'column', gap: 4, transition: 'background 0.2s ease' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                            <path d="M8 1.5C5.51 1.5 3.5 3.51 3.5 6c0 1.55.77 2.92 1.95 3.75.28.19.45.5.45.83V11h4.2v-.42c0-.33.17-.64.45-.83C11.73 8.92 12.5 7.55 12.5 6c0-2.49-2.01-4.5-4.5-4.5z" stroke="#6B7280" strokeWidth="1.2" strokeLinejoin="round"/>
-                            <path d="M6 11v.5A2 2 0 008 13.5a2 2 0 002-2V11" stroke="#6B7280" strokeWidth="1.2" strokeLinecap="round"/>
-                          </svg>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src="/playground/doorslam/tips.svg" alt="" width={16} height={16} style={{ display: 'block' }} />
                           <span style={{ fontSize: 14, fontWeight: 700, color: '#6B7280', lineHeight: '125%' }}>Tips</span>
                         </div>
                         {['Use a dark pen on white paper', 'Keep all your working in the frame', "Make sure it's clear and easy to read"].map(tip => (
                           <div key={tip} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                            <div style={{ width: 4, height: 4, borderRadius: 2, background: '#6B7280', marginTop: 7, flexShrink: 0 }} />
+                            <div style={{ width: 4, height: 4, borderRadius: 2, background: '#6B7280', marginTop: 5, flexShrink: 0 }} />
                             <span style={{ fontSize: 14, fontWeight: 500, color: '#6B7280', lineHeight: '150%' }}>{tip}</span>
                           </div>
                         ))}
