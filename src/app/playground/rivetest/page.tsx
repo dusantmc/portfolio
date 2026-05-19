@@ -904,7 +904,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                       <span style={{ fontSize: 16, fontWeight: 400, color: fg, lineHeight: '150%', transition: 'color 0.2s ease' }}>Scan your written answer</span>
                       {/* Camera area */}
                       <div style={{ background: 'rgba(107,114,128,0.1)', borderRadius: 10, height: 140, overflow: 'hidden' }}>
-                        <ScanIllustration style={{ width: '100%', height: '100%' }} />
+                        <ScanIllustration style={{ width: 320, height: 140 }} />
                       </div>
                       {/* Tips */}
                       <div style={{ marginTop: -8, opacity: 0.8, background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.8)', borderRadius: 16, padding: '12px 0', display: 'flex', flexDirection: 'column', gap: 4, transition: 'background 0.2s ease' }}>
