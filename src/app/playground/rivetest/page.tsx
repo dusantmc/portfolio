@@ -81,6 +81,12 @@ const { RiveComponent, rive } = useRive({
     autoplay: true,
   });
 
+  const { RiveComponent: ScanIllustration } = useRive({
+    src: '/playground/doorslam/scan_illustration.riv',
+    stateMachines: 'Illustration1',
+    autoplay: true,
+  });
+
   useEffect(() => {
     if (!focusRive) return;
     try {
@@ -892,16 +898,13 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                   </div>
 
                   {/* Answer content */}
-                  <div style={{ animation: flipPhase === 'out' ? `card-flip-out${flipDirection === 'reverse' ? '-reverse' : ''} 0.25s ease forwards` : flipPhase === 'in' ? `card-flip-in${flipDirection === 'reverse' ? '-reverse' : ''} 0.25s ease forwards` : undefined }}>
+                  <div style={{ animation: flipPhase === 'out' ? `card-flip-out${flipDirection === 'reverse' ? '-reverse' : ''} 0.2s ease forwards` : flipPhase === 'in' ? `card-flip-in${flipDirection === 'reverse' ? '-reverse' : ''} 0.2s ease forwards` : undefined }}>
                   {scanMode ? (
                     <div style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#fff', borderRadius: 16, padding: '16px 20px 8px', display: 'flex', flexDirection: 'column', gap: 12, boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)', transition: 'background 0.2s ease' }}>
                       <span style={{ fontSize: 16, fontWeight: 400, color: fg, lineHeight: '150%', transition: 'color 0.2s ease' }}>Scan your written answer</span>
                       {/* Camera area */}
-                      <div style={{ position: 'relative', background: 'rgba(107,114,128,0.1)', borderRadius: 10, height: 140 }}>
-                        <div style={{ position: 'absolute', top: 10, left: 10, width: 14, height: 14, borderTop: '2px solid #9CA3AF', borderLeft: '2px solid #9CA3AF', borderRadius: '2px 0 0 0' }} />
-                        <div style={{ position: 'absolute', top: 10, right: 10, width: 14, height: 14, borderTop: '2px solid #9CA3AF', borderRight: '2px solid #9CA3AF', borderRadius: '0 2px 0 0' }} />
-                        <div style={{ position: 'absolute', bottom: 10, left: 10, width: 14, height: 14, borderBottom: '2px solid #9CA3AF', borderLeft: '2px solid #9CA3AF', borderRadius: '0 0 0 2px' }} />
-                        <div style={{ position: 'absolute', bottom: 10, right: 10, width: 14, height: 14, borderBottom: '2px solid #9CA3AF', borderRight: '2px solid #9CA3AF', borderRadius: '0 0 2px 0' }} />
+                      <div style={{ background: 'rgba(107,114,128,0.1)', borderRadius: 10, height: 140, overflow: 'hidden' }}>
+                        <ScanIllustration style={{ width: '100%', height: '100%' }} />
                       </div>
                       {/* Tips */}
                       <div style={{ marginTop: -8, opacity: 0.8, background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.8)', borderRadius: 16, padding: '12px 0', display: 'flex', flexDirection: 'column', gap: 4, transition: 'background 0.2s ease' }}>
