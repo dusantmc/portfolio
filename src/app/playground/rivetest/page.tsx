@@ -812,7 +812,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                     <div style={{ fontSize: 16, fontWeight: 700, color: accent, lineHeight: '125%', transition: 'color 0.2s ease' }}>Ready to begin?</div>
                     <div style={{ fontSize: 14, fontWeight: 400, color: '#6B7280', lineHeight: '150%' }}>Let&apos;s start your revision session</div>
                   </div>
-                  <div onClick={() => { if (selectedConfidence) setShowQuestion(true); }} className="pressable" style={{ boxSizing: 'border-box', height: 52, borderRadius: 12, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: selectedConfidence ? 1 : 0.5, cursor: selectedConfidence ? 'pointer' : 'default', transition: 'opacity 0.2s ease' }}>
+                  <div onClick={() => { if (selectedConfidence) setShowQuestion(true); }} className="pressable" style={{ boxSizing: 'border-box', height: 52, borderRadius: 12, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: selectedConfidence ? 1 : 0.5, cursor: selectedConfidence ? 'pointer' : 'default', transition: 'opacity 0.2s ease, transform 0.15s ease' }}>
                     <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', lineHeight: '125%' }}>Start Session</span>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src="/playground/doorslam/cta-arrow.svg" alt="" width={16} height={16} style={{ display: 'block' }} />
@@ -827,8 +827,9 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
               <div style={{
                 position: 'absolute', inset: 0,
                 display: 'flex', flexDirection: 'column',
+                background: isDark ? SCREEN_BG.dark : SCREEN_BG.light,
                 transform: showQuestion ? 'translateX(0)' : 'translateX(100%)',
-                transition: 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                transition: 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94), background 0.2s ease',
               }}>
                 <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingLeft: 16, paddingRight: 16 }}>
                   {/* Question metadata */}
