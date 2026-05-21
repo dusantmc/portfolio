@@ -20,9 +20,30 @@
   to   { opacity: 1; transform: scale(1); }
 }
 
+@keyframes avatar-pop {
+  from { opacity: 0; transform: scale(0.5); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes card-appear {
+  from { opacity: 0; transform: scale(0.8); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes confetti-fall {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+  80%  { opacity: 0.9; }
+  100% { transform: translateY(420px) rotate(600deg); opacity: 0; }
+}
+
 @keyframes scale-in {
   from { transform: scale(0.8); }
   to   { transform: scale(1); }
+}
+
+@keyframes chess-card-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes step-shrink {

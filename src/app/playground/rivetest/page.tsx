@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+
 import { DM_Sans } from 'next/font/google';
 import { useRive, useStateMachineInput, Layout, Fit, Alignment } from '@rive-app/react-webgl2';
 import './styles.css';
@@ -24,13 +25,32 @@ const SCREEN_BG = {
   ].join(', '),
 };
 
+const CONFETTI_COLORS = ['#4F46E5', '#84CC16', '#F97316', '#EC4899', '#EAB308', '#06B6D4'];
+const CONFETTI_PIECES = Array.from({ length: 55 }, (_, i) => {
+  const a = Math.abs((i * 1664525 + 1013904223) | 0);
+  const b = Math.abs((a * 1664525 + 1013904223) | 0);
+  const c = Math.abs((b * 1664525 + 1013904223) | 0);
+  const d = Math.abs((c * 1664525 + 1013904223) | 0);
+  const e = Math.abs((d * 1664525 + 1013904223) | 0);
+  const f = Math.abs((e * 1664525 + 1013904223) | 0);
+  return {
+    left:     (a % 1000) / 10,
+    delay:    (b % 50) / 100,
+    duration: 1.0 + (c % 70) / 100,
+    color:    CONFETTI_COLORS[d % CONFETTI_COLORS.length],
+    w:        4 + (e % 3),
+    h:        5 + (f % 4),
+    round:    a % 3 === 0,
+  };
+});
+
 export default function RiveTestPage() {
   const [time, setTime] = useState('');
   const [isDark, setIsDark] = useState(false);
   const [showStudyBuddy, setShowStudyBuddy] = useState(false);
   const [chatText, setChatText] = useState('');
   const [isChatFocused, setIsChatFocused] = useState(false);
-  const [messages, setMessages] = useState<string[]>([]);
+  const [messages, setMessages] = useState<Array<{ type: 'text'; content: string } | { type: 'chess' }>>([]);
   const [isThinking, setIsThinking] = useState(false);
   const [showStreakModal, setShowStreakModal] = useState(false);
   const [streakFireReady, setStreakFireReady] = useState(false);
@@ -40,6 +60,7 @@ export default function RiveTestPage() {
   const [streakAnimating, setStreakAnimating] = useState(false);
   const [showSession, setShowSession] = useState(false);
   const [showQuestion, setShowQuestion] = useState(false);
+  const [showComplete, setShowComplete] = useState(false);
   const [scanMode, setScanMode] = useState(false);
   const [displayScanMode, setDisplayScanMode] = useState(false);
   const [flipDirection, setFlipDirection] = useState<'forward' | 'reverse'>('forward');
@@ -50,6 +71,12 @@ export default function RiveTestPage() {
   const [focusMode, setFocusMode] = useState(false);
   const [showFocusModal, setShowFocusModal] = useState(false);
   const [stepOneActive, setStepOneActive] = useState(false);
+  const [stepCompleteActive, setStepCompleteActive] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackAvatarActive, setFeedbackAvatarActive] = useState(false);
+  const [sessionExitLeft, setSessionExitLeft] = useState(false);
+  const [sessionNoTransition, setSessionNoTransition] = useState(false);
+  const [selectedFeedback, setSelectedFeedback] = useState<string | null>(null);
 
 const { RiveComponent, rive } = useRive({
   src: '/playground/doorslam/fab.riv',
@@ -73,6 +100,12 @@ const { RiveComponent, rive } = useRive({
   const { RiveComponent: StreakFireRive } = useRive({
     src: '/playground/doorslam/streak_fire.riv',
     stateMachines: 'Streak Fire',
+    autoplay: true,
+  });
+
+  const { RiveComponent: CompleteStreakRive } = useRive({
+    src: '/playground/doorslam/streak_fire.riv',
+    stateMachines: 'Streak Fire Fill',
     autoplay: true,
   });
 
@@ -206,6 +239,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
 
   useEffect(() => {
     if (showSession) {
+      setSessionExitLeft(false);
       const t = setTimeout(() => setStepOneActive(true), 250);
       return () => clearTimeout(t);
     } else {
@@ -213,6 +247,36 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
       setShowQuestion(false);
     }
   }, [showSession]);
+
+  useEffect(() => {
+    if (showComplete) {
+      const t1 = setTimeout(() => setStepCompleteActive(true), 450);
+      const t2 = setTimeout(() => setShowFeedback(true), 3000);
+      return () => { clearTimeout(t1); clearTimeout(t2); };
+    } else {
+      setStepCompleteActive(false);
+      setShowFeedback(false);
+      setFeedbackAvatarActive(false);
+      setSelectedFeedback(null);
+    }
+  }, [showComplete]);
+
+  useEffect(() => {
+    if (!showSession && sessionExitLeft) {
+      const t = setTimeout(() => {
+        setSessionNoTransition(true);
+        setSessionExitLeft(false);
+        requestAnimationFrame(() => setSessionNoTransition(false));
+      }, 400);
+      return () => clearTimeout(t);
+    }
+  }, [showSession, sessionExitLeft]);
+
+  useEffect(() => {
+    if (!showFeedback) { setFeedbackAvatarActive(false); return; }
+    const t = setTimeout(() => setFeedbackAvatarActive(true), 250);
+    return () => clearTimeout(t);
+  }, [showFeedback]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -223,6 +287,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
       setCardPhase('idle');
       setAnswerText('');
       setIsAnswerFocused(false);
+      setShowComplete(false);
       return;
     }
     const t = setTimeout(() => textareaRef.current?.focus(), 380);
@@ -358,8 +423,8 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
           <div style={{
             position: 'absolute', inset: 0,
             display: 'flex', flexDirection: 'column',
-            transform: showSession ? 'translateX(-30%)' : 'translateX(0)',
-            transition: 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+            transform: showSession && !sessionExitLeft ? 'translateX(-30%)' : 'translateX(0)',
+            transition: sessionExitLeft ? 'none' : 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
           }}>
 
           {/* Header — top bar only, frosted glass */}
@@ -726,8 +791,8 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
             background: isDark ? SCREEN_BG.dark : SCREEN_BG.light,
             zIndex: 26,
             display: 'flex', flexDirection: 'column',
-            transform: showSession ? 'translateX(0)' : 'translateX(100%)',
-            transition: 'transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94), background 0.2s ease',
+            transform: showSession ? 'translateX(0)' : sessionExitLeft ? 'translateY(100%)' : 'translateX(100%)',
+            transition: sessionNoTransition ? 'none' : `transform ${sessionExitLeft ? '0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)' : '0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)'}, background 0.2s ease`,
             borderRadius: 44,
             overflow: 'hidden',
           }}>
@@ -751,8 +816,8 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                 <div style={{ fontSize: 14, fontWeight: 400, color: isDark ? '#9CA3AF' : '#6B7280', lineHeight: '150%', transition: 'color 0.2s ease' }}>Fractional Distillation of Crude Oil</div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                {/* Timer badge — tapping navigates back from question view */}
-                <div onClick={() => { if (showQuestion) setShowQuestion(false); }} className={showQuestion ? 'pressable' : ''} style={{ display: 'flex', alignItems: 'center', gap: 6, background: isDark ? '#1B2840' : '#fff', borderRadius: 18, paddingLeft: 10, paddingRight: 10, boxSizing: 'border-box', height: 36, transition: 'background 0.2s ease', cursor: showQuestion ? 'pointer' : 'default' }}>
+                {/* Timer badge — tapping navigates back one step */}
+                <div onClick={() => { if (showFeedback) setShowFeedback(false); else if (showComplete) setShowComplete(false); else if (showQuestion) setShowQuestion(false); }} className={showQuestion || showComplete || showFeedback ? 'pressable' : ''} style={{ display: 'flex', alignItems: 'center', gap: 6, background: isDark ? '#1B2840' : '#fff', borderRadius: 18, paddingLeft: 10, paddingRight: 10, boxSizing: 'border-box', height: 36, transition: 'background 0.2s ease', cursor: showQuestion || showComplete || showFeedback ? 'pointer' : 'default' }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src="/playground/doorslam/timer.svg" alt="" width={16} height={16} style={{ display: 'block', filter: isDark ? 'brightness(0) invert(1) opacity(0.6)' : 'none', transition: 'filter 0.2s ease' }} />
                   <span style={{ fontSize: 14, fontWeight: 500, color: isDark ? '#9CA3AF' : '#6B7280', lineHeight: 1, transition: 'color 0.2s ease' }}>25m</span>
@@ -873,7 +938,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                 position: 'absolute', inset: 0,
                 display: 'flex', flexDirection: 'column',
                 background: isDark ? SCREEN_BG.dark : SCREEN_BG.light,
-                transform: showQuestion ? 'translateX(0)' : 'translateX(100%)',
+                transform: showComplete ? 'translateX(-30%)' : (showQuestion ? 'translateX(0)' : 'translateX(100%)'),
                 transition: 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94), background 0.2s ease',
               }}>
                 <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingLeft: 16, paddingRight: 16 }}>
@@ -971,7 +1036,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
 
                 {/* Bottom actions */}
                 <div style={{ flexShrink: 0, paddingTop: 20, paddingLeft: 16, paddingRight: 16, paddingBottom: 16 }}>
-                  <div className="pressable" style={{ height: 52, borderRadius: 12, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: (displayScanMode || answerText.trim()) ? 'pointer' : 'default', opacity: (displayScanMode || answerText.trim()) ? 1 : 0.5, pointerEvents: (displayScanMode || answerText.trim()) ? 'auto' : 'none', transition: 'opacity 0.2s ease, transform 0.15s ease' }}>
+                  <div onClick={() => { if (displayScanMode || answerText.trim()) setShowComplete(true); }} className="pressable" style={{ height: 52, borderRadius: 12, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: (displayScanMode || answerText.trim()) ? 'pointer' : 'default', opacity: (displayScanMode || answerText.trim()) ? 1 : 0.5, pointerEvents: (displayScanMode || answerText.trim()) ? 'auto' : 'none', transition: 'opacity 0.2s ease, transform 0.15s ease' }}>
                     <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', lineHeight: '125%' }}>{displayScanMode ? 'Scan answer' : 'Check my answer'}</span>
                   </div>
                   <div className="pressable-fade" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 20, cursor: 'pointer' }}>
@@ -988,7 +1053,178 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                 </div>
               </div>{/* end question panel */}
 
+              {/* Complete panel */}
+              <div style={{
+                position: 'absolute', inset: 0,
+                display: 'flex', flexDirection: 'column',
+                background: isDark ? SCREEN_BG.dark : SCREEN_BG.light,
+                transform: showFeedback ? 'translateX(-30%)' : (showComplete ? 'translateX(0)' : 'translateX(100%)'),
+                transition: 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94), background 0.2s ease',
+              }}>
+                {/* Confetti overlay */}
+                <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingLeft: 16, paddingRight: 16 }}>
+                  {/* Steps — all complete */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4, paddingBottom: 16 }}>
+                    {(['Preview','Recall','Revise','Practice','Summary','Complete'] as const).map((step, i) => {
+                      const isLast = i === 5;
+                      return (
+                        <div key={step} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 52 }}>
+                          {isLast ? (
+                            <div style={{ position: 'relative', width: 32, height: 32, flexShrink: 0 }}>
+                              <div style={{ position: 'absolute', inset: 0, borderRadius: 16, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)', animation: stepCompleteActive ? 'step-shrink 0.2s ease forwards' : undefined }}>
+                                <span style={{ fontSize: 14, fontWeight: 600, color: isDark ? 'rgba(255,255,255,0.4)' : '#6B7280', lineHeight: '125%' }}>6</span>
+                              </div>
+                              {stepCompleteActive && (
+                                <div style={{ position: 'absolute', inset: 0, borderRadius: 16, background: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'step-grow 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.18s both', transition: 'background 0.2s ease' }}>
+                                  <span style={{ fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: '125%' }}>6</span>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div style={{ width: 32, height: 32, borderRadius: 16, background: '#84CC16', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                                <path d="M4 9l3.5 3.5L14 5.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            </div>
+                          )}
+                          <span style={{ fontSize: 12, fontWeight: isLast && stepCompleteActive ? 700 : 400, color: isLast && stepCompleteActive ? accent : '#6B7280', marginTop: 4, lineHeight: '125%', transition: 'color 0.2s ease' }}>{step}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Celebration icon */}
+                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: 80, marginBottom: 24 }}>
+                    <div style={{ width: 64, height: 64, borderRadius: 32, background: isDark ? 'rgba(10,22,40,0.4)' : 'rgba(243,244,246,1)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s ease', opacity: stepCompleteActive ? undefined : 0, animation: stepCompleteActive ? 'avatar-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both' : undefined }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/playground/doorslam/party-popper.svg" alt="" width={36} height={36} style={{ display: 'block' }} />
+                    </div>
+                  </div>
+
+                  {/* Heading */}
+                  <div style={{ textAlign: 'center', marginBottom: 8 }}>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: fg, lineHeight: '125%', transition: 'color 0.2s ease' }}>You did it, Hannah!</div>
+                  </div>
+                  <p style={{ textAlign: 'center', fontSize: 16, fontWeight: 500, color: '#6B7280', lineHeight: '150%', margin: '0 24px 32px' }}>Another session complete – you&apos;re on fire!</p>
+
+                  {/* Stat cards */}
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    {/* XP */}
+                    <div style={{ flex: 1, background: isDark ? '#0A1628' : '#fff', borderRadius: 16, padding: '16px 12px', boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, transition: 'background 0.2s ease', opacity: stepCompleteActive ? undefined : 0, animation: stepCompleteActive ? 'card-appear 0.45s cubic-bezier(0.34, 2.2, 0.64, 1) 0.25s both' : undefined }}>
+                      <div style={{ height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: 24, fontWeight: 700, color: accent, lineHeight: '125%', transition: 'color 0.2s ease' }}>+45</span>
+                      </div>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: '#6B7280', lineHeight: '125%' }}>XP earned</span>
+                    </div>
+                    {/* Streak */}
+                    <div style={{ flex: 1, background: isDark ? '#0A1628' : '#fff', borderRadius: 16, padding: '16px 12px', boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, transition: 'background 0.2s ease', opacity: stepCompleteActive ? undefined : 0, animation: stepCompleteActive ? 'card-appear 0.45s cubic-bezier(0.34, 2.2, 0.64, 1) 0.65s both' : undefined }}>
+                      <div style={{ height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <CompleteStreakRive style={{ width: 38.5, height: 44, marginLeft: -10, flexShrink: 0 }} />
+                        <span style={{ fontSize: 24, fontWeight: 700, color: fg, lineHeight: '125%', transition: 'color 0.2s ease', marginLeft: -2 }}>{streakCount}</span>
+                      </div>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: '#6B7280', lineHeight: '125%' }}>day streak</span>
+                    </div>
+                    {/* Badge */}
+                    <div style={{ flex: 1, background: isDark ? '#0A1628' : '#fff', borderRadius: 16, padding: '16px 12px', boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, transition: 'background 0.2s ease', opacity: stepCompleteActive ? undefined : 0, animation: stepCompleteActive ? 'card-appear 0.45s cubic-bezier(0.34, 2.2, 0.64, 1) 1.05s both' : undefined }}>
+                      <div style={{ height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/playground/doorslam/trophy.svg" alt="" width={28} height={28} style={{ display: 'block' }} />
+                      </div>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: '#6B7280', lineHeight: '125%' }}>New badge!</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Skip button */}
+                <div style={{ flexShrink: 0, paddingLeft: 16, paddingRight: 16, paddingBottom: 16, paddingTop: 16 }}>
+                  <div
+                    onClick={() => setShowFeedback(true)}
+                    className="pressable-fade"
+                    style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                  >
+                    <span style={{ fontSize: 16, fontWeight: 600, color: fg, lineHeight: '125%', transition: 'color 0.2s ease' }}>Skip</span>
+                  </div>
+                </div>
+                <div style={{ height: 23, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 140, height: 5, borderRadius: 3, background: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(31,35,48,0.2)' }} />
+                </div>
+              </div>{/* end complete panel */}
+
             </div>{/* end content area */}
+
+            {/* Confetti overlay — full session panel height */}
+            {stepCompleteActive && (
+              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 15 }}>
+                {CONFETTI_PIECES.map((p, i) => (
+                  <div key={i} style={{
+                    position: 'absolute', top: -12, left: `${p.left}%`,
+                    width: p.w, height: p.h,
+                    background: p.color,
+                    borderRadius: p.round ? '50%' : 2,
+                    animation: `confetti-fall ${p.duration}s ease-in ${p.delay}s both`,
+                  }} />
+                ))}
+              </div>
+            )}
+
+            {/* Feedback panel — slides in from right after Complete */}
+            <div style={{
+              position: 'absolute', inset: 0,
+              display: 'flex', flexDirection: 'column',
+              background: isDark ? SCREEN_BG.dark : SCREEN_BG.light,
+              transform: showFeedback ? 'translateX(0)' : 'translateX(100%)',
+              transition: 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94), background 0.2s ease',
+            }}>
+              <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingLeft: 16, paddingRight: 16 }}>
+                {/* Spacer for header (59px status bar + 64px nav) */}
+                <div style={{ height: 123 }} />
+                {/* Avatar */}
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: 40, marginBottom: 24 }}>
+                  <div style={{ width: 64, height: 64, borderRadius: 32, background: isDark ? 'rgba(10,22,40,0.4)' : 'rgba(243,244,246,1)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s ease', opacity: feedbackAvatarActive ? undefined : 0, animation: feedbackAvatarActive ? 'avatar-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both' : undefined }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/playground/doorslam/question.svg" alt="" width={36} height={36} style={{ display: 'block' }} />
+                  </div>
+                </div>
+
+                {/* Heading */}
+                <div style={{ textAlign: 'center', marginBottom: 8 }}>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: fg, lineHeight: '125%', transition: 'color 0.2s ease' }}>How do you feel about this topic?</div>
+                </div>
+                <p style={{ textAlign: 'center', fontSize: 16, fontWeight: 500, color: '#6B7280', lineHeight: '150%', margin: '0 24px 24px' }}>Be honest – it helps us help you!</p>
+
+                {/* Options */}
+                <div style={{ background: isDark ? '#0A1628' : '#fff', borderRadius: 16, padding: 8, boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0 1px 1px rgba(0,0,0,0.05)', transition: 'background 0.2s ease' }}>
+                  {([
+                    { id: 'got-it',     title: 'Got it!',             subtitle: 'I could teach this to a friend',   color: '#84CC16', selectedBg: 'rgba(132,204,22,0.102)',   icon: '/playground/doorslam/option-confident.svg' },
+                    { id: 'fairly',     title: 'Fairly confident',    subtitle: 'I understand most of it',          color: '#4F46E5', selectedBg: 'rgba(79,70,229,0.102)',    icon: '/playground/doorslam/option-fairly.svg'    },
+                    { id: 'wobbly',     title: 'A bit wobbly',        subtitle: 'Some parts are still unclear',     color: '#F97316', selectedBg: 'rgba(249,115,22,0.102)',   icon: '/playground/doorslam/option-unsure.svg'    },
+                    { id: 'more',       title: 'Need more practice',  subtitle: "I'd like to go over this again",   color: '#EF4444', selectedBg: 'rgba(239,68,68,0.102)',    icon: '/playground/doorslam/option-new.svg'       },
+                  ] as const).map(({ id, title, subtitle, color, selectedBg, icon }) => (
+                    <div key={id} onClick={() => setSelectedFeedback(id)} style={{ WebkitTapHighlightColor: 'transparent', display: 'flex', alignItems: 'center', gap: 16, padding: '13px 12px', borderRadius: 8, cursor: 'pointer', background: selectedFeedback === id ? selectedBg : selectedBg.replace('0.102', '0'), transition: 'background 0.2s ease' }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={icon} alt="" width={24} height={24} style={{ flexShrink: 0, display: 'block' }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 16, fontWeight: 600, color: fg, lineHeight: '125%', transition: 'color 0.2s ease' }}>{title}</div>
+                        <div style={{ fontSize: 12, fontWeight: 500, color: '#6B7280', lineHeight: '150%' }}>{subtitle}</div>
+                      </div>
+                      <div style={{ width: 20, height: 20, borderRadius: 10, border: `2px solid ${selectedFeedback === id ? color : '#D1D5DB'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'border-color 0.15s ease' }}>
+                        {selectedFeedback === id && <div style={{ width: 10, height: 10, borderRadius: 5, background: color, animation: 'scale-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both' }} />}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Continue button */}
+              <div style={{ flexShrink: 0, paddingLeft: 16, paddingRight: 16, paddingBottom: 16, paddingTop: 16 }}>
+                <div onClick={() => { setSessionExitLeft(true); setShowSession(false); }} className="pressable" style={{ height: 52, borderRadius: 12, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'opacity 0.2s ease, transform 0.15s ease' }}>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', lineHeight: '125%' }}>Continue</span>
+                </div>
+              </div>
+              <div style={{ height: 23, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 140, height: 5, borderRadius: 3, background: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(31,35,48,0.2)' }} />
+              </div>
+            </div>{/* end feedback panel */}
           </div>
 
           {/* Study Buddy panel — slides in from right */}
@@ -1098,6 +1334,36 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                 /* Chat view */
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingTop: 16 }}>
                   {messages.map((msg, i) => (
+                    msg.type === 'chess' ? (
+                      <div key={i} style={{
+                        alignSelf: 'stretch', marginBottom: 12,
+                        background: '#fff', borderRadius: 20,
+                        padding: '28px 20px 20px',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px -1px rgba(0,0,0,0.06)',
+                        animation: 'chess-card-in 0.35s ease both',
+                      }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/playground/doorslam/chess.png" alt="chess" width={80} height={80} style={{ display: 'block' }} />
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                          <div style={{ fontSize: 20, fontWeight: 700, color: '#1F2330', letterSpacing: '-0.3px', textAlign: 'center' }}>
+                            Play Chess
+                          </div>
+                          <div style={{ fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: '150%' }}>
+                            Challenge yourself with a quick game of chess!
+                          </div>
+                        </div>
+                        <button className="pressable" style={{
+                          marginTop: 4, width: '100%', height: 40, padding: 0,
+                          background: '#4F46E5', borderRadius: 14,
+                          border: 'none', cursor: 'pointer',
+                          fontSize: 16, fontWeight: 600, color: '#fff',
+                          fontFamily: 'inherit',
+                        }}>
+                          Play game
+                        </button>
+                      </div>
+                    ) : (
                     <div key={i} style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
                       <div style={{
                         background: 'rgba(79,70,229,0.10)',
@@ -1107,9 +1373,10 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                         minWidth: 52, maxWidth: '80%',
                         fontSize: 18, lineHeight: '136%', color: '#1F2330',
                       }}>
-                        {msg}
+                        {msg.content}
                       </div>
                     </div>
+                    )
                   ))}
 
                   {isThinking && (
@@ -1160,9 +1427,17 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                   onBlur={() => setIsChatFocused(false)}
                   onKeyDown={e => {
                     if (e.key === 'Enter' && chatText.trim() && !isThinking) {
-                      setMessages(prev => [...prev, chatText.trim()]);
+                      const txt = chatText.trim();
+                      const isChess = /^(chess|play chess|let's play chess)$/i.test(txt);
+                      setMessages(prev => [...prev, { type: 'text', content: txt }]);
                       setChatText('');
                       setIsThinking(true);
+                      if (isChess) {
+                        setTimeout(() => {
+                          setIsThinking(false);
+                          setMessages(prev => [...prev, { type: 'chess' as const }]);
+                        }, 900);
+                      }
                     }
                   }}
                   style={{
@@ -1196,9 +1471,17 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
                   <div
                     onClick={() => {
                       if (!chatText.trim()) return;
-                      setMessages(prev => [...prev, chatText.trim()]);
+                      const txt = chatText.trim();
+                      const isChess = /^(chess|play chess|let's play chess)$/i.test(txt);
+                      setMessages(prev => [...prev, { type: 'text', content: txt }]);
                       setChatText('');
                       setIsThinking(true);
+                      if (isChess) {
+                        setTimeout(() => {
+                          setIsThinking(false);
+                          setMessages(prev => [...prev, { type: 'chess' as const }]);
+                        }, 900);
+                      }
                     }}
                     style={{
                       position: 'absolute', inset: 0,
