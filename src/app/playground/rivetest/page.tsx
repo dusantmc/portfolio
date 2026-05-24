@@ -8,6 +8,63 @@ import './styles.css';
 
 const SM_NAME = 'FAB_Machine';
 
+type TabKey = 'today' | 'rewards' | 'beats';
+
+function TabIcon({ tabKey, isActive, isDark }: { tabKey: TabKey; isActive: boolean; isDark: boolean }) {
+  const c = isActive ? (isDark ? '#818CF8' : '#4F46E5') : (isDark ? 'rgba(255,255,255,0.4)' : '#6B7280');
+
+  if (tabKey === 'today') {
+    return (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path d="M8.40002 3V6.6" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M15.6 3V6.6" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        {isActive ? <>
+          <path d="M20.1 12.2H3.90002V18.6C3.90002 19.9255 4.97454 21 6.30002 21H17.7C19.0255 21 20.1 19.9255 20.1 18.6V12.2Z" fill={c} stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M17.7 4.80005H6.30002C4.97454 4.80005 3.90002 5.87457 3.90002 7.20005V8.2H20.1V7.20005C20.1 5.87457 19.0255 4.80005 17.7 4.80005Z" fill={c} stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </> : <>
+          <path d="M17.7 4.80005H6.30002C4.97454 4.80005 3.90002 5.87456 3.90002 7.20005V18.6C3.90002 19.9255 4.97454 21 6.30002 21H17.7C19.0255 21 20.1 19.9255 20.1 18.6001V7.20005C20.1 5.87457 19.0255 4.80005 17.7 4.80005Z" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M3.90002 10.2H20.1" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </>}
+      </svg>
+    );
+  }
+
+  if (tabKey === 'rewards') {
+    if (isActive) return (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path d="M22 10C22 10.8284 21.3284 11.5 20.5 11.5H13.8999C13.3476 11.5 12.8999 11.0523 12.8999 10.5V8C12.8999 7.44772 13.3476 7 13.8999 7H20C21.1045 7 22 7.89543 22 9V10Z" fill={c}/>
+        <path d="M10.1 7C10.6523 7 11.1 7.44772 11.1 8V10.5C11.1 11.0523 10.6523 11.5 10.1 11.5H3.5C2.67157 11.5 2 10.8284 2 10V9C2 7.89543 2.89543 7 4 7H10.1Z" fill={c}/>
+        <path d="M20.0001 19C20.0001 19.7956 19.6838 20.5585 19.1212 21.1211C18.5586 21.6837 17.7957 22 17.0001 22H13.9C13.3477 22 12.9 21.5523 12.9 21V14.5C12.9 13.9477 13.3477 13.5 13.9 13.5H19.0001C19.2653 13.5 19.5196 13.6054 19.7071 13.793C19.8946 13.9805 20.0001 14.2348 20.0001 14.5V19Z" fill={c}/>
+        <path d="M10.1 13.5C10.6523 13.5 11.1 13.9477 11.1 14.5V21C11.1 21.5523 10.6523 22 10.1 22H7C6.20435 22 5.44152 21.6837 4.87891 21.1211C4.3163 20.5585 4 19.7956 4 19V14.5C4 14.2348 4.10543 13.9805 4.29297 13.793C4.48051 13.6054 4.73478 13.5 5 13.5H10.1Z" fill={c}/>
+        <path d="M7.5 7.99995C6.83696 7.99995 6.20107 7.73656 5.73223 7.26772C5.26339 6.79887 5 6.16299 5 5.49995C5 4.83691 5.26339 4.20102 5.73223 3.73218C6.20107 3.26334 6.83696 2.99995 7.5 2.99995C8.46469 2.98314 9.41002 3.45121 10.2127 4.34311C10.869 5.07231 11.4051 6.05715 11.7765 7.2068C11.8409 7.40634 12.1591 7.40634 12.2235 7.2068C12.5949 6.05715 13.131 5.07231 13.7873 4.34311C14.59 3.45121 15.5353 2.98314 16.5 2.99995C17.163 2.99995 17.7989 3.26334 18.2678 3.73218C18.7366 4.20102 19 4.83691 19 5.49995C19 6.16299 18.7366 6.79887 18.2678 7.26772C17.7989 7.73656 17.163 7.99995 16.5 7.99995" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    );
+    return (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path d="M20 8H4C3.44772 8 3 8.44772 3 9V11C3 11.5523 3.44772 12 4 12H20C20.5523 12 21 11.5523 21 11V9C21 8.44772 20.5523 8 20 8Z" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 8V21" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M19 12V19C19 19.5304 18.7893 20.0391 18.4142 20.4142C18.0391 20.7893 17.5304 21 17 21H7C6.46957 21 5.96086 20.7893 5.58579 20.4142C5.21071 20.0391 5 19.5304 5 19V12" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M7.5 8.00044C6.83696 8.00044 6.20107 7.73704 5.73223 7.2682C5.26339 6.79936 5 6.16348 5 5.50044C5 4.8374 5.26339 4.20151 5.73223 3.73267C6.20107 3.26383 6.83696 3.00044 7.5 3.00044C8.46469 2.98363 9.41002 3.4517 10.2127 4.3436C11.0154 5.2355 11.6383 6.50984 12 8.00044C12.3617 6.50984 12.9846 5.2355 13.7873 4.3436C14.59 3.4517 15.5353 2.98363 16.5 3.00044C17.163 3.00044 17.7989 3.26383 18.2678 3.73267C18.7366 4.20151 19 4.8374 19 5.50044C19 6.16348 18.7366 6.79936 18.2678 7.2682C17.7989 7.73704 17.163 8.00044 16.5 8.00044" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    );
+  }
+
+  // beats
+  if (isActive) return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <path d="M17.3469 2C17.7234 2.00237 18.0544 2.01657 18.345 2.08887C19.6051 2.40258 20.5202 3.49179 20.6125 4.78711C20.6243 4.95168 20.6128 5.12482 20.593 5.30957C20.7422 5.36503 20.8878 5.43129 21.0295 5.51074C21.8296 5.95938 22.4514 6.67008 22.7903 7.52246C23.0106 8.07673 23.0491 8.65652 23.0198 9.2793C22.9909 9.89221 22.8896 10.6457 22.7668 11.5664L22.0471 16.9668C21.9508 17.6892 21.8717 18.2869 21.7688 18.7715C21.6632 19.2684 21.5184 19.7208 21.2542 20.1387C20.8413 20.7913 20.2476 21.3108 19.5461 21.6338C19.0973 21.8404 18.6305 21.9239 18.1243 21.9629C17.6303 22.0009 17.027 22 16.2981 22H7.70239C6.9735 22 6.37019 22.0009 5.87622 21.9629C5.36996 21.9239 4.90324 21.8403 4.45435 21.6338C3.75284 21.3108 3.15925 20.7913 2.74634 20.1387C2.48202 19.7208 2.33725 19.2684 2.23169 18.7715C2.12879 18.2869 2.04968 17.6892 1.95337 16.9668L1.23364 11.5664C1.11088 10.6457 1.00955 9.89221 0.980713 9.2793C0.951414 8.65649 0.98986 8.07675 1.21021 7.52246C1.54915 6.67006 2.17081 5.95936 2.97095 5.51074C3.11211 5.43163 3.25702 5.36586 3.40552 5.31055C3.38563 5.12549 3.37525 4.95191 3.38696 4.78711C3.47925 3.49187 4.39452 2.40267 5.65454 2.08887C5.94537 2.01646 6.27675 2.00237 6.65356 2H17.3469ZM12.2961 8.31055C12.0645 8.21126 11.7976 8.23533 11.5872 8.37402C11.3768 8.51282 11.2502 8.74799 11.2502 9V14.3809C11.0155 14.2978 10.7635 14.25 10.5002 14.25C9.25761 14.25 8.25025 15.2574 8.25024 16.5C8.25024 17.7426 9.2576 18.75 10.5002 18.75C11.7428 18.7499 12.7502 17.7426 12.7502 16.5V12.6377L15.2043 13.6895C15.436 13.7887 15.7029 13.7647 15.9133 13.626C16.1236 13.4872 16.2502 13.252 16.2502 13V10.5C16.2502 10.2002 16.0716 9.92885 15.7961 9.81055L12.2961 8.31055ZM14.7502 10.9941V11.8623L12.7502 11.0049V10.1377L14.7502 10.9941ZM7.04517 4C6.37486 4 6.22616 4.00738 6.13794 4.0293C5.71806 4.13391 5.41293 4.4971 5.38208 4.92871C5.38046 4.9514 5.38047 4.97767 5.38306 5.01465C5.84893 5.00056 6.38047 5 6.98267 5H17.0178C17.6192 5 18.15 5.00061 18.6155 5.01465C18.618 4.97761 18.619 4.95142 18.6174 4.92871C18.5866 4.49705 18.2815 4.13385 17.8616 4.0293C17.7733 4.00746 17.6238 4 16.9543 4H7.04517Z" fill={c}/>
+    </svg>
+  );
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <path d="M2.22458 11.4344C1.97439 9.55795 1.8493 8.61973 2.13884 7.89155C2.39304 7.25223 2.85927 6.71971 3.45939 6.38324C4.14292 6 5.08944 6 6.98248 6H17.0175C18.9106 6 19.8571 6 20.5406 6.38324C21.1407 6.71971 21.607 7.25223 21.8612 7.89155C22.1507 8.61973 22.0256 9.55795 21.7754 11.4344L21.0554 16.8344C20.8586 18.3102 20.7602 19.0482 20.4088 19.6038C20.0991 20.0933 19.6543 20.4828 19.1281 20.7251C18.5309 21 17.7864 21 16.2975 21H7.70248C6.21356 21 5.46911 21 4.87192 20.7251C4.34571 20.4828 3.90091 20.0933 3.59122 19.6038C3.23976 19.0482 3.14137 18.3102 2.94458 16.8344L2.22458 11.4344Z" stroke={c} strokeWidth="2"/>
+      <path d="M19.4762 6C19.5807 5.40163 19.6329 5.10245 19.6155 4.85786C19.5539 3.9943 18.9438 3.26838 18.1037 3.05924C17.8657 3 17.562 3 16.9546 3H7.04539C6.43796 3 6.13425 3 5.89631 3.05924C5.05621 3.26838 4.44605 3.9943 4.38452 4.85786C4.36709 5.10245 4.41933 5.40163 4.52381 6" stroke={c} strokeWidth="2"/>
+      <circle cx="10.5" cy="16.5" r="1.5" stroke={c} strokeWidth="2"/>
+      <path d="M12 16.5V9L15.5 10.5V13L12 11.5" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
 const dmSans = DM_Sans({ subsets: ['latin'] });
 
 const SIDE_ZONE = (393 - 126) / 2; // 133.5px
@@ -77,6 +134,7 @@ export default function RiveTestPage() {
   const [sessionExitLeft, setSessionExitLeft] = useState(false);
   const [sessionNoTransition, setSessionNoTransition] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'today' | 'rewards' | 'beats'>('today');
 
 const { RiveComponent, rive } = useRive({
   src: '/playground/doorslam/fab.riv',
@@ -144,13 +202,27 @@ const { RiveComponent: StreakButtonRive, rive: streakButtonRive } = useRive({
   autoplay: true,
 });
 
+const { RiveComponent: StreakButtonRiveRewards, rive: streakButtonRiveRewards } = useRive({
+  src: '/playground/doorslam/streak_fire.riv',
+  stateMachines: 'Streak Increase',
+  autoplay: true,
+});
+
+const { RiveComponent: StreakButtonRiveBeats, rive: streakButtonRiveBeats } = useRive({
+  src: '/playground/doorslam/streak_fire.riv',
+  stateMachines: 'Streak Increase',
+  autoplay: true,
+});
+
 
 
   useEffect(() => {
     if (streakAnimKey === 0) return;
-    streakButtonRive?.reset({ stateMachines: 'Streak Increase' });
-    streakButtonRive?.play('Streak Increase');
-  }, [streakAnimKey, streakButtonRive]);
+    for (const r of [streakButtonRive, streakButtonRiveRewards, streakButtonRiveBeats]) {
+      r?.reset({ stateMachines: 'Streak Increase' });
+      r?.play('Streak Increase');
+    }
+  }, [streakAnimKey, streakButtonRive, streakButtonRiveRewards, streakButtonRiveBeats]);
 
 
 
@@ -221,6 +293,10 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
     if (delta > 0) scrollDownRef.current?.fire();
     else           scrollUpRef.current?.fire();
   }, []);
+
+  useEffect(() => {
+    lastScrollY.current = 0;
+  }, [activeTab]);
 
   const handleCloseStreakModal = () => {
     setShowStreakModal(false);
@@ -513,6 +589,10 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
 
           {/* Scrollable screen content */}
           <div onScroll={handleScroll} style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: 16 }}>
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 24, fontWeight: 700, color: fg, lineHeight: '125%', letterSpacing: '-0.3px', marginBottom: 4, transition: 'color 0.2s ease' }}>Hi Hannah</div>
+              <div style={{ fontSize: 14, fontWeight: 400, color: '#6B7280', lineHeight: '150%' }}>Ready to keep the momentum going?</div>
+            </div>
             {[
               { label: "Today's Sessions",     h: 180 },
               { label: "This Week's Progress", h: 160 },
@@ -567,7 +647,299 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
             <div style={{ height: 16 }} />
           </div>
 
-          {/* FAB */}
+
+          {/* Tab bar + safe area */}
+          <div style={{
+            flexShrink: 0, display: 'flex', flexDirection: 'column',
+            borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+            background: isDark
+              ? 'linear-gradient(to bottom, rgba(10,22,40,0) 0%, rgba(10,22,40,0.6) 100%)'
+              : 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.6) 100%)',
+            backdropFilter: 'blur(40px)',
+            transition: 'background 0.2s ease, border-color 0.2s ease',
+          }}>
+            <div style={{ boxSizing: 'border-box', height: 70, display: 'flex', alignItems: 'flex-start', paddingTop: 12, paddingLeft: 24, paddingRight: 24 }}>
+              {([
+                { label: 'Today',   tabKey: 'today'   },
+                { label: 'Rewards', tabKey: 'rewards' },
+                { label: 'Beats',   tabKey: 'beats'   },
+              ] as const).map(({ label, tabKey }) => {
+                const isActive = activeTab === tabKey;
+                return (
+                  <div key={label} onClick={() => setActiveTab(tabKey)} className="pressable" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+                    <TabIcon tabKey={tabKey} isActive={isActive} isDark={isDark} />
+                    <span style={{
+                      fontSize: 10, fontWeight: 600, lineHeight: 1,
+                      color: isActive ? accent : isDark ? 'rgba(255,255,255,0.4)' : '#6B7280',
+                      transition: 'color 0.2s ease',
+                    }}>
+                      {label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ height: 23 }} />
+          </div>
+          </div>{/* end main content wrapper */}
+
+          {/* Rewards panel — slides in from right */}
+          <div style={{
+            position: 'absolute', top: 0, left: 0,
+            width: 393, height: 852,
+            background: isDark ? SCREEN_BG.dark : SCREEN_BG.light,
+            zIndex: 20,
+            display: 'flex', flexDirection: 'column',
+            opacity: activeTab === 'rewards' ? 1 : 0,
+            pointerEvents: activeTab === 'rewards' ? 'auto' : 'none',
+            transition: 'background 0.2s ease',
+            borderRadius: 44,
+            overflow: 'hidden',
+          }}>
+            {/* Header wrapper — frosted glass */}
+            <div style={{
+              flexShrink: 0, display: 'flex', flexDirection: 'column',
+              background: isDark
+                ? 'linear-gradient(to bottom, rgba(10,22,40,0.8) 0%, rgba(10,22,40,0) 100%)'
+                : 'linear-gradient(to bottom, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 100%)',
+              backdropFilter: 'blur(40px)',
+              transition: 'background 0.2s ease',
+              zIndex: 10,
+            }}>
+              <div className="phone-status-bar" style={{ height: 59 }} />
+              <div style={{ height: 64, flexShrink: 0, display: 'flex', alignItems: 'center', paddingLeft: 16, paddingRight: 16, position: 'relative' }}>
+                <div
+                  onClick={() => setIsDark(d => !d)}
+                  className="pressable"
+                  style={{ width: 36, height: 36, borderRadius: 18, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isDark ? '#1c2a40' : '#e5e7eb', flexShrink: 0, cursor: 'pointer', transition: 'background 0.2s ease' }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/playground/doorslam/avatar.jpg" alt="avatar" width={32} height={32} style={{ borderRadius: 16, objectFit: 'cover', display: 'block' }} />
+                </div>
+                <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={isDark ? '/playground/doorslam/logo-dark.svg' : '/playground/doorslam/logo.svg'} alt="logo" width={130} height={24} style={{ display: 'block' }} />
+                </div>
+                <div className="pressable" onClick={() => { setStreakModalKey(k => k + 1); setShowStreakModal(true); }} style={{ marginLeft: 'auto', flexShrink: 0, cursor: 'pointer' }}>
+                  <div style={{ boxSizing: 'border-box', height: 36, borderRadius: 18, background: isDark ? 'rgba(255,255,255,0.08)' : '#fff', display: 'flex', alignItems: 'center', paddingLeft: 4, paddingRight: 12, paddingTop: 2, paddingBottom: 2, gap: 0, transition: 'background 0.2s ease' }}>
+                    <StreakButtonRiveRewards style={{ width: 28, height: 32, flexShrink: 0 }} />
+                    <span style={{ fontSize: 14, fontWeight: 700, color: fg, lineHeight: '14px', display: 'block', transition: 'color 0.2s ease' }}>{streakCount}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Scrollable rewards content */}
+            <div onScroll={handleScroll} style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: 16 }}>
+              {/* Page title */}
+              <div style={{ marginBottom: 4 }}>
+                <div style={{ fontSize: 24, fontWeight: 700, color: fg, lineHeight: '125%', letterSpacing: '-0.3px', transition: 'color 0.2s ease' }}>My Rewards</div>
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 400, color: '#6B7280', lineHeight: '150%', marginBottom: 20 }}>
+                Earn points from your revision sessions and spend them on rewards!
+              </div>
+
+              {/* Points balance card */}
+              <div style={{ borderRadius: 20, background: 'linear-gradient(135deg, #6366F1 0%, #06B6D4 100%)', height: 132, marginBottom: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/playground/doorslam/star.svg" alt="" width={16} height={16} style={{ display: 'block' }} />
+                  <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.85)', lineHeight: '125%' }}>Points Balance</span>
+                </div>
+                <div style={{ fontSize: 48, fontWeight: 700, color: '#fff', lineHeight: 1, letterSpacing: '-1px' }}>20</div>
+              </div>
+
+              {/* Keep Working Towards */}
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 16, fontWeight: 600, color: fg, lineHeight: '125%', marginBottom: 12, transition: 'color 0.2s ease' }}>Keep Working Towards</div>
+                <div style={{ display: 'flex', gap: 12, overflowX: 'auto', marginLeft: -16, marginRight: -16, paddingLeft: 16, paddingRight: 16, scrollbarWidth: 'none' }}>
+                  {[0, 1, 2, 3].map(i => (
+                    <div key={i} style={{
+                      width: 156, height: 196, flexShrink: 0, borderRadius: 16,
+                      background: isDark ? '#0A1628' : '#fff',
+                      boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0px 1px 2px -1px rgba(0,0,0,0.10), 0px 1px 3px 0px rgba(0,0,0,0.10)',
+                      transition: 'background 0.2s ease',
+                    }} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Browse all available rewards */}
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: fg, lineHeight: '125%', marginBottom: 4, transition: 'color 0.2s ease' }}>Browse all available rewards</div>
+                <div style={{ fontSize: 14, fontWeight: 400, color: '#6B7280', lineHeight: '150%', marginBottom: 12 }}>Ask your parent to add ones you&apos;d like!</div>
+                <div style={{
+                  height: 200, borderRadius: 16,
+                  background: isDark ? '#0A1628' : '#fff',
+                  boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0px 1px 2px -1px rgba(0,0,0,0.10), 0px 1px 3px 0px rgba(0,0,0,0.10)',
+                  transition: 'background 0.2s ease',
+                }} />
+              </div>
+
+              <div style={{ height: 109 }} />
+            </div>
+
+            {/* Tab bar */}
+            <div style={{
+              flexShrink: 0, display: 'flex', flexDirection: 'column',
+              borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+              background: isDark
+                ? 'linear-gradient(to bottom, rgba(10,22,40,0) 0%, rgba(10,22,40,0.6) 100%)'
+                : 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.6) 100%)',
+              backdropFilter: 'blur(40px)',
+              transition: 'background 0.2s ease, border-color 0.2s ease',
+            }}>
+              <div style={{ boxSizing: 'border-box', height: 70, display: 'flex', alignItems: 'flex-start', paddingTop: 12, paddingLeft: 24, paddingRight: 24 }}>
+                {([
+                  { label: 'Today',   tabKey: 'today'   },
+                  { label: 'Rewards', tabKey: 'rewards' },
+                  { label: 'Beats',   tabKey: 'beats'   },
+                ] as const).map(({ label, tabKey }) => {
+                  const isActive = activeTab === tabKey;
+                  return (
+                    <div key={label} onClick={() => setActiveTab(tabKey)} className="pressable" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+                      <TabIcon tabKey={tabKey} isActive={isActive} isDark={isDark} />
+                      <span style={{
+                        fontSize: 10, fontWeight: 600, lineHeight: 1,
+                        color: isActive ? accent : isDark ? 'rgba(255,255,255,0.4)' : '#6B7280',
+                        transition: 'color 0.2s ease',
+                      }}>
+                        {label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ height: 23 }} />
+            </div>
+          </div>{/* end rewards panel */}
+
+          {/* Beats panel */}
+          <div style={{
+            position: 'absolute', top: 0, left: 0,
+            width: 393, height: 852,
+            background: isDark ? SCREEN_BG.dark : SCREEN_BG.light,
+            zIndex: 20,
+            display: 'flex', flexDirection: 'column',
+            opacity: activeTab === 'beats' ? 1 : 0,
+            pointerEvents: activeTab === 'beats' ? 'auto' : 'none',
+            transition: 'background 0.2s ease',
+            borderRadius: 44,
+            overflow: 'hidden',
+          }}>
+            {/* Header wrapper — frosted glass */}
+            <div style={{
+              flexShrink: 0, display: 'flex', flexDirection: 'column',
+              background: isDark
+                ? 'linear-gradient(to bottom, rgba(10,22,40,0.8) 0%, rgba(10,22,40,0) 100%)'
+                : 'linear-gradient(to bottom, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 100%)',
+              backdropFilter: 'blur(40px)',
+              transition: 'background 0.2s ease',
+              zIndex: 10,
+            }}>
+              <div className="phone-status-bar" style={{ height: 59 }} />
+              <div style={{ height: 64, flexShrink: 0, display: 'flex', alignItems: 'center', paddingLeft: 16, paddingRight: 16, position: 'relative' }}>
+                <div onClick={() => setIsDark(d => !d)} className="pressable" style={{ width: 36, height: 36, borderRadius: 18, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isDark ? '#1c2a40' : '#e5e7eb', flexShrink: 0, cursor: 'pointer', transition: 'background 0.2s ease' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/playground/doorslam/avatar.jpg" alt="avatar" width={32} height={32} style={{ borderRadius: 16, objectFit: 'cover', display: 'block' }} />
+                </div>
+                <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={isDark ? '/playground/doorslam/logo-dark.svg' : '/playground/doorslam/logo.svg'} alt="logo" width={130} height={24} style={{ display: 'block' }} />
+                </div>
+                <div className="pressable" onClick={() => { setStreakModalKey(k => k + 1); setShowStreakModal(true); }} style={{ marginLeft: 'auto', flexShrink: 0, cursor: 'pointer' }}>
+                  <div style={{ boxSizing: 'border-box', height: 36, borderRadius: 18, background: isDark ? 'rgba(255,255,255,0.08)' : '#fff', display: 'flex', alignItems: 'center', paddingLeft: 4, paddingRight: 12, paddingTop: 2, paddingBottom: 2, gap: 0, transition: 'background 0.2s ease' }}>
+                    <StreakButtonRiveBeats style={{ width: 28, height: 32, flexShrink: 0 }} />
+                    <span style={{ fontSize: 14, fontWeight: 700, color: fg, lineHeight: '14px', display: 'block', transition: 'color 0.2s ease' }}>{streakCount}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Scrollable beats content */}
+            <div onScroll={handleScroll} style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: 16 }}>
+              {/* Page title */}
+              <div style={{ marginBottom: 4 }}>
+                <div style={{ fontSize: 24, fontWeight: 700, color: fg, lineHeight: '125%', letterSpacing: '-0.3px', transition: 'color 0.2s ease' }}>Beats</div>
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 400, color: '#6B7280', lineHeight: '150%', marginBottom: 20 }}>
+                Earn points from your revision sessions and spend them on rewards!
+              </div>
+
+              {/* Today's Recap */}
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: fg, lineHeight: '125%', transition: 'color 0.2s ease' }}>Today&apos;s Recap</div>
+                  <div className="pressable" style={{ background: isDark ? 'rgba(129,140,248,0.12)' : 'rgba(79,70,229,0.10)', borderRadius: 9999, paddingLeft: 12, paddingRight: 12, paddingTop: 5, paddingBottom: 5, cursor: 'pointer', transition: 'background 0.2s ease' }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#818CF8' : '#4F46E5', lineHeight: '125%', transition: 'color 0.2s ease' }}>Play All</span>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateRows: 'repeat(2, 72px)', gridAutoFlow: 'column', gridAutoColumns: 280, gap: 12, overflowX: 'auto', marginLeft: -16, marginRight: -16, paddingLeft: 16, paddingRight: 16, scrollbarWidth: 'none' }}>
+                  {[0, 1, 2, 3, 4, 5].map(i => (
+                    <div key={i} style={{
+                      borderRadius: 16,
+                      background: isDark ? '#0A1628' : '#fff',
+                      boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0px 1px 2px -1px rgba(0,0,0,0.10), 0px 1px 3px 0px rgba(0,0,0,0.10)',
+                      transition: 'background 0.2s ease',
+                    }} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Playlists */}
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: fg, lineHeight: '125%', marginBottom: 12, transition: 'color 0.2s ease' }}>Playlists</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {[0, 1].map(row => (
+                    <div key={row} style={{ display: 'flex', gap: 12 }}>
+                      {[0, 1].map(col => (
+                        <div key={col} style={{
+                          flex: 1, height: 170, borderRadius: 16,
+                          background: isDark ? '#0A1628' : '#fff',
+                          boxShadow: isDark ? '0px 1px 2px -1px rgba(0,0,0,0.3), 0px 1px 3px 0px rgba(0,0,0,0.3)' : '0px 1px 2px -1px rgba(0,0,0,0.10), 0px 1px 3px 0px rgba(0,0,0,0.10)',
+                          transition: 'background 0.2s ease',
+                        }} />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ height: 109 }} />
+            </div>
+
+            {/* Tab bar */}
+            <div style={{
+              flexShrink: 0, display: 'flex', flexDirection: 'column',
+              borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+              background: isDark
+                ? 'linear-gradient(to bottom, rgba(10,22,40,0) 0%, rgba(10,22,40,0.6) 100%)'
+                : 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.6) 100%)',
+              backdropFilter: 'blur(40px)',
+              transition: 'background 0.2s ease, border-color 0.2s ease',
+            }}>
+              <div style={{ boxSizing: 'border-box', height: 70, display: 'flex', alignItems: 'flex-start', paddingTop: 12, paddingLeft: 24, paddingRight: 24 }}>
+                {([
+                  { label: 'Today',   tabKey: 'today'   },
+                  { label: 'Rewards', tabKey: 'rewards' },
+                  { label: 'Beats',   tabKey: 'beats'   },
+                ] as const).map(({ label, tabKey }) => {
+                  const isActive = activeTab === tabKey;
+                  return (
+                    <div key={label} onClick={() => setActiveTab(tabKey)} className="pressable" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+                      <TabIcon tabKey={tabKey} isActive={isActive} isDark={isDark} />
+                      <span style={{ fontSize: 10, fontWeight: 600, lineHeight: 1, color: isActive ? accent : isDark ? 'rgba(255,255,255,0.4)' : '#6B7280', transition: 'color 0.2s ease' }}>
+                        {label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ height: 23 }} />
+            </div>
+          </div>{/* end beats panel */}
+
+          {/* Persistent FAB — above all tab panels, below session/study buddy overlays */}
           <div
             onClick={() => {
               setMessages([]);
@@ -581,7 +953,7 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
             className="pressable"
             style={{
               position: 'absolute', right: 20, bottom: 113,
-              width: 56, height: 56, zIndex: 15, cursor: 'pointer',
+              width: 56, height: 56, zIndex: 23, cursor: 'pointer',
               transformOrigin: 'center',
             }}
           >
@@ -592,43 +964,6 @@ const scrollDownTrigger = useStateMachineInput(rive, SM_NAME, 'scrollDown');
               <RiveComponent />
             </div>
           </div>
-
-          {/* Tab bar + safe area */}
-          <div style={{
-            flexShrink: 0, display: 'flex', flexDirection: 'column',
-            borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
-            background: isDark
-              ? 'linear-gradient(to bottom, rgba(10,22,40,0) 0%, rgba(10,22,40,0.6) 100%)'
-              : 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.6) 100%)',
-            backdropFilter: 'blur(40px)',
-            transition: 'background 0.2s ease, border-color 0.2s ease',
-          }}>
-            <div style={{ boxSizing: 'border-box', height: 70, display: 'flex', alignItems: 'flex-start', paddingTop: 12, paddingLeft: 24, paddingRight: 24 }}>
-              {[
-                { label: 'Today',   icon: '/playground/doorslam/tab-home.svg',   active: true  },
-                { label: 'Rewards', icon: '/playground/doorslam/tab-reward.svg', active: false },
-                { label: 'Beats',   icon: '/playground/doorslam/tab-beats.svg',  active: false },
-              ].map(({ label, icon, active }) => (
-                <div key={label} className="pressable" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={icon} alt={label} width={24} height={24} style={{
-                    display: 'block',
-                    filter: (!active && isDark) ? 'brightness(0) invert(1) opacity(0.5)' : 'none',
-                    transition: 'filter 0.2s ease',
-                  }} />
-                  <span style={{
-                    fontSize: 10, fontWeight: 600, lineHeight: 1,
-                    color: active ? accent : isDark ? 'rgba(255,255,255,0.4)' : '#6B7280',
-                    transition: 'color 0.2s ease',
-                  }}>
-                    {label}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <div style={{ height: 23 }} />
-          </div>
-          </div>{/* end main content wrapper */}
 
           {/* Streak modal backdrop */}
           <div
